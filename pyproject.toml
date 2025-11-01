@@ -1,0 +1,14 @@
+[project]
+name = "comfyui-easytoolkit"
+description = ""
+version = "0.0.1"
+license = { text = "GNU General Public License v3.0" }
+
+[project.urls]
+Repository = "https://github.com/fuyouawa/comfyui-easytoolkit"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = "fuyouawa"
+DisplayName = "comfyui-easytoolkit"
+Icon = ""
