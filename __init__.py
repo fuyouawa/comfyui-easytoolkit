@@ -2,7 +2,7 @@
 from aiohttp import web
 from server import PromptServer
 
-from nodes.example import *
+from .nodes.example import *
 
 @PromptServer.instance.routes.get("/hello")
 async def get_hello(request):
@@ -20,6 +20,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Example": "Example Node"
 }
 
+# Set the web directory, any .js file in that directory will be loaded by the frontend as a frontend extension
+WEB_DIRECTORY = "./web"
 
 NODES_DIRECTORY = "./nodes"
 
