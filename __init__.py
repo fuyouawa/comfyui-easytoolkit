@@ -29,8 +29,6 @@ def register_node(c):
 from .nodes import *
 
 # Set the web directory, any .js file in that directory will be loaded by the frontend as a frontend extension
-# WEB_DIRECTORY = "./web"
+WEB_DIRECTORY = "./web"
 
-NODES_DIRECTORY = "./nodes"
-
-__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'NODES_DIRECTORY']
+__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
