@@ -30,10 +30,10 @@ class ImageProcessor:
 
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("image",)
-    FUNCTION = "process"
+    FUNCTION = "run"
     CATEGORY = "EasyToolkit/Image"
 
-    def process(self, image, enable, operation):
+    def run(self, image, enable, operation):
         """
         处理图像的主函数
         """
