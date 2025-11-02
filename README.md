@@ -24,45 +24,6 @@ git clone https://github.com/your-repo/comfyui-easytoolkit.git
 
 ## 节点列表
 
-### 图像处理节点 (EasyToolkit/Image)
-
-#### ImageProcessor - 图像处理器
-**功能**: 对单张图像进行各种处理操作
-
-**输入参数**:
-- `image` (IMAGE): 输入图像
-- `operation` (下拉菜单): 处理操作类型
-  - `invert`: 颜色反转
-  - `xor-16`: 异或加密 (密钥 16)
-  - `xor-32`: 异或加密 (密钥 32)
-  - `xor-64`: 异或加密 (密钥 64)
-  - `xor-128`: 异或加密 (密钥 128)
-- `enable` (BOOLEAN): 启用/禁用处理
-
-**输出**:
-- `image` (IMAGE): 处理后的图像
-
-#### ImageBatchProcessor - 图像批次处理器
-**功能**: 对图像批次进行批量处理操作
-
-**输入参数**:
-- `image_batch` (IMAGE): 输入图像批次
-- `operation` (下拉菜单): 处理操作类型 (同 ImageProcessor)
-- `enable` (BOOLEAN): 启用/禁用处理
-
-**输出**:
-- `image_batch` (IMAGE): 处理后的图像批次
-
-#### ImageBatchSelector - 图像批次选择器
-**功能**: 从图像批次中选择指定索引的单张图像
-
-**输入参数**:
-- `images` (IMAGE): 输入图像批次
-- `select` (INT): 要选择的图像索引 (0-1000)
-
-**输出**:
-- `image` (IMAGE): 选择出的单张图像
-
 ### 算法节点 (EasyToolkit/Algorithm)
 
 #### FrameCalculator - 帧数计算器
@@ -78,22 +39,44 @@ git clone https://github.com/your-repo/comfyui-easytoolkit.git
 **输出**:
 - `total_frames` (INT): 计算得到的总帧数
 
-## 使用示例
+### 图像处理节点 (EasyToolkit/Image)
 
-### 基本图像处理工作流
-```
-加载图像 → ImageProcessor → 保存图像
-```
+#### ImageBatchSelector - 图像批次选择器
+**功能**: 从图像批次中选择指定索引的单张图像
 
-### 批量图像处理工作流
-```
-加载图像批次 → ImageBatchProcessor → ImageBatchSelector → 保存单张图像
-```
+**输入参数**:
+- `images` (IMAGE): 输入图像批次
+- `select` (INT): 要选择的图像索引 (0-1000)
 
-### 视频帧数计算工作流
-```
-FrameCalculator → 其他视频处理节点
-```
+**输出**:
+- `image` (IMAGE): 选择出的单张图像
+
+#### ImageEncryptor - 图像加密器
+**功能**: 对单张图像进行各种处理操作
+
+**输入参数**:
+- `image` (IMAGE): 输入图像
+- `operation` (下拉菜单): 处理操作类型
+  - `invert`: 颜色反转
+  - `xor-16`: 异或加密 (密钥 16)
+  - `xor-32`: 异或加密 (密钥 32)
+  - `xor-64`: 异或加密 (密钥 64)
+  - `xor-128`: 异或加密 (密钥 128)
+- `enable` (BOOLEAN): 启用/禁用处理
+
+**输出**:
+- `image` (IMAGE): 处理后的图像
+
+#### ImageBatchEncryptor - 图像批次加密器
+**功能**: 对图像批次进行批量处理操作
+
+**输入参数**:
+- `image_batch` (IMAGE): 输入图像批次
+- `operation` (下拉菜单): 处理操作类型 (同 ImageEncryptor)
+- `enable` (BOOLEAN): 启用/禁用处理
+
+**输出**:
+- `image_batch` (IMAGE): 处理后的图像批次
 
 ## 操作说明
 
@@ -111,12 +94,6 @@ FrameCalculator → 其他视频处理节点
 
 ### 图像批次选择
 当输入图像批次包含多张图像时，可以通过 `ImageBatchSelector` 节点选择特定索引的图像进行处理。
-
-## 技术细节
-
-- **图像格式**: 支持标准的 ComfyUI IMAGE 张量格式 (B, H, W, C)
-- **数据类型**: 使用 PyTorch 张量进行高效计算
-- **性能优化**: 批量处理支持并行计算
 
 ## 更新日志
 

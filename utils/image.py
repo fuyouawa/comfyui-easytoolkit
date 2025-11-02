@@ -12,7 +12,7 @@ def xor_operation(image, key):
     return processed_images.to(torch.float32) / 255.0
 
 
-def process_image(image, operation):
+def encrypt_image(image, operation):
     if operation == "invert":
         processed_image = invert_colors(image)
     elif operation == "xor-16":

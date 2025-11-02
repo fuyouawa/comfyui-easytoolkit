@@ -1,8 +1,8 @@
 from ... import register_node
-from ...utils.image import process_image
+from ...utils.image import encrypt_image
 
 @register_node
-class ImageProcessor:
+class ImageEncryptor:
     """
     图像处理器节点
     提供多种图像处理功能：颜色翻转、异或加密/解密
@@ -40,5 +40,5 @@ class ImageProcessor:
         if not enable:
             return (image,)
 
-        processed_images = process_image(image, operation)
+        processed_images = encrypt_image(image, operation)
         return (processed_images,)

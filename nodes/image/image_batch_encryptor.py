@@ -1,9 +1,9 @@
 import torch
 from ... import register_node
-from ...utils.image import process_image
+from ...utils.image import encrypt_image
 
 @register_node
-class ImageBatchProcessor:
+class ImageBatchEncryptor:
     """
     图像批次处理器节点
     提供多种图像批次处理功能：颜色翻转、异或加密/解密
@@ -53,7 +53,7 @@ class ImageBatchProcessor:
             single_image = image_batch[i:i+1]  # 保持批次维度
 
             # 应用图像处理
-            processed_image = process_image(single_image, operation)
+            processed_image = encrypt_image(single_image, operation)
 
             # 添加到处理后的批次
             processed_batch.append(processed_image)
