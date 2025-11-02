@@ -2,14 +2,6 @@
 
 一个简单易用的 ComfyUI 工具包，提供各种实用的图像处理、算法计算等节点，旨在简化工作流程并提高效率。
 
-## 功能特性
-
-- 🖼️ **图像处理** - 颜色反转、异或加密/解密等图像操作
-- 🔢 **算法计算** - 帧数计算等实用算法
-- 🎯 **批量处理** - 支持单张图像和图像批次的灵活处理
-- ⚡ **高效性能** - 基于 PyTorch 的高性能图像处理
-- 🔧 **易于使用** - 直观的节点接口和参数配置
-
 ## 安装方法
 
 ### 方法一：直接复制
@@ -40,6 +32,22 @@ git clone https://github.com/your-repo/comfyui-easytoolkit.git
 - `total_frames` (INT): 计算得到的总帧数
 
 ### 图像处理节点 (EasyToolkit/Image)
+
+#### ImageDownloader - 图像下载器
+**功能**: 提供前端按钮来下载传入的图像，支持动态文件名模板
+
+**输入参数**:
+- `image` (IMAGE): 输入图像
+- `filename` (STRING): 文件名模板，支持以下变量：
+  - `%date:yyyy-MM-dd%` - 日期 (2023-12-25)
+  - `%date:hh-mm-ss%` - 时间 (14-30-45)
+  - `%timestamp%` - 时间戳 (1703493045)
+  - `%counter%` - 下载计数器 (自动递增)
+  - `%random%` - 随机数 (1000-9999)
+
+**输出**:
+- `images` (IMAGE): 原始图像
+
 
 #### ImageBatchSelector - 图像批次选择器
 **功能**: 从图像批次中选择指定索引的单张图像
@@ -77,26 +85,6 @@ git clone https://github.com/your-repo/comfyui-easytoolkit.git
 
 **输出**:
 - `image_batch` (IMAGE): 处理后的图像批次
-
-#### ImageDownloader - 图像下载器
-**功能**: 提供前端按钮来下载传入的图像，支持动态文件名模板
-
-**输入参数**:
-- `image` (IMAGE): 输入图像
-- `file_name` (STRING): 文件名模板，支持以下变量：
-  - `%date:yyyy-MM-dd%` - 日期 (2023-12-25)
-  - `%date:hh-mm-ss%` - 时间 (14-30-45)
-  - `%timestamp%` - 时间戳 (1703493045)
-  - `%counter%` - 下载计数器 (自动递增)
-  - `%random%` - 随机数 (1000-9999)
-
-**输出**:
-- `images` (IMAGE): 原始图像
-
-**使用说明**:
-1. 连接图像到节点
-2. 设置文件名模板
-3. 在 ComfyUI 界面中点击下载按钮下载图像
 
 ## 更新日志
 

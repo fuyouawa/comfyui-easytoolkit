@@ -1,6 +1,6 @@
 import { app } from "../../../scripts/app.js";
 
-function downloadBase64Image(b64, filename = 'image.png') {
+function downloadBase64Image(b64, filename) {
     const byteCharacters = atob(b64);
     const byteNumbers = new Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i++) {
@@ -11,7 +11,7 @@ function downloadBase64Image(b64, filename = 'image.png') {
 
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = filename;
+    link.download = filename + ".png";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -38,7 +38,7 @@ app.registerExtension({
                 const data = await response.json();
                 if (data.success) {
                     const b64 = data.base64_image;
-                    downloadBase64Image(b64, data.file_name);
+                    downloadBase64Image(b64, data.filename);
                 }
                 else {
                     alert(data.error);
