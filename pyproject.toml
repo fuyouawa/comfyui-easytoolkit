@@ -1,6 +1,6 @@
 [project]
 name = "comfyui-easytoolkit"
-description = ""
+description = "A simple ComfyUI toolkit, providing various practical nodes for image processing, algorithms, etc."
 version = "0.0.1"
 license = { text = "GNU General Public License v3.0" }
 
