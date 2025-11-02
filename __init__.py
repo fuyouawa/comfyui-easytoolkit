@@ -1,3 +1,4 @@
+import re
 # Add custom API routes, using router
 # from aiohttp import web
 # from server import PromptServer
@@ -14,11 +15,14 @@ NODE_CLASS_MAPPINGS = {}
 # A dictionary that contains the friendly/humanly readable titles for the nodes
 NODE_DISPLAY_NAME_MAPPINGS = {}
 
+def camel_to_spaced(s: str) -> str:
+    return re.sub(r'(?<=[a-z0-9])([A-Z])', r' \1', s)
+
 def register_node(c):
     assert not isinstance(c.RETURN_TYPES, str), "Error: string found instead of tuple."
     assert not isinstance(c.RETURN_NAMES, str), "Error: string found instead of tuple."
     NODE_CLASS_MAPPINGS[c.__name__] = c
-    NODE_DISPLAY_NAME_MAPPINGS[c.__name__] = c.__name__
+    NODE_DISPLAY_NAME_MAPPINGS[c.__name__] = camel_to_spaced(c.__name__)
     return c
 
 # 导入所有节点
