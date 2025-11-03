@@ -55,7 +55,7 @@ def convert_image_batch_to_pil_list(image_batch) -> List[Image.Image]:
 def image_batch_to_video_bytes(
     image_batch,
     frame_rate: int,
-    format: str = "image/gif",
+    video_format: str = "image/gif",
     pingpong: bool = False,
     loop_count: int = 0,
     video_metadata: Optional[dict] = None,
@@ -75,7 +75,7 @@ def image_batch_to_video_bytes(
         if len(frames) >= 2:
             frames = frames + frames[-2:0:-1]
 
-    format_type, format_ext = format.split("/")
+    format_type, format_ext = video_format.split("/")
     # image formats via Pillow
     if format_type == "image":
         return _process_image_format(frames, format_ext, frame_rate, loop_count)
@@ -215,6 +215,7 @@ def _run_ffmpeg_with_metadata_file(
     try:
         with subprocess.Popen(new_args + ["-f", muxer, tmp_out], stdin=subprocess.PIPE, env=env) as proc:
             for fr in frames:
+                #TODO 在format为video/av1-webm时会报错
                 proc.stdin.write(fr.tobytes())
             proc.stdin.close()
             proc.wait()

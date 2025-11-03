@@ -1,6 +1,6 @@
 import { app } from "../../../scripts/app.js";
 
-function downloadBase64(b64, filename, file_format) {
+function downloadBase64(b64, filename, format) {
     const byteCharacters = atob(b64);
     const byteNumbers = new Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i++) {
@@ -8,34 +8,11 @@ function downloadBase64(b64, filename, file_format) {
     }
     const byteArray = new Uint8Array(byteNumbers);
 
-    let blob_type = '';
-    if (file_format === 'png') {
-        blob_type = 'image/png';
-    }
-    else if (file_format === 'jpeg') {
-        blob_type = 'image/jpeg';
-    }
-    else if (file_format === 'gif') {
-        blob_type = 'image/gif';
-    }
-    else if (file_format === 'webp') {
-        blob_type = 'image/webp';
-    }
-    else if (file_format === 'mp4') {
-        blob_type = 'video/mp4';
-    }
-    else if (file_format === 'webm') {
-        blob_type = 'video/webm';
-    }
-    else {
-        alert('不支持的格式：' + file_format);
-        return;
-    }
-    const blob = new Blob([byteArray], { type: blob_type });
+    const blob = new Blob([byteArray], { type: format });
 
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = filename + "." + file_format;
+    link.download = filename + "." + format.split("/").pop();
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -43,9 +20,9 @@ function downloadBase64(b64, filename, file_format) {
 }
 
 app.registerExtension({
-    name: "EasyToolkit.Misc.Base64Downloader",
+    name: "EasyToolkit.Misc.Base64CacheDownloader",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name !== "Base64Downloader") return;
+        if (nodeData.name !== "Base64CacheDownloader") return;
 
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
@@ -58,17 +35,29 @@ app.registerExtension({
 
             uuid_widget.hidden = true;
 
-            this.addWidget("button", "下载上次数据", null, async () => {
-                const response = await fetch("/base64_downloader/download", {
+            this.addWidget("button", "下载数据", null, async () => {
+                const response = await fetch("/base64_cache_downloader/download", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ "uuid": uuid_widget.value }),
                 });
                 const data = await response.json();
                 if (data.success) {
-                    downloadBase64(data.base64_image, data.filename, data.file_format);
+                    downloadBase64(data.base64_image, data.filename, data.format);
                 }
                 else {
+                    alert(data.error);
+                }
+            });
+
+            this.addWidget("button", "删除缓存", null, async () => {
+                const response = await fetch("/base64_cache_downloader/clear", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ "uuid": uuid_widget.value }),
+                });
+                const data = await response.json();
+                if (!data.success) {
                     alert(data.error);
                 }
             });

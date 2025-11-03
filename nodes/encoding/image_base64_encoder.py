@@ -14,16 +14,19 @@ class ImageBase64Encoder:
         """
         return {
             "required": {
-                "image": ("IMAGE",)
+                "image": ("IMAGE",),
+                "format": (["image/png", "image/jpeg"], {
+                    "default": "image/png"
+                }),
             },
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("base64",)
+    RETURN_TYPES = ("STRING","STRING",)
+    RETURN_NAMES = ("base64","file_ext",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, image):
-        b64 = image_to_base64(image)
-        return {"result": (b64,)}
+    def run(self, image, format="image/png"):
+        b64 = image_to_base64(image, format)
+        return {"result": (b64,format.split("/")[-1],)}

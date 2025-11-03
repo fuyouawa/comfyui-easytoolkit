@@ -34,7 +34,7 @@ def encrypt_image(image, operation):
     return processed_image
 
 
-def image_to_base64(image) -> str:
+def image_to_base64(image, format="image/png") -> str:
     # 如果是 torch.Tensor，先转 numpy
     if isinstance(image, torch.Tensor):
         image = image.detach().cpu().numpy()
@@ -52,6 +52,7 @@ def image_to_base64(image) -> str:
 
     # 保存到内存并转 base64
     buffer = io.BytesIO()
-    image_pil.save(buffer, format="PNG")
+    
+    image_pil.save(buffer, format=format.split("/")[-1])
     buffer.seek(0)
     return base64.b64encode(buffer.read()).decode("utf-8")
