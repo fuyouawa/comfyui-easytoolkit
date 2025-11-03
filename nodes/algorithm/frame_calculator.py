@@ -1,5 +1,6 @@
 from ... import register_node
 
+
 @register_node
 class FrameCalculator:
     """
@@ -8,6 +9,7 @@ class FrameCalculator:
 
     计算公式：总帧数 = 持续时间 * 帧率 + 附加帧数
     """
+
     def __init__(self):
         pass
 

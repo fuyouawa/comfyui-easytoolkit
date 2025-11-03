@@ -2,6 +2,7 @@ import torch
 from ... import register_node
 from ...utils.image import encrypt_image
 
+
 @register_node
 class ImageBatchEncryptor:
     """
@@ -50,7 +51,7 @@ class ImageBatchEncryptor:
         # 遍历批次中的每张图像
         for i in range(batch_size):
             # 获取单张图像
-            single_image = image_batch[i:i+1]  # 保持批次维度
+            single_image = image_batch[i:i + 1]  # 保持批次维度
 
             # 应用图像处理
             processed_image = encrypt_image(single_image, operation)

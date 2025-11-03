@@ -33,22 +33,6 @@ git clone https://github.com/your-repo/comfyui-easytoolkit.git
 
 ### 图像处理节点 (EasyToolkit/Image)
 
-#### ImageDownloader - 图像下载器
-**功能**: 提供前端按钮来下载传入的图像，支持动态文件名模板
-
-**输入参数**:
-- `image` (IMAGE): 输入图像
-- `filename` (STRING): 文件名模板，支持以下变量：
-  - `%date:yyyy-MM-dd%` - 日期 (2023-12-25)
-  - `%date:hh-mm-ss%` - 时间 (14-30-45)
-  - `%timestamp%` - 时间戳 (1703493045)
-  - `%counter%` - 下载计数器 (自动递增)
-  - `%random%` - 随机数 (1000-9999)
-
-**输出**:
-- `images` (IMAGE): 原始图像
-
-
 #### ImageBatchSelector - 图像批次选择器
 **功能**: 从图像批次中选择指定索引的单张图像
 

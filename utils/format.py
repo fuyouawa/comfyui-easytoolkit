@@ -2,6 +2,7 @@ import datetime
 import re
 import time
 
+
 def format_filename(template: str) -> str:
     """
     格式化文件名模板
@@ -25,13 +26,13 @@ def format_filename(template: str) -> str:
         # 格式映射：用户友好格式 -> Python strftime格式
         format_mapping = {
             'yyyy': '%Y',  # 四位年份
-            'yy': '%y',    # 两位年份
-            'MM': '%m',    # 两位月份
-            'dd': '%d',    # 两位日期
-            'HH': '%H',    # 24小时制小时
-            'hh': '%I',    # 12小时制小时
-            'mm': '%M',    # 分钟
-            'ss': '%S',    # 秒
+            'yy': '%y',  # 两位年份
+            'MM': '%m',  # 两位月份
+            'dd': '%d',  # 两位日期
+            'HH': '%H',  # 24小时制小时
+            'hh': '%I',  # 12小时制小时
+            'mm': '%M',  # 分钟
+            'ss': '%S',  # 秒
         }
 
         # 替换格式代码
