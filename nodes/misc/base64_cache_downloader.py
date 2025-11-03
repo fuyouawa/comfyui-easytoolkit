@@ -26,7 +26,7 @@ class Base64CacheDownloader:
                 "filename": ("STRING", {
                     "default": "%date:yyyy-MM-dd%_%date:hh-mm-ss%"
                 }),
-                "format": (["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm"], {
+                "format": (["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm", "text/plain"], {
                     "default": "image/png"
                 }),
                 "uuid": ("STRING", {
@@ -37,7 +37,7 @@ class Base64CacheDownloader:
     
 
     RETURN_TYPES = ("STRING","STRING",)
-    RETURN_NAMES = ("filename","file_ext",)
+    RETURN_NAMES = ("base64","uuid",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Misc"
     OUTPUT_NODE = True
@@ -45,14 +45,13 @@ class Base64CacheDownloader:
     def run(self, base64, filename, format, uuid):
         global _image_cache_by_uuid
 
-        formatted_filename = format_filename(filename)
-
         _image_cache_by_uuid[uuid] = {
             "base64_image": base64,
-            "filename": formatted_filename,
+            "filename": filename,
             "format": format
         }
-        return {"result": (formatted_filename, format.split("/")[-1],)}
+
+        return {"result": (base64,uuid,)}
 
     
 @routes.post("/base64_cache_downloader/download")
@@ -61,14 +60,21 @@ async def handle_download(request):
     global _download_counter
 
     data = await request.json()
-    uuid = data.get("uuid", "")
+    uuid = data.get("uuid", None)
+    filename = data.get("filename", None)
+    format = data.get("format", None)
 
     if not uuid or uuid not in _image_cache_by_uuid:
         return web.json_response({"success": False, "error": "There is no base64 data at all."})
     
     last_image_cache = _image_cache_by_uuid[uuid]
+
+    if not filename:
+        filename = last_image_cache["filename"]
+    if not format:
+        format = last_image_cache["format"]
     
-    filename = last_image_cache["filename"]
+    filename = format_filename(filename)
     if '%counter%' in filename:
         _download_counter += 1
         filename = filename.replace('%counter%', str(_download_counter))
@@ -77,7 +83,7 @@ async def handle_download(request):
             "success": True,
             "base64_image": last_image_cache["base64_image"],
             "filename": filename,
-            "format": last_image_cache["format"]
+            "format": format
         })
 
     

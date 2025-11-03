@@ -1,7 +1,7 @@
 from ... import register_node
 
 @register_node
-class ImageFileExtFormatter:
+class FileExtensionFormatter:
     def __init__(self):
         pass
 
@@ -18,7 +18,7 @@ class ImageFileExtFormatter:
             },
         }
     
-    RETURN_TYPES = (["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm"],)
+    RETURN_TYPES = (["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm", "text/plain"],)
     RETURN_NAMES = ("format",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Algorithm"
@@ -38,6 +38,8 @@ class ImageFileExtFormatter:
             format = "video/mp4"
         elif file_ext == "webm":
             format = "video/webm"
+        elif file_ext == "txt":
+            format = "text/plain"
         else:
             raise Exception("Unsupported extension: " + file_ext)
 
