@@ -62,6 +62,10 @@ app.registerExtension({
                 }
             });
 
+            this.addWidget("button", "重新生成UUID", null, async () => {
+                uuid_widget.value = crypto.randomUUID();
+            });
+
             // 自定义绘制
             const onDrawForeground = this.onDrawForeground;
             this.onDrawForeground = function (ctx) {

@@ -1,7 +1,7 @@
 from ... import register_node
 
 @register_node
-class ImageFileExtToFormat:
+class ImageFileExtFormatter:
     def __init__(self):
         pass
 
