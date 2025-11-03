@@ -3,7 +3,7 @@ from ...utils.image import image_to_base64
 
 
 @register_node
-class ImageBase64Converter:
+class ImageBase64Encoder:
     def __init__(self):
         pass
 
@@ -21,7 +21,7 @@ class ImageBase64Converter:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("base64",)
     FUNCTION = "run"
-    CATEGORY = "EasyToolkit/Convert"
+    CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
     def run(self, image):

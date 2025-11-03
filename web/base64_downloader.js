@@ -15,6 +15,12 @@ function downloadBase64(b64, filename, file_format) {
     else if (file_format === 'jpeg') {
         blob_type = 'image/jpeg';
     }
+    else if (file_format === 'gif') {
+        blob_type = 'image/gif';
+    }
+    else if (file_format === 'webp') {
+        blob_type = 'image/webp';
+    }
     else if (file_format === 'mp4') {
         blob_type = 'video/mp4';
     }

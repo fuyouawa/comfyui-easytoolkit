@@ -26,7 +26,7 @@ class Base64Downloader:
                 "filename": ("STRING", {
                     "default": "%date:yyyy-MM-dd%_%date:hh-mm-ss%"
                 }),
-                "file_format": (["png", "jpeg", "mp4", "webm"], {
+                "file_format": (["png", "jpeg", "gif", "webp", "mp4", "webm"], {
                     "default": "png"
                 }),
                 "uuid": ("STRING", {
