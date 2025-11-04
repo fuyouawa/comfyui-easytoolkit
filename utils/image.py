@@ -1,4 +1,5 @@
 import torch
+import cv2
 import numpy as np
 from PIL import Image
 import base64
@@ -56,3 +57,24 @@ def image_to_base64(image, format="image/png") -> str:
     image_pil.save(buffer, format=format.split("/")[-1])
     buffer.seek(0)
     return base64.b64encode(buffer.read()).decode("utf-8")
+
+def base64_to_image(base64_data):
+    nparr = np.frombuffer(base64.b64decode(base64_data), np.uint8)
+
+    result = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
+    channels = cv2.split(result)
+    if len(channels) > 3:
+      mask = channels[3].astype(np.float32) / 255.0
+      mask = torch.from_numpy(mask)
+    else:
+      mask = torch.ones(channels[0].shape, dtype=torch.float32, device="cpu")
+
+    result = _convert_color(result)
+    result = result.astype(np.float32) / 255.0
+    new_images = torch.from_numpy(result)[None,]
+    return new_images, mask
+
+def _convert_color(image):
+    if len(image.shape) > 2 and image.shape[2] >= 4:
+        return cv2.cvtColor(image, cv2.COLOR_BGRA2RGB)
+    return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
