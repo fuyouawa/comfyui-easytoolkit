@@ -9,7 +9,7 @@ routes = PromptServer.instance.routes
 _download_counter = 0
 
 @register_node
-class Base64CacheDownloader:
+class Base64Downloader:
     def __init__(self):
         pass
 

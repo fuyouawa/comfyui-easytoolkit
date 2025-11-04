@@ -1,12 +1,10 @@
 import base64
-import os
-import tempfile
 import time
 import asyncio
 from aiohttp import web
 from server import PromptServer
 from ... import register_node
-from ...utils.persistent_context import get_persistent_context, has_persistent_context
+from ...utils.persistent_context import get_persistent_context
 
 routes = PromptServer.instance.routes
 
@@ -39,7 +37,7 @@ async def start_cleanup_task():
 asyncio.create_task(start_cleanup_task())
 
 @register_node
-class Base64CacheLoader:
+class Base64Uploader:
     def __init__(self):
         pass
 

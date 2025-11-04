@@ -28,9 +28,9 @@ function downloadBase64(b64, basename, format) {
 }
 
 app.registerExtension({
-    name: "EasyToolkit.Misc.Base64CacheDownloader",
+    name: "EasyToolkit.Misc.Base64Downloader",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name !== "Base64CacheDownloader") return;
+        if (nodeData.name !== "Base64Downloader") return;
 
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
@@ -92,30 +92,6 @@ app.registerExtension({
                 uuid_widget = this.widgets?.find(w => w.name === "uuid");
                 uuid_widget.value = crypto.randomUUID();
             });
-
-            // 自定义绘制
-            // const onDrawForeground = this.onDrawForeground;
-            // this.onDrawForeground = function (ctx) {
-            //     if (onDrawForeground) onDrawForeground.apply(this, arguments);
-
-            //     const w = this.widgets?.find(w => w.name === "uuid");
-            //     if (w) {
-            //         ctx.save();
-            //         ctx.fillStyle = "orange";
-            //         ctx.font = "10px Arial";
-
-            //         const text = `UUID: ${w.value}`;
-            //         const textWidth = ctx.measureText(text).width;
-
-            //         // 如果有w.width，用它；否则用默认宽度
-            //         const nodeWidth = this.width || 100; // 这里100是示例宽度
-            //         const x = (w.x || 0) + (nodeWidth - textWidth) / 2;
-            //         const y = (w.y || 0) + 14;
-
-            //         ctx.fillText(text, x, y);
-            //         ctx.restore();
-            //     }
-            // };
         };
     },
 });

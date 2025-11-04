@@ -1,9 +1,9 @@
 import { app } from "../../../scripts/app.js";
 
 app.registerExtension({
-    name: "EasyToolkit.Misc.Base64CacheLoader",
+    name: "EasyToolkit.Misc.Base64Uploader",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name !== "Base64CacheLoader") return;
+        if (nodeData.name !== "Base64Uploader") return;
 
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
@@ -66,9 +66,9 @@ app.registerExtension({
 
 // 添加分块上传方法到节点原型
 app.registerExtension({
-    name: "EasyToolkit.Misc.Base64CacheLoader.Upload",
+    name: "EasyToolkit.Misc.Base64Uploader.Upload",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name !== "Base64CacheLoader") return;
+        if (nodeData.name !== "Base64Uploader") return;
 
         nodeType.prototype.uploadFileInChunks = async function(file, uuid, filename, progressWidget) {
             const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
