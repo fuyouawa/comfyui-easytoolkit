@@ -8,13 +8,17 @@ import folder_paths
 from .config import get_config
 
 class PersistentContext:
-    def __init__(self, value: any, cache=None):
+    def __init__(self, value: any, key: str = None, cache=None):
         self._value = value
+        self._key = key
         self._cache = cache
         self.update_access_time()
 
     def update_access_time(self):
         self._last_access_time = time.time()
+
+    def get_key(self) -> str:
+        return self._key
 
     def get_value(self) -> any:
         self.update_access_time()
@@ -73,9 +77,25 @@ class PersistentContextCache:
     def create_context(self, key: str, value: any) -> PersistentContext:
         self._update_context_access_time(key)
         self._cleanup_expired()
-        context = PersistentContext(value, cache=self)
+        context = PersistentContext(value, key=key, cache=self)
         self._data[key] = context
         return context
+
+    def resolve_contexts_by_value_type(self, value_type: type) -> list[PersistentContext]:
+        """Get all contexts whose value is an instance of the specified type
+        
+        Args:
+            value_type: The type to filter by (e.g., str, int, dict, list, or custom classes)
+        
+        Returns:
+            List of PersistentContext objects whose values match the specified type
+        """
+        self._cleanup_expired()
+        result = []
+        for context in self._data.values():
+            if isinstance(context.get_value(), value_type):
+                result.append(context)
+        return result
 
     def _update_context_access_time(self, key: str):
         if key in self._data:
@@ -158,11 +178,19 @@ class PersistentContextCache:
         """Save the context data to disk (runs in a separate thread)"""
         try:
             self._last_save_time = time.time()
+            
+            # Create a snapshot of the data to avoid "dictionary changed size during iteration"
+            # This needs to be done with the lock to ensure thread safety
+            with self._save_lock:
+                data_snapshot = self._data.copy()
+                last_cleanup_time_snapshot = self._last_cleanup_time
+                last_save_time_snapshot = self._last_save_time
+            
             # Prepare data for serialization
             save_data = {
-                'data': self._data,
-                'last_cleanup_time': self._last_cleanup_time,
-                'last_save_time': self._last_save_time
+                'data': data_snapshot,
+                'last_cleanup_time': last_cleanup_time_snapshot,
+                'last_save_time': last_save_time_snapshot
             }
             
             # Write to a temporary file first, then rename (atomic operation)
@@ -221,6 +249,26 @@ def get_persistent_context(key: str, default_value = None) -> PersistentContext:
 def save_persistent_context():
     """Manually save all persistent contexts to disk"""
     _global_context_cache.save()
+
+def resolve_persistent_contexts_by_value_type(value_type: type) -> list[PersistentContext]:
+    """Get all persistent contexts whose value is an instance of the specified type
+    
+    Args:
+        value_type: The type to filter by (e.g., str, int, dict, list, or custom classes)
+    
+    Returns:
+        List of PersistentContext objects whose values match the specified type
+    
+    Example:
+        # Get all contexts with string values
+        str_contexts = get_persistent_contexts_by_value_type(str)
+        for ctx in str_contexts:
+            print(f"Key: {ctx.get_key()}, Value: {ctx.get_value()}")
+        
+        # Get all contexts with dict values
+        dict_contexts = get_persistent_contexts_by_value_type(dict)
+    """
+    return _global_context_cache.resolve_contexts_by_value_type(value_type)
 
 def _shutdown_handler():
     """Handler to ensure data is saved on program exit"""
