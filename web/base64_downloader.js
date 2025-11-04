@@ -1,30 +1,36 @@
 import { app } from "../../../scripts/app.js";
 
 function downloadBase64(b64, basename, format) {
-    let suffix = format.split("/").pop();
-    let blob = null;
-    if (format == "text/plain") {
-        suffix = "txt";
-        blob = new Blob([b64], { type: format });
-    }
-    else {
-        const byteCharacters = atob(b64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
+    try {
+        let suffix = format.split("/").pop();
+        let blob = null;
+        if (format == "text/plain") {
+            suffix = "txt";
+            blob = new Blob([b64], { type: format });
         }
-        const byteArray = new Uint8Array(byteNumbers);
+        else {
+            const byteCharacters = atob(b64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
 
-        blob = new Blob([byteArray], { type: format });
+            blob = new Blob([byteArray], { type: format });
+        }
+
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = basename + "." + suffix;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    } catch (error) {
+        console.error("下载失败:", error);
+        alert(`下载失败: ${error.message}`);
+        throw error;
     }
-
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = basename + "." + suffix;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
 }
 
 app.registerExtension({
@@ -44,53 +50,73 @@ app.registerExtension({
             uuid_widget.disabled = true;
 
             this.addWidget("button", "下载数据", null, async () => {
-                uuid_widget = this.widgets?.find(w => w.name === "uuid");
-                let basename_widget = this.widgets?.find(w => w.name === "basename");
-                let format_widget = this.widgets?.find(w => w.name === "format");
-                if (!uuid_widget || !basename_widget || !format_widget) {
-                    alert("Cannot find uuid or basename or format widget.");
-                    return;
-                }
+                try {
+                    uuid_widget = this.widgets?.find(w => w.name === "uuid");
+                    let basename_widget = this.widgets?.find(w => w.name === "basename");
+                    let format_widget = this.widgets?.find(w => w.name === "format");
+                    if (!uuid_widget || !basename_widget || !format_widget) {
+                        alert("Cannot find uuid or basename or format widget.");
+                        return;
+                    }
 
-                const response = await fetch("/base64_cache_downloader/download", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        "uuid": uuid_widget.value,
-                        "basename": basename_widget.computedDisabled ? null : basename_widget.value, 
-                        "format": format_widget.computedDisabled ? null : format_widget.value
-                    }),
-                });
-                const data = await response.json();
-                if (data.success) {
-                    try {
+                    const response = await fetch("/base64_cache_downloader/download", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            "uuid": uuid_widget.value,
+                            "basename": basename_widget.computedDisabled ? null : basename_widget.value,
+                            "format": format_widget.computedDisabled ? null : format_widget.value
+                        }),
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    if (data.success) {
                         downloadBase64(data.base64_image, data.basename, data.format);
                     }
-                    catch (e) {
-                        alert(e);
+                    else {
+                        alert(data.error);
                     }
-                }
-                else {
-                    alert(data.error);
+                } catch (error) {
+                    console.error("下载数据失败:", error);
+                    alert(`下载数据失败: ${error.message}`);
                 }
             });
 
             this.addWidget("button", "删除缓存", null, async () => {
-                uuid_widget = this.widgets?.find(w => w.name === "uuid");
-                const response = await fetch("/base64_cache_downloader/clear", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ "uuid": uuid_widget.value }),
-                });
-                const data = await response.json();
-                if (!data.success) {
-                    alert(data.error);
+                try {
+                    uuid_widget = this.widgets?.find(w => w.name === "uuid");
+                    const response = await fetch("/base64_cache_downloader/clear", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ "uuid": uuid_widget.value }),
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    if (!data.success) {
+                        alert(data.error);
+                    }
+                } catch (error) {
+                    console.error("删除缓存失败:", error);
+                    alert(`删除缓存失败: ${error.message}`);
                 }
             });
 
             this.addWidget("button", "重新生成UUID", null, async () => {
-                uuid_widget = this.widgets?.find(w => w.name === "uuid");
-                uuid_widget.value = crypto.randomUUID();
+                try {
+                    uuid_widget = this.widgets?.find(w => w.name === "uuid");
+                    uuid_widget.value = crypto.randomUUID();
+                } catch (error) {
+                    console.error("生成UUID失败:", error);
+                    alert(`生成UUID失败: ${error.message}`);
+                }
             });
         };
     },

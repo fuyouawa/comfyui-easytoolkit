@@ -10,8 +10,13 @@ app.registerExtension({
             if (onNodeCreated) onNodeCreated.apply(this, arguments);
 
             let uuid_widget = this.widgets?.find(w => w.name === "uuid");
-            if (uuid_widget && (!uuid_widget.value || uuid_widget.value === "")) {
-                uuid_widget.value = crypto.randomUUID();
+            try {
+                if (uuid_widget && (!uuid_widget.value || uuid_widget.value === "")) {
+                    uuid_widget.value = crypto.randomUUID();
+                }
+            } catch (error) {
+                console.error("生成UUID失败:", error);
+                alert(`生成UUID失败: ${error.message}`);
             }
 
             uuid_widget.disabled = true;
@@ -21,44 +26,59 @@ app.registerExtension({
             progressWidget.value = "待命中...";
 
             this.addWidget("button", "选择文件上传", null, async () => {
-                const input = document.createElement("input");
-                input.type = "file";
-                input.accept = "*/*";
-                input.style.display = "none";
+                try {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = "*/*";
+                    input.style.display = "none";
 
-                input.onchange = async (event) => {
-                    const file = event.target.files[0];
-                    if (!file) return;
+                    input.onchange = async (event) => {
+                        try {
+                            const file = event.target.files[0];
+                            if (!file) return;
 
-                    uuid_widget = this.widgets?.find(w => w.name === "uuid");
-                    let filename_widget = this.widgets?.find(w => w.name === "filename");
-                    progressWidget = this.widgets?.find(w => w.name === "upload_progress");
-                    if (!uuid_widget || !filename_widget || !progressWidget) {
-                        alert("Cannot find uuid or filename or progress widget.");
-                        return;
-                    }
-                    filename_widget.value = file.name;
+                            uuid_widget = this.widgets?.find(w => w.name === "uuid");
+                            let filename_widget = this.widgets?.find(w => w.name === "filename");
+                            progressWidget = this.widgets?.find(w => w.name === "upload_progress");
+                            if (!uuid_widget || !filename_widget || !progressWidget) {
+                                alert("Cannot find uuid or filename or progress widget.");
+                                return;
+                            }
+                            filename_widget.value = file.name;
 
-                    // 查找或创建进度显示
-                    progressWidget.value = "正在准备上传...";
+                            // 查找或创建进度显示
+                            progressWidget.value = "正在准备上传...";
 
-                    try {
-                        // 使用分块上传避免大文件卡死
-                        await this.uploadFileInChunks(file, uuid_widget.value, file.name, progressWidget);
-                        progressWidget.value = "上传完成！";
-                    } catch (error) {
-                        console.error("Upload failed:", error);
-                        progressWidget.value = `上传失败: ${error.message}`;
-                        alert(`Update failed: ${error.message}`);
-                    }
-                };
+                            try {
+                                // 使用分块上传避免大文件卡死
+                                await this.uploadFileInChunks(file, uuid_widget.value, file.name, progressWidget);
+                                progressWidget.value = "上传完成！";
+                            } catch (error) {
+                                console.error("Upload failed:", error);
+                                progressWidget.value = `上传失败: ${error.message}`;
+                                alert(`上传失败: ${error.message}`);
+                            }
+                        } catch (error) {
+                            console.error("文件选择处理失败:", error);
+                            alert(`文件选择处理失败: ${error.message}`);
+                        }
+                    };
 
-                input.click(); // 打开文件选择对话框
+                    input.click(); // 打开文件选择对话框
+                } catch (error) {
+                    console.error("创建文件选择器失败:", error);
+                    alert(`创建文件选择器失败: ${error.message}`);
+                }
             });
 
             this.addWidget("button", "重新生成UUID", null, async () => {
-                uuid_widget = this.widgets?.find(w => w.name === "uuid");
-                uuid_widget.value = crypto.randomUUID();
+                try {
+                    uuid_widget = this.widgets?.find(w => w.name === "uuid");
+                    uuid_widget.value = crypto.randomUUID();
+                } catch (error) {
+                    console.error("生成UUID失败:", error);
+                    alert(`生成UUID失败: ${error.message}`);
+                }
             });
         };
     },
@@ -71,67 +91,84 @@ app.registerExtension({
         if (nodeData.name !== "Base64Uploader") return;
 
         nodeType.prototype.uploadFileInChunks = async function(file, uuid, filename, progressWidget) {
-            const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
-            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+            try {
+                const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+                const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
-            // 先初始化上传
-            progressWidget.value = "正在初始化上传...";
-            const initResponse = await fetch("/base64_cache_loader/init_upload", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    "uuid": uuid,
-                    "filename": filename,
-                    "total_chunks": totalChunks,
-                    "file_size": file.size
-                }),
-            });
-
-            const initResult = await initResponse.json();
-            if (!initResult.success) {
-                throw new Error(initResult.error || "Initialization failed");
-            }
-
-            // 分块上传文件
-            for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-                const start = chunkIndex * CHUNK_SIZE;
-                const end = Math.min(start + CHUNK_SIZE, file.size);
-                const chunk = file.slice(start, end);
-
-                progressWidget.value = `上传中... ${Math.round(((chunkIndex + 1) / totalChunks) * 100)}% (${chunkIndex + 1}/${totalChunks})`;
-
-                // 给UI一个更新的机会
-                await new Promise(resolve => setTimeout(resolve, 0));
-
-                const formData = new FormData();
-                formData.append("uuid", uuid);
-                formData.append("chunk_index", chunkIndex.toString());
-                formData.append("chunk_data", chunk);
-
-                const response = await fetch("/base64_cache_loader/upload_chunk", {
+                // 先初始化上传
+                progressWidget.value = "正在初始化上传...";
+                const initResponse = await fetch("/base64_cache_loader/init_upload", {
                     method: "POST",
-                    body: formData,
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        "uuid": uuid,
+                        "filename": filename,
+                        "total_chunks": totalChunks,
+                        "file_size": file.size
+                    }),
                 });
 
-                const result = await response.json();
-                if (!result.success) {
-                    throw new Error(result.error || `Update chunk ${chunkIndex + 1} failed`);
+                if (!initResponse.ok) {
+                    throw new Error(`HTTP error! status: ${initResponse.status}`);
                 }
-            }
 
-            // 完成上传
-            progressWidget.value = "正在完成上传...";
-            const finalizeResponse = await fetch("/base64_cache_loader/finalize_upload", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    "uuid": uuid
-                }),
-            });
+                const initResult = await initResponse.json();
+                if (!initResult.success) {
+                    throw new Error(initResult.error || "Initialization failed");
+                }
 
-            const finalizeResult = await finalizeResponse.json();
-            if (!finalizeResult.success) {
-                throw new Error(finalizeResult.error || "Finalization failed");
+                // 分块上传文件
+                for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                    const start = chunkIndex * CHUNK_SIZE;
+                    const end = Math.min(start + CHUNK_SIZE, file.size);
+                    const chunk = file.slice(start, end);
+
+                    progressWidget.value = `上传中... ${Math.round(((chunkIndex + 1) / totalChunks) * 100)}% (${chunkIndex + 1}/${totalChunks})`;
+
+                    // 给UI一个更新的机会
+                    await new Promise(resolve => setTimeout(resolve, 0));
+
+                    const formData = new FormData();
+                    formData.append("uuid", uuid);
+                    formData.append("chunk_index", chunkIndex.toString());
+                    formData.append("chunk_data", chunk);
+
+                    const response = await fetch("/base64_cache_loader/upload_chunk", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    if (!result.success) {
+                        throw new Error(result.error || `Upload chunk ${chunkIndex + 1} failed`);
+                    }
+                }
+
+                // 完成上传
+                progressWidget.value = "正在完成上传...";
+                const finalizeResponse = await fetch("/base64_cache_loader/finalize_upload", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        "uuid": uuid
+                    }),
+                });
+
+                if (!finalizeResponse.ok) {
+                    throw new Error(`HTTP error! status: ${finalizeResponse.status}`);
+                }
+
+                const finalizeResult = await finalizeResponse.json();
+                if (!finalizeResult.success) {
+                    throw new Error(finalizeResult.error || "Finalization failed");
+                }
+            } catch (error) {
+                console.error("分块上传失败:", error);
+                throw error; // 重新抛出错误以便外层处理
             }
         };
     },
