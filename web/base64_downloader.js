@@ -118,6 +118,26 @@ app.registerExtension({
                     alert(`生成UUID失败: ${error.message}`);
                 }
             });
+
+            this.addWidget("button", "复制UUID", null, async () => {
+                try {
+                    uuid_widget = this.widgets?.find(w => w.name === "uuid");
+                    if (!uuid_widget || !uuid_widget.value) {
+                        alert("UUID不存在");
+                        return;
+                    }
+                    await navigator.clipboard.writeText(uuid_widget.value);
+                    app.extensionManager.toast.add({
+                        severity: "info",
+                        summary: "复制成功",
+                        detail: "UUID已复制到剪切板",
+                        life: 3000
+                    });
+                } catch (error) {
+                    console.error("复制UUID失败:", error);
+                    alert(`复制UUID失败: ${error.message}`);
+                }
+            });
         };
     },
 });
