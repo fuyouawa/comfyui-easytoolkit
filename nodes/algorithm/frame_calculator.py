@@ -4,10 +4,10 @@ from ... import register_node
 @register_node
 class FrameCalculator:
     """
-    帧数计算节点
-    根据持续时间、帧率和附加帧数计算总帧数
+    Frame calculation node
+    Calculate total frames based on duration, frame rate, and extra frames
 
-    计算公式：总帧数 = 持续时间 * 帧率 + 附加帧数
+    Calculation formula: total_frames = duration * frame_rate + extra_frames
     """
 
     def __init__(self):

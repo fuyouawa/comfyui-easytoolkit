@@ -25,7 +25,7 @@ def register_node(c):
     NODE_DISPLAY_NAME_MAPPINGS[c.__name__] = camel_to_spaced(c.__name__)
     return c
 
-# 导入所有节点
+# Import all nodes
 from .nodes import *
 
 # Set the web directory, any .js file in that directory will be loaded by the frontend as a frontend extension

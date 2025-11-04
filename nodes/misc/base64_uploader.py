@@ -8,16 +8,16 @@ from ...utils.context import get_persistent_context
 
 routes = PromptServer.instance.routes
 
-# 存储分块上传的临时数据
+# Store temporary data for chunked uploads
 _chunk_uploads = {}
 
 async def cleanup_expired_uploads():
-    """清理超过1小时未完成的分块上传"""
+    """Clean up chunked uploads that have been inactive for over 1 hour"""
     current_time = time.time()
     expired_uuids = []
 
     for uuid, upload_info in _chunk_uploads.items():
-        # 如果超过1小时未完成，清理
+        # If inactive for over 1 hour, clean up
         if current_time - upload_info.get("start_time", current_time) > 3600:
             expired_uuids.append(uuid)
 
@@ -27,13 +27,13 @@ async def cleanup_expired_uploads():
     if expired_uuids:
         print(f"Cleaned up {len(expired_uuids)} expired chunk uploads")
 
-# 启动定时清理任务
+# Start periodic cleanup task
 async def start_cleanup_task():
     while True:
-        await asyncio.sleep(300)  # 每5分钟清理一次
+        await asyncio.sleep(300)  # Clean up every 5 minutes
         await cleanup_expired_uploads()
 
-# 在应用启动时启动清理任务
+# Start cleanup task when application launches
 asyncio.create_task(start_cleanup_task())
 
 @register_node
@@ -44,7 +44,7 @@ class Base64Uploader:
     @classmethod
     def INPUT_TYPES(s):
         """
-        定义输入参数
+        Define input parameters
         """
         return {
             "required": {
@@ -93,7 +93,7 @@ async def handle_init_upload(request):
     if file_size is None:
         return web.json_response({"success": False, "error": "file_size is required."})
 
-    # 初始化分块上传
+    # Initialize chunked upload
     _chunk_uploads[uuid] = {
         "filename": filename,
         "total_chunks": total_chunks,
@@ -121,17 +121,17 @@ async def handle_upload_chunk(request):
     if not chunk_data:
         return web.json_response({"success": False, "error": "chunk_data is required."})
 
-    # 检查上传是否已初始化
+    # Check if upload has been initialized
     if uuid not in _chunk_uploads:
         return web.json_response({"success": False, "error": "Upload not initialized."})
 
     upload_info = _chunk_uploads[uuid]
     chunk_index = int(chunk_index)
 
-    # 读取分块数据 - 使用FileField的file属性
+    # Read chunk data - using FileField's file attribute
     chunk_bytes = chunk_data.file.read()
 
-    # 存储分块
+    # Store chunk
     upload_info["chunks"][chunk_index] = chunk_bytes
     upload_info["received_chunks"] += 1
 
@@ -145,34 +145,34 @@ async def handle_finalize_upload(request):
     if not uuid:
         return web.json_response({"success": False, "error": "uuid is required."})
 
-    # 检查上传是否已初始化
+    # Check if upload has been initialized
     if uuid not in _chunk_uploads:
         return web.json_response({"success": False, "error": "Upload not initialized."})
 
     upload_info = _chunk_uploads[uuid]
 
-    # 检查是否所有分块都已接收
+    # Check if all chunks have been received
     if upload_info["received_chunks"] != upload_info["total_chunks"]:
         return web.json_response({"success": False, "error": f"Not all chunks received. Expected {upload_info['total_chunks']}, got {upload_info['received_chunks']}."})
 
-    # 合并所有分块
+    # Merge all chunks
     file_data = b""
     for i in range(upload_info["total_chunks"]):
         if i not in upload_info["chunks"]:
             return web.json_response({"success": False, "error": f"Missing chunk {i}."})
         file_data += upload_info["chunks"][i]
 
-    # 转换为Base64
+    # Convert to Base64
     base64_data = base64.b64encode(file_data).decode('utf-8')
 
-    # 保存到持久化上下文
+    # Save to persistent context
     get_persistent_context(uuid).set_value({
         "base64": base64_data,
         "filename": upload_info["filename"],
-        "format": "application/octet-stream"  # 默认格式，实际使用时可能需要检测
+        "format": "application/octet-stream"  # Default format, may need detection in actual use
     })
 
-    # 清理临时数据
+    # Clean up temporary data
     del _chunk_uploads[uuid]
 
     return web.json_response({"success": True})

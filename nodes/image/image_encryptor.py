@@ -4,8 +4,8 @@ from ...utils.image import encrypt_image
 @register_node
 class ImageEncryptor:
     """
-    图像处理器节点
-    提供多种图像处理功能：颜色翻转、异或加密/解密
+    Image processor node
+    Provides multiple image processing functions: color inversion, XOR encryption/decryption
     """
 
     def __init__(self):
@@ -14,7 +14,7 @@ class ImageEncryptor:
     @classmethod
     def INPUT_TYPES(s):
         """
-        定义输入参数
+        Define input parameters
         """
         return {
             "required": {
@@ -35,7 +35,7 @@ class ImageEncryptor:
 
     def run(self, image, enable, operation):
         """
-        处理图像的主函数
+        Main function for processing images
         """
         if not enable:
             return (image,)

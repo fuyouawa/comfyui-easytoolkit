@@ -35,24 +35,24 @@ def encrypt_image(image, operation):
 
 
 def image_to_base64(image, format="image/png") -> str:
-    # 如果是 torch.Tensor，先转 numpy
+    # If it's a torch.Tensor, convert to numpy first
     if isinstance(image, torch.Tensor):
         image = image.detach().cpu().numpy()
 
-    # 去掉 batch 维度（例如 (1, H, W, C) -> (H, W, C)）
+    # Remove batch dimension (e.g., (1, H, W, C) -> (H, W, C))
     if image.ndim == 4:
         image = image[0]
 
-    # 转为 uint8
+    # Convert to uint8
     if image.dtype != np.uint8:
         image = np.clip(image * 255, 0, 255).astype(np.uint8)
 
-    # 转为 PIL 图像
+    # Convert to PIL image
     image_pil = Image.fromarray(image)
 
-    # 保存到内存并转 base64
+    # Save to memory and convert to base64
     buffer = io.BytesIO()
-    
+
     image_pil.save(buffer, format=format.split("/")[-1])
     buffer.seek(0)
     return base64.b64encode(buffer.read()).decode("utf-8")

@@ -66,7 +66,7 @@ class ImageBatchBase64Encoder:
                     metadata.add_text(x, json.dumps(extra_pnginfo[x]))
                     video_metadata[x] = extra_pnginfo[x]
 
-        # 使用新的通用函数生成视频 bytes
+        # Use new generic function to generate video bytes
         video_bytes, ext = image_batch_to_video_bytes(
             image_batch=images,
             frame_rate=frame_rate,
@@ -77,7 +77,7 @@ class ImageBatchBase64Encoder:
             ffmpeg_bin=ffmpeg_path,
         )
 
-        # 将视频 bytes 转换为 base64 字符串
+        # Convert video bytes to base64 string
         video_base64 = base64.b64encode(video_bytes).decode('utf-8')
 
         return {"result":(video_base64,ext,)}

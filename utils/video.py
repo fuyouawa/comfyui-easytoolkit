@@ -20,24 +20,24 @@ if ffmpeg_path is None:
 
 def convert_image_batch_to_pil_list(image_batch) -> List[Image.Image]:
     """
-    将 image_batch 转为 PIL Image 列表并规范化。
+    Convert image_batch to PIL Image list and normalize.
 
-    支持多种输入格式：
-    - ComfyUI tensor objects (通过 im.cpu().numpy() 转换)
-    - PIL Image 对象
-    - numpy arrays (自动转换为 uint8 并裁剪到 [0, 255])
+    Supports multiple input formats:
+    - ComfyUI tensor objects (converted via im.cpu().numpy())
+    - PIL Image objects
+    - numpy arrays (automatically converted to uint8 and clipped to [0, 255])
 
-    返回:
-        List[Image.Image]: 规范化后的 PIL Image 列表，所有图像已转换为 RGB 格式并确保偶数尺寸
+    Returns:
+        List[Image.Image]: Normalized PIL Image list, all images converted to RGB format and ensured even dimensions
     """
     frames: List[Image.Image] = []
     for im in image_batch:
         try:
-            # 处理 ComfyUI tensor objects
+            # Handle ComfyUI tensor objects
             arr = (255.0 * im.cpu().numpy()).astype("uint8")
             img = Image.fromarray(arr)
         except Exception:
-            # 如果 image_batch 已经是 PIL Image 或 numpy array，则尝试直接处理
+            # If image_batch is already PIL Image or numpy array, try direct processing
             if isinstance(im, Image.Image):
                 img = im
             else:
@@ -62,13 +62,13 @@ def image_batch_to_video_bytes(
     ffmpeg_bin: Optional[str] = None,
 ) -> Tuple[bytes, str]:
     """
-    将 image_batch 转为视频并返回 bytes。
-    返回 (video_bytes, extension_without_dot)
-    - 对 image/* (gif, webp) 使用 Pillow 直接保存到 BytesIO。
-    - 对 video/* 使用 ffmpeg，先输出到临时文件再读取字节。
-    - 如果使用临时文件保存输出，第三个返回值是临时文件路径（调用者可决定是否保留或删除）。
+    Convert image_batch to video and return bytes.
+    Returns (video_bytes, extension_without_dot)
+    - For image/* (gif, webp) use Pillow to save directly to BytesIO.
+    - For video/* use ffmpeg, output to temporary file first then read bytes.
+    - If using temporary file for output, third return value is temporary file path (caller can decide whether to keep or delete).
     """
-    # 将 image_batch 转为 PIL Image 列表并规范化
+    # Convert image_batch to PIL Image list and normalize
     frames = convert_image_batch_to_pil_list(image_batch)
 
     if pingpong:
@@ -87,12 +87,12 @@ def image_batch_to_video_bytes(
     if ffmpeg_bin is None:
         raise ProcessLookupError("ffmpeg not found")
 
-    # 找到对应 video_format json（保持与你原来一致）
+    # Find corresponding video_format json (keeping consistent with original)
     video_format_path = folder_paths.get_full_path("video_formats", format_ext + ".json")
     with open(video_format_path, "r") as f:
         video_format = json.load(f)
 
-    # 生成临时输出文件
+    # Generate temporary output file
     tmp_dir = folder_paths.get_temp_directory()
     os.makedirs(tmp_dir, exist_ok=True)
     # out_suffix = "." + video_format["extension"]
@@ -110,7 +110,7 @@ def image_batch_to_video_bytes(
         "-s", dimensions, "-r", str(frame_rate), "-i", "-"
     ] + video_format.get("main_pass", [])
 
-    # metadata handling - attempt to pass as -metadata comment=..., 若长度过长则回退到使用临时 metadata 文件
+    # metadata handling - attempt to pass as -metadata comment=..., if too long fall back to using temporary metadata file
     metadata_args = ["-metadata", "comment=" + metadata_json]
 
     # estimate max arg length (copy from your original)
@@ -133,14 +133,14 @@ def image_batch_to_video_bytes(
             _run_ffmpeg_with_metadata_arg(args, metadata_args, frames, tmp_out, env, muxer)
         except (FileNotFoundError, OSError) as e:
             # replicate original fallback triggers for very long metadata on Windows/Errno
-            # 回退到 metadata temp file approach
+            # fall back to metadata temp file approach
             _run_ffmpeg_with_metadata_file(args, frames, metadata_json, tmp_dir, tmp_out, env, muxer)
 
-    # 读取 tmp_out 为 bytes
+    # Read tmp_out as bytes
     with open(tmp_out, "rb") as f:
         data = f.read()
 
-    # 删除临时文件
+    # Delete temporary file
     os.remove(tmp_out)
 
     return data, video_format["extension"]
@@ -148,8 +148,8 @@ def image_batch_to_video_bytes(
 
 def _process_image_format(frames: List[Image.Image], format_ext: str, frame_rate: int, loop_count: int) -> Tuple[bytes, str]:
     """
-    处理图像格式（GIF、WEBP等）的逻辑。
-    返回 (video_bytes, extension_without_dot)
+    Logic for processing image formats (GIF, WEBP, etc.)
+    Returns (video_bytes, extension_without_dot)
     """
     bio = io.BytesIO()
     pil_format = format_ext.upper()
@@ -173,14 +173,14 @@ def _process_image_format(frames: List[Image.Image], format_ext: str, frame_rate
         })
         frames[0].save(bio, format="WEBP", **save_kwargs)
     else:
-        # 其他 pillow 支持的多帧 image
+        # Other pillow-supported multi-frame images
         frames[0].save(bio, format=pil_format, save_all=True, append_images=frames[1:], duration=round(1000/frame_rate), loop=loop_count)
     bio.seek(0)
     return bio.read(), format_ext
 
 
 def _ensure_even_dimensions(img: Image.Image) -> Image.Image:
-    """确保宽高为偶数（ffmpeg 有些编码器对奇数维度不友好）。"""
+    """Ensure width and height are even (some ffmpeg encoders don't like odd dimensions)."""
     w, h = img.size
     new_w = w + (w % 2)
     new_h = h + (h % 2)
@@ -198,29 +198,29 @@ def _run_ffmpeg_with_metadata_file(
     muxer: str
 ):
     """
-    使用临时元数据文件运行 ffmpeg 的辅助函数。
-    处理元数据文件的创建、转义、ffmpeg 执行和清理。
+    Helper function to run ffmpeg with temporary metadata file.
+    Handles metadata file creation, escaping, ffmpeg execution, and cleanup.
     """
-    # 创建临时元数据文件
+    # Create temporary metadata file
     md_tmp = os.path.join(tmp_dir, f"{uuid.uuid4().hex}_metadata.txt")
     with open(md_tmp, "w", encoding="utf-8") as mf:
         mf.write(";FFMETADATA1\n")
-        # 转义危险字符
+        # Escape dangerous characters
         md = metadata_json.replace("\\", "\\\\").replace(";", "\\;").replace("#", "\\#").replace("\n", "\\\n")
         mf.write(md)
 
-    # 构建包含元数据文件的新参数
+    # Build new arguments including metadata file
     new_args = [args[0]] + ["-i", md_tmp] + args[1:]
 
     try:
         with subprocess.Popen(new_args + ["-f", muxer, tmp_out], stdin=subprocess.PIPE, env=env) as proc:
             for fr in frames:
-                #TODO 在format为video/av1-webm时会报错
+                #TODO Error occurs when format is video/av1-webm
                 proc.stdin.write(fr.tobytes())
             proc.stdin.close()
             proc.wait()
     finally:
-        # 清理临时元数据文件
+        # Clean up temporary metadata file
         if md_tmp and os.path.exists(md_tmp):
             os.remove(md_tmp)
 
@@ -234,7 +234,7 @@ def _run_ffmpeg_with_metadata_arg(
     muxer: str
 ):
     """
-    使用元数据参数直接运行 ffmpeg 的辅助函数。
+    Helper function to run ffmpeg with metadata arguments directly.
     """
     # run ffmpeg writing frames to stdin and create tmp_out
     try:

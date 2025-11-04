@@ -10,7 +10,7 @@ class ImageBase64Encoder:
     @classmethod
     def INPUT_TYPES(s):
         """
-        定义输入参数
+        Define input parameters
         """
         return {
             "required": {
