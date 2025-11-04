@@ -1,0 +1,14 @@
+# comfyui-easytoolkit Configuration
+
+# Persistent Context Cache Settings
+persistent_context:
+  # Time in seconds before a context is considered expired (default: 300 = 5 minutes)
+  timeout: 300.0
+  
+  # Interval in seconds between cleanup checks (default: 60 = 1 minute)
+  check_interval: 60.0
+  
+  # Interval in seconds between automatic saves to disk (default: 60 = 1 minute)
+  # Set to 0 to disable automatic periodic saves (only saves on create/cleanup)
+  auto_save_interval: 60.0
+
