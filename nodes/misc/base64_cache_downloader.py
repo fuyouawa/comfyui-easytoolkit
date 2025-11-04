@@ -2,10 +2,10 @@ from aiohttp import web
 from server import PromptServer
 from ... import register_node
 from ...utils.format import format_filename
+from ...utils.persistent_context import get_persistent_context, has_persistent_context
 
 routes = PromptServer.instance.routes
 
-_image_cache_by_uuid: dict[str, dict[str, any]] = {}
 _download_counter = 0
 
 @register_node
@@ -43,20 +43,17 @@ class Base64CacheDownloader:
     OUTPUT_NODE = True
 
     def run(self, base64, filename, format, uuid):
-        global _image_cache_by_uuid
-
-        _image_cache_by_uuid[uuid] = {
+        get_persistent_context(uuid).set_value({
             "base64_image": base64,
             "filename": filename,
             "format": format
-        }
+        })
 
         return {"result": (base64,uuid,)}
 
     
 @routes.post("/base64_cache_downloader/download")
 async def handle_download(request):
-    global _image_cache_by_uuid
     global _download_counter
 
     data = await request.json()
@@ -64,10 +61,13 @@ async def handle_download(request):
     filename = data.get("filename", None)
     format = data.get("format", None)
 
-    if not uuid or uuid not in _image_cache_by_uuid:
+    if not uuid or not has_persistent_context(uuid):
         return web.json_response({"success": False, "error": "There is no base64 data at all."})
     
-    last_image_cache = _image_cache_by_uuid[uuid]
+    last_image_cache = get_persistent_context(uuid).get_value()
+
+    if not last_image_cache:
+        return web.json_response({"success": False, "error": "There is no base64 data at all."})
 
     if not filename:
         filename = last_image_cache["filename"]
