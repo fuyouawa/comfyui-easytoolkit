@@ -53,6 +53,12 @@ app.registerExtension({
                                 // 使用分块上传避免大文件卡死
                                 await this.uploadFileInChunks(file, uuid_widget.value, file.name, progressWidget);
                                 progressWidget.value = "上传完成！";
+                                app.extensionManager.toast.add({
+                                    severity: "info",
+                                    summary: "上传成功",
+                                    detail: `文件 ${file.name} 已上传`,
+                                    life: 3000
+                                });
                             } catch (error) {
                                 console.error("Upload failed:", error);
                                 progressWidget.value = `上传失败: ${error.message}`;
@@ -75,6 +81,12 @@ app.registerExtension({
                 try {
                     uuid_widget = this.widgets?.find(w => w.name === "uuid");
                     uuid_widget.value = crypto.randomUUID();
+                    app.extensionManager.toast.add({
+                        severity: "info",
+                        summary: "生成成功",
+                        detail: "新的UUID已生成",
+                        life: 3000
+                    });
                 } catch (error) {
                     console.error("生成UUID失败:", error);
                     alert(`生成UUID失败: ${error.message}`);

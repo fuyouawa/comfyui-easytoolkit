@@ -76,6 +76,12 @@ app.registerExtension({
                     const data = await response.json();
                     if (data.success) {
                         downloadBase64(data.base64_image, data.basename, data.format);
+                        app.extensionManager.toast.add({
+                            severity: "info",
+                            summary: "下载成功",
+                            detail: `文件 ${data.basename} 已下载`,
+                            life: 3000
+                        });
                     }
                     else {
                         alert(data.error);
@@ -100,7 +106,14 @@ app.registerExtension({
                     }
                     
                     const data = await response.json();
-                    if (!data.success) {
+                    if (data.success) {
+                        app.extensionManager.toast.add({
+                            severity: "info",
+                            summary: "删除成功",
+                            detail: "缓存已清除",
+                            life: 3000
+                        });
+                    } else {
                         alert(data.error);
                     }
                 } catch (error) {
@@ -113,6 +126,12 @@ app.registerExtension({
                 try {
                     uuid_widget = this.widgets?.find(w => w.name === "uuid");
                     uuid_widget.value = crypto.randomUUID();
+                    app.extensionManager.toast.add({
+                        severity: "info",
+                        summary: "生成成功",
+                        detail: "新的UUID已生成",
+                        life: 3000
+                    });
                 } catch (error) {
                     console.error("生成UUID失败:", error);
                     alert(`生成UUID失败: ${error.message}`);
