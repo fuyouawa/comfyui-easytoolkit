@@ -5,6 +5,7 @@ from aiohttp import web
 from server import PromptServer
 from ... import register_node
 from ...utils.context import get_persistent_context
+from .base64_context import Base64Context
 
 routes = PromptServer.instance.routes
 
@@ -65,13 +66,13 @@ class Base64Uploader:
     OUTPUT_NODE = True
 
     def run(self, filename: str, uuid):
-        last_data_cache = get_persistent_context(uuid).get_value()
-        if not last_data_cache:
+        context = get_persistent_context(uuid).get_value()
+        if not context or not isinstance(context, Base64Context):
             raise Exception("There is no base64 data at all.")
 
-        base64 = last_data_cache["base64"]
-        basename = filename.split(".")[0]
-        suffix = filename.split(".")[-1]
+        base64 = context.get_base64()
+        basename = context.get_basename()
+        suffix = context.get_suffix()
         return {"result": (base64, basename, suffix,)}
 
 @routes.post("/base64_cache_loader/init_upload")
@@ -165,12 +166,9 @@ async def handle_finalize_upload(request):
     # Convert to Base64
     base64_data = base64.b64encode(file_data).decode('utf-8')
 
-    # Save to persistent context
-    get_persistent_context(uuid).set_value({
-        "base64": base64_data,
-        "filename": upload_info["filename"],
-        "format": "application/octet-stream"  # Default format, may need detection in actual use
-    })
+    # Save to persistent context using Base64Context
+    context = Base64Context(base64_data, upload_info["filename"])
+    get_persistent_context(uuid).set_value(context)
 
     # Clean up temporary data
     del _chunk_uploads[uuid]

@@ -1,8 +1,9 @@
 from aiohttp import web
 from server import PromptServer
 from ... import register_node
-from ...utils.format import format_filename
+from ...utils.format import format_filename, all_resource_formats, file_format_to_suffix
 from ...utils.context import get_persistent_context, has_persistent_context
+from .base64_context import Base64Context
 
 routes = PromptServer.instance.routes
 
@@ -26,8 +27,8 @@ class Base64Downloader:
                 "basename": ("STRING", {
                     "default": "%date:yyyy-MM-dd%_%date:hh-mm-ss%"
                 }),
-                "format": (["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm", "text/plain"], {
-                    "default": "image/png"
+                "format": (all_resource_formats, {
+                    "default": all_resource_formats[0]
                 }),
                 "uuid": ("STRING", {
                     "default": "",
@@ -43,11 +44,11 @@ class Base64Downloader:
     OUTPUT_NODE = True
 
     def run(self, base64, basename, format, uuid):
-        get_persistent_context(uuid).set_value({
-            "base64_image": base64,
-            "basename": basename,
-            "format": format
-        })
+        # Create filename from basename and format
+        filename = f"{basename}.{file_format_to_suffix(format)}"
+        # Save to persistent context using Base64Context
+        context = Base64Context(base64, filename)
+        get_persistent_context(uuid).set_value(context)
 
         return {"result": (base64,uuid,)}
 
@@ -64,15 +65,16 @@ async def handle_download(request):
     if not uuid or not has_persistent_context(uuid):
         return web.json_response({"success": False, "error": "There is no base64 data at all."})
     
-    last_image_cache = get_persistent_context(uuid).get_value()
+    context = get_persistent_context(uuid).get_value()
 
-    if not last_image_cache:
+    if not context or not isinstance(context, Base64Context):
         return web.json_response({"success": False, "error": "There is no base64 data at all."})
 
+    # Use basename and format from request, or fall back to context values
     if not basename:
-        basename = last_image_cache["basename"]
+        basename = context.get_basename()
     if not format:
-        format = last_image_cache["format"]
+        format = context.get_format()
     
     basename = format_filename(basename)
     if '%counter%' in basename:
@@ -81,7 +83,7 @@ async def handle_download(request):
 
     return web.json_response({
             "success": True,
-            "base64_image": last_image_cache["base64_image"],
+            "base64": context.get_base64(),
             "basename": basename,
             "format": format
         })
@@ -89,13 +91,12 @@ async def handle_download(request):
     
 @routes.post("/base64_cache_downloader/clear")
 async def handle_clear(request):
-    global _image_cache_by_uuid
-
     data = await request.json()
     uuid = data.get("uuid", "")
 
-    if not uuid or uuid not in _image_cache_by_uuid:
+    if not uuid or not has_persistent_context(uuid):
         return web.json_response({"success": False, "error": "There is no base64 data at all."})
     
-    del _image_cache_by_uuid[uuid]
+    # Clear the persistent context by setting it to None
+    get_persistent_context(uuid).set_value(None)
     return web.json_response({"success": True})

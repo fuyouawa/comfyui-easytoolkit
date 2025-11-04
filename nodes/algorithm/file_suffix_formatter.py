@@ -1,4 +1,5 @@
 from ... import register_node
+from ...utils.format import format_file_suffix, all_resource_formats
 
 @register_node
 class FileSuffixFormatter:
@@ -18,29 +19,11 @@ class FileSuffixFormatter:
             },
         }
     
-    RETURN_TYPES = (["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm", "text/plain"],)
+    RETURN_TYPES = (all_resource_formats,)
     RETURN_NAMES = ("format",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Algorithm"
 
     def run(self, suffix):
-        format = None
-
-        if suffix == "png":
-            format = "image/png"
-        elif suffix == "jpeg":
-            format = "image/jpeg"
-        elif suffix == "gif":
-            format = "image/gif"
-        elif suffix == "webp":
-            format = "image/webp"
-        elif suffix == "mp4":
-            format = "video/mp4"
-        elif suffix == "webm":
-            format = "video/webm"
-        elif suffix == "txt":
-            format = "text/plain"
-        else:
-            raise Exception("Unsupported extension: " + suffix)
-
+        format = format_file_suffix(suffix)
         return {"result": (format,)}

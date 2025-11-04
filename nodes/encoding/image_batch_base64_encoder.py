@@ -1,9 +1,10 @@
 import json
 import base64
-from PIL.PngImagePlugin import PngInfo
-
 import folder_paths
 
+from PIL.PngImagePlugin import PngInfo
+
+from ...utils.format import animated_image_formats
 from ...utils.video import image_batch_to_video_bytes, ffmpeg_path
 
 from ... import register_node
@@ -12,12 +13,11 @@ from ... import register_node
 class ImageBatchBase64Encoder:
     @classmethod
     def INPUT_TYPES(s):
-        #Hide ffmpeg formats if ffmpeg isn't available
+
+        ffmpeg_formats = []
         if ffmpeg_path is not None:
             ffmpeg_formats = ["video/"+x[:-5] for x in folder_paths.get_filename_list("video_formats")]
-        else:
-            ffmpeg_formats = []
-        # ffmpeg_formats =["video/"+x for x in  ['webm', 'mp4', 'mkv']]
+            
         return {
             "required": {
                 "image_batch": ("IMAGE",),
@@ -26,7 +26,9 @@ class ImageBatchBase64Encoder:
                     {"default": 8, "min": 1, "step": 1},
                 ),
                 "loop_count": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1}),
-                "video_format": (["image/gif", "image/webp"] + ffmpeg_formats,),
+                "video_format": (animated_image_formats + ffmpeg_formats,{
+                    "default": "image/gif",
+                }),
                 "pingpong": ("BOOLEAN", {"default": False}),
                 "save_metadata": ("BOOLEAN", {"default": False}),
             },
@@ -74,7 +76,6 @@ class ImageBatchBase64Encoder:
             pingpong=pingpong,
             loop_count=loop_count,
             video_metadata=video_metadata,
-            ffmpeg_bin=ffmpeg_path,
         )
 
         # Convert video bytes to base64 string

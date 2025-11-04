@@ -1,5 +1,6 @@
 from ... import register_node
 from ...utils.image import image_to_base64
+from ...utils.format import static_image_formats
 
 
 @register_node
@@ -15,8 +16,8 @@ class ImageBase64Encoder:
         return {
             "required": {
                 "image": ("IMAGE",),
-                "format": (["image/png", "image/jpeg"], {
-                    "default": "image/png"
+                "format": (static_image_formats, {
+                    "default": static_image_formats[0]
                 }),
             },
         }

@@ -75,7 +75,7 @@ app.registerExtension({
                     
                     const data = await response.json();
                     if (data.success) {
-                        downloadBase64(data.base64_image, data.basename, data.format);
+                        downloadBase64(data.base64, data.basename, data.format);
                         app.extensionManager.toast.add({
                             severity: "info",
                             summary: "下载成功",

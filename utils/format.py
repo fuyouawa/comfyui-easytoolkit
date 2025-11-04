@@ -58,3 +58,54 @@ def format_filename(template: str) -> str:
         template = template.replace('%random%', str(random.randint(1000, 9999)))
 
     return template
+
+
+def format_file_suffix(suffix: str) -> str:
+    """
+    Format file suffix
+    
+    Args:
+        suffix: File suffix
+        
+    Returns:
+        Formatted file suffix
+    """
+    mapping = {
+        "png": "image/png",
+        "jpeg": "image/jpeg",
+        "jpg": "image/jpeg",
+        "gif": "image/gif",
+        "webp": "image/webp",
+        "mp4": "video/mp4",
+        "webm": "video/webm",
+        "txt": "text/plain",
+    }
+    
+    return mapping.get(suffix.lower(), "application/octet-stream")
+
+def file_format_to_suffix(format: str) -> str:
+    """
+    Convert file format to suffix
+    
+    Args:
+        format: File format
+        
+    Returns:
+        Suffix
+    """
+    mapping = {
+        "image/png": "png",
+        "image/jpeg": "jpeg",
+        "image/gif": "gif",
+        "image/webp": "webp",
+        "video/mp4": "mp4",
+        "video/webm": "webm",
+        "text/plain": "txt",
+    }
+    return mapping.get(format.lower(), "bin")
+
+static_image_formats = ["image/png", "image/jpeg"]
+animated_image_formats = ["image/gif", "image/webp"]
+image_formats = static_image_formats + animated_image_formats
+video_formats = ["video/mp4", "video/webm"]
+all_resource_formats = image_formats + video_formats + ["application/octet-stream"]
