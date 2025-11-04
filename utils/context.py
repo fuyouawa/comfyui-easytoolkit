@@ -1,6 +1,9 @@
 import time
 import os
 import pickle
+import threading
+import atexit
+from concurrent.futures import ThreadPoolExecutor
 import folder_paths
 from .config import get_config
 
@@ -23,6 +26,16 @@ class PersistentContext:
         # Save to disk whenever value is set
         if self._cache is not None and save:
             self._cache.save()
+    
+    def __getstate__(self):
+        """Exclude _cache when pickling to avoid circular reference issues"""
+        state = self.__dict__.copy()
+        state['_cache'] = None
+        return state
+    
+    def __setstate__(self, state):
+        """Restore state when unpickling"""
+        self.__dict__.update(state)
 
 class PersistentContextCache:
     def __init__(self):
@@ -34,7 +47,15 @@ class PersistentContextCache:
         
         self._data: dict[str, PersistentContext] = {}
         self._last_cleanup_time = time.time()
+        self._last_save_time = time.time()
         self._storage_file = self._get_storage_path()
+        
+        # Thread pool for async disk operations
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="persistent_context_saver")
+        self._save_lock = threading.Lock()
+        self._pending_save = False
+        self._save_future = None
+        
         self._load_from_disk()
 
     def get_context(self, key: str) -> PersistentContext:
@@ -76,9 +97,9 @@ class PersistentContextCache:
 
         self._last_cleanup_time = current_time
         
-        # Save to disk if any contexts were removed
+        # Save to disk asynchronously if any contexts were removed
         if expired_keys:
-            self._save_to_disk()
+            self.save()
     
     def _auto_save_check(self):
         """Check if it's time to auto-save and save if needed"""
@@ -88,11 +109,39 @@ class PersistentContextCache:
         
         current_time = time.time()
         if current_time - self._last_save_time >= self._auto_save_interval:
-            self._save_to_disk()
+            self.save()
 
-    def save(self):
-        """Manually trigger a save to disk"""
-        self._save_to_disk()
+    def save(self, wait=False):
+        """Manually trigger a save to disk in a separate thread
+        
+        Args:
+            wait: If True, blocks until save completes. If False, saves asynchronously.
+        """
+        with self._save_lock:
+            # If there's already a pending save, skip submitting another one
+            if self._pending_save and self._save_future and not self._save_future.done():
+                if wait:
+                    # Wait for the existing save to complete
+                    self._save_future.result()
+                return
+            
+            # Mark that we have a pending save
+            self._pending_save = True
+            
+            # Submit the save task to the thread pool
+            self._save_future = self._executor.submit(self._save_to_disk_impl)
+            
+            if wait:
+                # Block until save completes if requested
+                self._save_future.result()
+    
+    def shutdown(self):
+        """Shutdown the cache and save all pending data"""
+        # Wait for any pending save to complete
+        self.save(wait=True)
+        
+        # Shutdown the thread pool
+        self._executor.shutdown(wait=True)
     
     def _get_storage_path(self) -> str:
         """Get the storage path for persistent context data"""
@@ -105,8 +154,8 @@ class PersistentContextCache:
         
         return os.path.join(storage_dir, "persistent_context.pkl")
     
-    def _save_to_disk(self):
-        """Save the context data to disk"""
+    def _save_to_disk_impl(self):
+        """Save the context data to disk (runs in a separate thread)"""
         try:
             self._last_save_time = time.time()
             # Prepare data for serialization
@@ -129,6 +178,10 @@ class PersistentContextCache:
                 
         except Exception as e:
             print(f"[comfyui-easytoolkit] Warning: Failed to save persistent context to disk: {e}")
+        finally:
+            # Mark that the save is complete
+            with self._save_lock:
+                self._pending_save = False
     
     def _load_from_disk(self):
         """Load the context data from disk"""
@@ -168,3 +221,14 @@ def get_persistent_context(key: str, default_value = None) -> PersistentContext:
 def save_persistent_context():
     """Manually save all persistent contexts to disk"""
     _global_context_cache.save()
+
+def _shutdown_handler():
+    """Handler to ensure data is saved on program exit"""
+    try:
+        _global_context_cache.shutdown()
+        print("[comfyui-easytoolkit] Persistent context cache shutdown complete")
+    except Exception as e:
+        print(f"[comfyui-easytoolkit] Error during shutdown: {e}")
+
+# Register shutdown handler
+atexit.register(_shutdown_handler)
