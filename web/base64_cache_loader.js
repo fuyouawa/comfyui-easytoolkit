@@ -16,6 +16,10 @@ app.registerExtension({
 
             uuid_widget.disabled = true;
 
+            let progressWidget = this.addWidget("text", "upload_progress", "正在准备上传...", () => {});
+            progressWidget.disabled = true;
+            progressWidget.value = "待命中...";
+
             this.addWidget("button", "选择文件上传", null, async () => {
                 const input = document.createElement("input");
                 input.type = "file";
@@ -28,46 +32,107 @@ app.registerExtension({
 
                     uuid_widget = this.widgets?.find(w => w.name === "uuid");
                     let filename_widget = this.widgets?.find(w => w.name === "filename");
-                    if (!uuid_widget || !filename_widget) {
-                        alert("Cannot find uuid or file widget.");
+                    progressWidget = this.widgets?.find(w => w.name === "upload_progress");
+                    if (!uuid_widget || !filename_widget || !progressWidget) {
+                        alert("Cannot find uuid or filename or progress widget.");
                         return;
                     }
                     filename_widget.value = file.name;
 
-                    const reader = new FileReader();
-                    reader.onload = async () => {
-                        // Split the data URL into format and base64 data
-                        const dataUrl = reader.result;
-                        const matches = dataUrl.match(/^data:(.+\/.+);base64,(.+)$/);
-                        const fileFormat = matches ? matches[1] : "application/octet-stream";
-                        const base64Data = matches ? matches[2] : dataUrl.replace(/^data:.*?;base64,/, "");
+                    // 查找或创建进度显示
+                    progressWidget.value = "正在准备上传...";
 
-                        const response = await fetch("/base64_cache_loader/update", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                "uuid": uuid_widget.value,
-                                "filename": file.name,
-                                "format": fileFormat,
-                                "base64": base64Data,
-                            }),
-                        });
-                        const result = await response.json();
-                        if (!result.success) {
-                            alert(result.error);
-                            return;
-                        }
-                    };
-                    reader.readAsDataURL(file);
+                    try {
+                        // 使用分块上传避免大文件卡死
+                        await this.uploadFileInChunks(file, uuid_widget.value, file.name, progressWidget);
+                        progressWidget.value = "上传完成！";
+                    } catch (error) {
+                        console.error("Upload failed:", error);
+                        progressWidget.value = `上传失败: ${error.message}`;
+                        alert(`Update failed: ${error.message}`);
+                    }
                 };
-
-                this.addWidget("button", "重新生成UUID", null, async () => {
-                    uuid_widget = this.widgets?.find(w => w.name === "uuid");
-                    uuid_widget.value = crypto.randomUUID();
-                });
 
                 input.click(); // 打开文件选择对话框
             });
+
+            this.addWidget("button", "重新生成UUID", null, async () => {
+                uuid_widget = this.widgets?.find(w => w.name === "uuid");
+                uuid_widget.value = crypto.randomUUID();
+            });
+        };
+    },
+});
+
+// 添加分块上传方法到节点原型
+app.registerExtension({
+    name: "EasyToolkit.Misc.Base64CacheLoader.Upload",
+    async beforeRegisterNodeDef(nodeType, nodeData, app) {
+        if (nodeData.name !== "Base64CacheLoader") return;
+
+        nodeType.prototype.uploadFileInChunks = async function(file, uuid, filename, progressWidget) {
+            const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+            // 先初始化上传
+            progressWidget.value = "正在初始化上传...";
+            const initResponse = await fetch("/base64_cache_loader/init_upload", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    "uuid": uuid,
+                    "filename": filename,
+                    "total_chunks": totalChunks,
+                    "file_size": file.size
+                }),
+            });
+
+            const initResult = await initResponse.json();
+            if (!initResult.success) {
+                throw new Error(initResult.error || "Initialization failed");
+            }
+
+            // 分块上传文件
+            for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                const start = chunkIndex * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, file.size);
+                const chunk = file.slice(start, end);
+
+                progressWidget.value = `上传中... ${Math.round(((chunkIndex + 1) / totalChunks) * 100)}% (${chunkIndex + 1}/${totalChunks})`;
+
+                // 给UI一个更新的机会
+                await new Promise(resolve => setTimeout(resolve, 0));
+
+                const formData = new FormData();
+                formData.append("uuid", uuid);
+                formData.append("chunk_index", chunkIndex.toString());
+                formData.append("chunk_data", chunk);
+
+                const response = await fetch("/base64_cache_loader/upload_chunk", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const result = await response.json();
+                if (!result.success) {
+                    throw new Error(result.error || `Update chunk ${chunkIndex + 1} failed`);
+                }
+            }
+
+            // 完成上传
+            progressWidget.value = "正在完成上传...";
+            const finalizeResponse = await fetch("/base64_cache_loader/finalize_upload", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    "uuid": uuid
+                }),
+            });
+
+            const finalizeResult = await finalizeResponse.json();
+            if (!finalizeResult.success) {
+                throw new Error(finalizeResult.error || "Finalization failed");
+            }
         };
     },
 });
