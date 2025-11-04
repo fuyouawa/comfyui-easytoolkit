@@ -22,7 +22,9 @@ class Config:
             'persistent_context': {
                 'timeout': 300.0,
                 'check_interval': 60.0,
-                'auto_save_interval': 30.0
+                'auto_save_interval': 30.0,
+                'access_update_interval': 60.0,
+                'start_timeout_on_first_access': True
             }
         }
         

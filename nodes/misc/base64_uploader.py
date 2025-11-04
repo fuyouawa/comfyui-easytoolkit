@@ -4,7 +4,8 @@ import asyncio
 from aiohttp import web
 from server import PromptServer
 from ... import register_node
-from ...utils.context import get_persistent_context
+from ...utils.context import get_persistent_context, has_persistent_context, update_persistent_context
+from ...utils.config import get_config
 from .base64_context import Base64Context
 
 routes = PromptServer.instance.routes
@@ -174,3 +175,45 @@ async def handle_finalize_upload(request):
     del _chunk_uploads[uuid]
 
     return web.json_response({"success": True})
+
+
+@routes.post("/base64_cache_loader/update_access")
+async def handle_update_access(request):
+    """Update the access time for a context to prevent it from being cleaned up"""
+    data = await request.json()
+    uuid = data.get("uuid", "")
+
+    if not uuid:
+        return web.json_response({"success": False, "error": "UUID is required."})
+
+    if not has_persistent_context(uuid):
+        return web.json_response({"success": False, "error": "Context not found."})
+    
+    # Update access time
+    update_persistent_context(uuid)
+    return web.json_response({"success": True})
+
+
+@routes.post("/base64_cache_loader/clear")
+async def handle_clear(request):
+    """Clear the persistent context for a given UUID"""
+    data = await request.json()
+    uuid = data.get("uuid", "")
+
+    if not uuid or not has_persistent_context(uuid):
+        return web.json_response({"success": False, "error": "没有base64数据。"})
+    
+    # Clear the persistent context by setting it to None
+    get_persistent_context(uuid).set_value(None)
+    return web.json_response({"success": True})
+
+
+@routes.get("/base64_cache_loader/config")
+async def handle_get_config(request):
+    """Get the access update interval configuration"""
+    config = get_config().get_persistent_context_config()
+    access_update_interval = config.get('access_update_interval', 60.0)
+    return web.json_response({
+        "success": True,
+        "access_update_interval": access_update_interval
+    })

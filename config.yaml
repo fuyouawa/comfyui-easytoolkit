@@ -11,4 +11,13 @@ persistent_context:
   # Interval in seconds between automatic saves to disk (default: 60 = 1 minute)
   # Set to 0 to disable automatic periodic saves (only saves on create/cleanup)
   auto_save_interval: 60.0
+  
+  # Interval in seconds for frontend nodes to ping backend to keep context alive (default: 60 = 1 minute)
+  # This prevents data from being cleared due to inactivity
+  # Set to 0 to disable automatic access updates from frontend
+  access_update_interval: 60.0
+  
+  # Whether to start timeout countdown only after first access (default: true)
+  # If true, context timeout starts from first access; if false, timeout starts from creation
+  start_timeout_on_first_access: true
 

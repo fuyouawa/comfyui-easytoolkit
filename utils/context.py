@@ -12,7 +12,7 @@ class PersistentContext:
         self._value = value
         self._key = key
         self._cache = cache
-        self.update_access_time()
+        self._last_access_time = 0.0
 
     def update_access_time(self):
         self._last_access_time = time.time()
@@ -48,37 +48,43 @@ class PersistentContextCache:
         self._timeout = config.get('timeout', 300.0)
         self._check_interval = config.get('check_interval', 60.0)
         self._auto_save_interval = config.get('auto_save_interval', 60.0)
+        self._start_timeout_on_first_access = config.get('start_timeout_on_first_access', True)
+
+        self._start_timeout = not self._start_timeout_on_first_access
         
         self._data: dict[str, PersistentContext] = {}
-        self._last_cleanup_time = time.time()
-        self._last_save_time = time.time()
+        self._last_cleanup_time = 0 if self._start_timeout else time.time()
+        self._last_save_time = 0 if self._start_timeout else time.time()
         self._storage_file = self._get_storage_path()
         
         # Thread pool for async disk operations
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="persistent_context_saver")
         self._save_lock = threading.Lock()
         self._pending_save = False
+        self._needs_another_save = False
         self._save_future = None
         
         self._load_from_disk()
 
     def get_context(self, key: str) -> PersistentContext:
-        self._update_context_access_time(key)
+        self._start_timeout = True
+        self.update_context_access_time(key)
         self._cleanup_expired()
         if key in self._data:
             return self._data[key]
         raise KeyError(f"Context with key '{key}' not found")
 
     def has_context(self, key: str) -> bool:
-        self._update_context_access_time(key)
+        self._start_timeout = True
+        self.update_context_access_time(key)
         self._cleanup_expired()
         return key in self._data
 
     def create_context(self, key: str, value: any) -> PersistentContext:
-        self._update_context_access_time(key)
-        self._cleanup_expired()
+        self._start_timeout = True
         context = PersistentContext(value, key=key, cache=self)
         self._data[key] = context
+        self._cleanup_expired()
         return context
 
     def resolve_contexts_by_value_type(self, value_type: type) -> list[PersistentContext]:
@@ -90,18 +96,25 @@ class PersistentContextCache:
         Returns:
             List of PersistentContext objects whose values match the specified type
         """
-        self._cleanup_expired()
+        self._start_timeout = True
         result = []
         for context in self._data.values():
             if isinstance(context.get_value(), value_type):
                 result.append(context)
+        self._cleanup_expired()
         return result
 
-    def _update_context_access_time(self, key: str):
+    def update_context_access_time(self, key: str):
         if key in self._data:
             self._data[key].update_access_time()
 
     def _cleanup_expired(self):
+        if not self._start_timeout:
+            return
+
+        if self._last_cleanup_time == 0:
+            self._last_cleanup_time = time.time()
+
         current_time = time.time()
         # Only perform cleanup if enough time has passed since last cleanup
         if current_time - self._last_cleanup_time < self._check_interval:
@@ -131,18 +144,12 @@ class PersistentContextCache:
         if current_time - self._last_save_time >= self._auto_save_interval:
             self.save()
 
-    def save(self, wait=False):
-        """Manually trigger a save to disk in a separate thread
-        
-        Args:
-            wait: If True, blocks until save completes. If False, saves asynchronously.
-        """
+    def save(self):
+        """Manually trigger a save to disk in a separate thread"""
         with self._save_lock:
-            # If there's already a pending save, skip submitting another one
+            # If there's already a pending save, mark that we need another save after it completes
             if self._pending_save and self._save_future and not self._save_future.done():
-                if wait:
-                    # Wait for the existing save to complete
-                    self._save_future.result()
+                self._needs_another_save = True
                 return
             
             # Mark that we have a pending save
@@ -150,17 +157,13 @@ class PersistentContextCache:
             
             # Submit the save task to the thread pool
             self._save_future = self._executor.submit(self._save_to_disk_impl)
-            
-            if wait:
-                # Block until save completes if requested
-                self._save_future.result()
     
     def shutdown(self):
         """Shutdown the cache and save all pending data"""
-        # Wait for any pending save to complete
-        self.save(wait=True)
+        # Trigger a save and wait for all pending saves to complete
+        self.save()
         
-        # Shutdown the thread pool
+        # Shutdown the thread pool (will wait for all tasks to complete)
         self._executor.shutdown(wait=True)
     
     def _get_storage_path(self) -> str:
@@ -207,9 +210,15 @@ class PersistentContextCache:
         except Exception as e:
             print(f"[comfyui-easytoolkit] Warning: Failed to save persistent context to disk: {e}")
         finally:
-            # Mark that the save is complete
+            # Mark that the save is complete and check if we need another save
             with self._save_lock:
                 self._pending_save = False
+                
+                # If another save was requested while we were saving, trigger it now
+                if self._needs_another_save:
+                    self._needs_another_save = False
+                    self._pending_save = True
+                    self._save_future = self._executor.submit(self._save_to_disk_impl)
     
     def _load_from_disk(self):
         """Load the context data from disk"""
@@ -246,9 +255,8 @@ def get_persistent_context(key: str, default_value = None) -> PersistentContext:
         return _global_context_cache.get_context(key)
     return _global_context_cache.create_context(key, default_value)
 
-def save_persistent_context():
-    """Manually save all persistent contexts to disk"""
-    _global_context_cache.save()
+def update_persistent_context(key: str):
+    return _global_context_cache.update_context_access_time(key)
 
 def resolve_persistent_contexts_by_value_type(value_type: type) -> list[PersistentContext]:
     """Get all persistent contexts whose value is an instance of the specified type

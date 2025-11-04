@@ -39,7 +39,7 @@ app.registerExtension({
         if (nodeData.name !== "Base64Downloader") return;
 
         const onNodeCreated = nodeType.prototype.onNodeCreated;
-        nodeType.prototype.onNodeCreated = function () {
+        nodeType.prototype.onNodeCreated = async function () {
             if (onNodeCreated) onNodeCreated.apply(this, arguments);
 
             let uuid_widget = this.widgets?.find(w => w.name === "uuid");
@@ -48,6 +48,49 @@ app.registerExtension({
             }
 
             uuid_widget.disabled = true;
+
+            // Initialize access update timer
+            this.accessUpdateTimer = null;
+            
+            // Function to update access time
+            const updateAccess = async () => {
+                try {
+                    const currentUuid = this.widgets?.find(w => w.name === "uuid")?.value;
+                    if (!currentUuid) return;
+                    
+                    const response = await fetch("/base64_cache_downloader/update_access", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ "uuid": currentUuid }),
+                    });
+                    
+                    // Silently update, only log errors
+                    if (!response.ok) {
+                        console.warn("Failed to update access time");
+                    }
+                } catch (error) {
+                    console.warn("Access update error:", error);
+                }
+            };
+            
+            // Get configuration from backend
+            try {
+                const configResponse = await fetch("/base64_cache_downloader/config");
+                if (configResponse.ok) {
+                    const configData = await configResponse.json();
+                    if (configData.success && configData.access_update_interval > 0) {
+                        const intervalMs = configData.access_update_interval * 1000;
+                        
+                        // Immediately update access time on initialization
+                        await updateAccess();
+                        
+                        // Start periodic access updates
+                        this.accessUpdateTimer = setInterval(updateAccess, intervalMs);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to get config for access updates:", error);
+            }
 
             this.addWidget("button", "下载数据", null, async () => {
                 try {
@@ -157,6 +200,32 @@ app.registerExtension({
                     alert(`复制UUID失败: ${error.message}`);
                 }
             });
+        };
+
+        // Clean up timer and context data when node is removed
+        const onRemoved = nodeType.prototype.onRemoved;
+        nodeType.prototype.onRemoved = function () {
+            // Clear the timer
+            if (this.accessUpdateTimer) {
+                clearInterval(this.accessUpdateTimer);
+                this.accessUpdateTimer = null;
+            }
+            
+            // Clear the context data
+            const uuid_widget = this.widgets?.find(w => w.name === "uuid");
+            if (uuid_widget && uuid_widget.value) {
+                fetch("/base64_cache_downloader/clear", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ "uuid": uuid_widget.value }),
+                }).catch(error => {
+                    console.warn("Failed to clear context on node removal:", error);
+                });
+            }
+            
+            if (onRemoved) {
+                return onRemoved.apply(this, arguments);
+            }
         };
     },
 });
