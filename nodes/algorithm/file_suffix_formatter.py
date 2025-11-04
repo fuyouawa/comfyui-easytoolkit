@@ -1,7 +1,7 @@
 from ... import register_node
 
 @register_node
-class FileExtensionFormatter:
+class FileSuffixFormatter:
     def __init__(self):
         pass
 
@@ -12,7 +12,7 @@ class FileExtensionFormatter:
         """
         return {
             "required": {
-                "file_ext": ("STRING", {
+                "suffix": ("STRING", {
                     "default": "png",
                 }),
             },
@@ -23,24 +23,24 @@ class FileExtensionFormatter:
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Algorithm"
 
-    def run(self, file_ext):
+    def run(self, suffix):
         format = None
 
-        if file_ext == "png":
+        if suffix == "png":
             format = "image/png"
-        elif file_ext == "jpeg":
+        elif suffix == "jpeg":
             format = "image/jpeg"
-        elif file_ext == "gif":
+        elif suffix == "gif":
             format = "image/gif"
-        elif file_ext == "webp":
+        elif suffix == "webp":
             format = "image/webp"
-        elif file_ext == "mp4":
+        elif suffix == "mp4":
             format = "video/mp4"
-        elif file_ext == "webm":
+        elif suffix == "webm":
             format = "video/webm"
-        elif file_ext == "txt":
+        elif suffix == "txt":
             format = "text/plain"
         else:
-            raise Exception("Unsupported extension: " + file_ext)
+            raise Exception("Unsupported extension: " + suffix)
 
         return {"result": (format,)}

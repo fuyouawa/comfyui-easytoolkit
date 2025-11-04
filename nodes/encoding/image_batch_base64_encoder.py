@@ -37,7 +37,7 @@ class ImageBatchBase64Encoder:
         }
 
     RETURN_TYPES = ("STRING", "STRING",)
-    RETURN_NAMES = ("base64", "file_ext",)
+    RETURN_NAMES = ("base64", "suffix",)
     OUTPUT_NODE = True
     CATEGORY = "EasyToolKit/Video"
     FUNCTION = "run"

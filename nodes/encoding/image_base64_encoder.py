@@ -22,7 +22,7 @@ class ImageBase64Encoder:
         }
 
     RETURN_TYPES = ("STRING","STRING",)
-    RETURN_NAMES = ("base64","file_ext",)
+    RETURN_NAMES = ("base64","suffix",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True

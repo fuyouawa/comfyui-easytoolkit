@@ -23,7 +23,7 @@ class Base64CacheDownloader:
                 "base64": ("STRING", {
                     "default": "",
                 }),
-                "filename": ("STRING", {
+                "basename": ("STRING", {
                     "default": "%date:yyyy-MM-dd%_%date:hh-mm-ss%"
                 }),
                 "format": (["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm", "text/plain"], {
@@ -42,10 +42,10 @@ class Base64CacheDownloader:
     CATEGORY = "EasyToolkit/Misc"
     OUTPUT_NODE = True
 
-    def run(self, base64, filename, format, uuid):
+    def run(self, base64, basename, format, uuid):
         get_persistent_context(uuid).set_value({
             "base64_image": base64,
-            "filename": filename,
+            "basename": basename,
             "format": format
         })
 
@@ -58,7 +58,7 @@ async def handle_download(request):
 
     data = await request.json()
     uuid = data.get("uuid", None)
-    filename = data.get("filename", None)
+    basename = data.get("basename", None)
     format = data.get("format", None)
 
     if not uuid or not has_persistent_context(uuid):
@@ -69,20 +69,20 @@ async def handle_download(request):
     if not last_image_cache:
         return web.json_response({"success": False, "error": "There is no base64 data at all."})
 
-    if not filename:
-        filename = last_image_cache["filename"]
+    if not basename:
+        basename = last_image_cache["basename"]
     if not format:
         format = last_image_cache["format"]
     
-    filename = format_filename(filename)
-    if '%counter%' in filename:
+    basename = format_filename(basename)
+    if '%counter%' in basename:
         _download_counter += 1
-        filename = filename.replace('%counter%', str(_download_counter))
+        basename = basename.replace('%counter%', str(_download_counter))
 
     return web.json_response({
             "success": True,
             "base64_image": last_image_cache["base64_image"],
-            "filename": filename,
+            "basename": basename,
             "format": format
         })
 

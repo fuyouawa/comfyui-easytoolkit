@@ -1,10 +1,10 @@
 import { app } from "../../../scripts/app.js";
 
-function downloadBase64(b64, filename, format) {
-    let file_ext = format.split("/").pop();
+function downloadBase64(b64, basename, format) {
+    let suffix = format.split("/").pop();
     let blob = null;
     if (format == "text/plain") {
-        file_ext = "txt";
+        suffix = "txt";
         blob = new Blob([b64], { type: format });
     }
     else {
@@ -20,7 +20,7 @@ function downloadBase64(b64, filename, format) {
 
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = filename + "." + file_ext;
+    link.download = basename + "." + suffix;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -45,10 +45,10 @@ app.registerExtension({
 
             this.addWidget("button", "下载数据", null, async () => {
                 uuid_widget = this.widgets?.find(w => w.name === "uuid");
-                let filename_widget = this.widgets?.find(w => w.name === "filename");
+                let basename_widget = this.widgets?.find(w => w.name === "basename");
                 let format_widget = this.widgets?.find(w => w.name === "format");
-                if (!uuid_widget || !filename_widget || !format_widget) {
-                    alert("Cannot find uuid or filename or format widget.");
+                if (!uuid_widget || !basename_widget || !format_widget) {
+                    alert("Cannot find uuid or basename or format widget.");
                     return;
                 }
 
@@ -57,14 +57,14 @@ app.registerExtension({
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         "uuid": uuid_widget.value,
-                        "filename": filename_widget.computedDisabled ? null : filename_widget.value, 
+                        "basename": basename_widget.computedDisabled ? null : basename_widget.value, 
                         "format": format_widget.computedDisabled ? null : format_widget.value
                     }),
                 });
                 const data = await response.json();
                 if (data.success) {
                     try {
-                        downloadBase64(data.base64_image, data.filename, data.format);
+                        downloadBase64(data.base64_image, data.basename, data.format);
                     }
                     catch (e) {
                         alert(e);
@@ -76,6 +76,7 @@ app.registerExtension({
             });
 
             this.addWidget("button", "删除缓存", null, async () => {
+                uuid_widget = this.widgets?.find(w => w.name === "uuid");
                 const response = await fetch("/base64_cache_downloader/clear", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -88,6 +89,7 @@ app.registerExtension({
             });
 
             this.addWidget("button", "重新生成UUID", null, async () => {
+                uuid_widget = this.widgets?.find(w => w.name === "uuid");
                 uuid_widget.value = crypto.randomUUID();
             });
 
