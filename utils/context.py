@@ -63,8 +63,6 @@ class PersistentContextCache:
         self._pending_save = False
         self._needs_another_save = False
         self._save_future = None
-        
-        self._load_from_disk()
 
     def get_context(self, key: str) -> PersistentContext:
         self._start_timeout = True
@@ -122,7 +120,7 @@ class PersistentContextCache:
 
         expired_keys = []
         for key, context in self._data.items():
-            if current_time - context._last_access_time > self._timeout:
+            if current_time - context._last_access_time > self._timeout or context.get_value() is None:
                 expired_keys.append(key)
 
         for key in expired_keys:
@@ -145,18 +143,7 @@ class PersistentContextCache:
             self.save()
 
     def save(self):
-        """Manually trigger a save to disk in a separate thread"""
-        with self._save_lock:
-            # If there's already a pending save, mark that we need another save after it completes
-            if self._pending_save and self._save_future and not self._save_future.done():
-                self._needs_another_save = True
-                return
-            
-            # Mark that we have a pending save
-            self._pending_save = True
-            
-            # Submit the save task to the thread pool
-            self._save_future = self._executor.submit(self._save_to_disk_impl)
+        pass
     
     def shutdown(self):
         """Shutdown the cache and save all pending data"""
@@ -177,74 +164,6 @@ class PersistentContextCache:
         
         return os.path.join(storage_dir, "persistent_context.pkl")
     
-    def _save_to_disk_impl(self):
-        """Save the context data to disk (runs in a separate thread)"""
-        try:
-            self._last_save_time = time.time()
-            
-            # Create a snapshot of the data to avoid "dictionary changed size during iteration"
-            # This needs to be done with the lock to ensure thread safety
-            with self._save_lock:
-                data_snapshot = self._data.copy()
-                last_cleanup_time_snapshot = self._last_cleanup_time
-                last_save_time_snapshot = self._last_save_time
-            
-            # Prepare data for serialization
-            save_data = {
-                'data': data_snapshot,
-                'last_cleanup_time': last_cleanup_time_snapshot,
-                'last_save_time': last_save_time_snapshot
-            }
-            
-            # Write to a temporary file first, then rename (atomic operation)
-            temp_file = self._storage_file + '.tmp'
-            with open(temp_file, 'wb') as f:
-                pickle.dump(save_data, f, protocol=pickle.HIGHEST_PROTOCOL)
-            
-            # Rename temp file to actual file (atomic on most systems)
-            if os.path.exists(self._storage_file):
-                os.replace(temp_file, self._storage_file)
-            else:
-                os.rename(temp_file, self._storage_file)
-                
-        except Exception as e:
-            print(f"[comfyui-easytoolkit] Warning: Failed to save persistent context to disk: {e}")
-        finally:
-            # Mark that the save is complete and check if we need another save
-            with self._save_lock:
-                self._pending_save = False
-                
-                # If another save was requested while we were saving, trigger it now
-                if self._needs_another_save:
-                    self._needs_another_save = False
-                    self._pending_save = True
-                    self._save_future = self._executor.submit(self._save_to_disk_impl)
-    
-    def _load_from_disk(self):
-        """Load the context data from disk"""
-        try:
-            if not os.path.exists(self._storage_file):
-                return
-            
-            with open(self._storage_file, 'rb') as f:
-                save_data = pickle.load(f)
-            
-            # Restore data (but keep current config values for timeout, check_interval, auto_save_interval)
-            self._data = save_data.get('data', {})
-            self._last_cleanup_time = save_data.get('last_cleanup_time', time.time())
-            self._last_save_time = save_data.get('last_save_time', time.time())
-            
-            # Set cache reference for all loaded contexts
-            for context in self._data.values():
-                context._cache = self
-            
-            print(f"[comfyui-easytoolkit] Loaded {len(self._data)} persistent contexts from disk")
-            
-        except Exception as e:
-            print(f"[comfyui-easytoolkit] Warning: Failed to load persistent context from disk: {e}")
-            # If loading fails, start with empty data
-            self._data = {}
-
 _global_context_cache = PersistentContextCache()
 
 def has_persistent_context(key: str) -> bool:
