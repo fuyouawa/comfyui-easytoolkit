@@ -1,5 +1,13 @@
 import { app } from "../../../scripts/app.js";
 import { apiPost } from "./api_utils.js";
+import { 
+    decodeBase64Text, 
+    calculateAvailableSpace, 
+    calculateImagePreviewDimensions,
+    drawImagePreview, 
+    drawTextPreview,
+    createPreviewDialog
+} from "./preview_utils.js";
 
 app.registerExtension({
     name: "EasyToolkit.Misc.Base64ContextLoader",
@@ -132,26 +140,18 @@ app.registerExtension({
                 img.onload = () => {
                     this.previewImage = img;
                     this.previewText = null;
-                    this.setSize(this.computeSize());
+                    this.setDirtyCanvas(true, true);
                 };
                 img.src = `data:${data.format};base64,${data.base64}`;
             } else if (data.content_type === "text") {
-                // Decode text if needed
-                let textContent = data.base64;
-                if (!data.format.startsWith("text/")) {
-                    try {
-                        textContent = atob(data.base64);
-                    } catch (e) {
-                        textContent = data.base64;
-                    }
-                }
-                this.previewText = textContent;
+                // Decode text using helper function
+                this.previewText = decodeBase64Text(data.base64, data.format);
                 this.previewImage = null;
-                this.setSize(this.computeSize());
+                this.setDirtyCanvas(true, true);
             } else {
                 this.previewImage = null;
                 this.previewText = null;
-                this.setSize(this.computeSize());
+                this.setDirtyCanvas(true, true);
             }
         };
 
@@ -168,156 +168,53 @@ app.registerExtension({
                 return;
             }
 
-            if (this.previewImage) {
-                // Draw image preview
-                const [w, h] = this.size;
-                const previewHeight = 300;
-                const previewY = h - previewHeight - 10;
-                
-                // Calculate image dimensions to fit in preview area
-                const maxWidth = w - 20;
-                const maxHeight = previewHeight;
-                let imgWidth = this.previewImage.width;
-                let imgHeight = this.previewImage.height;
-                
-                const aspectRatio = imgWidth / imgHeight;
-                if (imgWidth > maxWidth) {
-                    imgWidth = maxWidth;
-                    imgHeight = imgWidth / aspectRatio;
-                }
-                if (imgHeight > maxHeight) {
-                    imgHeight = maxHeight;
-                    imgWidth = imgHeight * aspectRatio;
-                }
-                
-                const imgX = (w - imgWidth) / 2;
-                const imgY = previewY + (maxHeight - imgHeight) / 2;
-                
-                ctx.save();
-                ctx.drawImage(this.previewImage, imgX, imgY, imgWidth, imgHeight);
-                ctx.restore();
-            } else if (this.previewText) {
-                // Draw text preview
-                const [w, h] = this.size;
-                const previewHeight = 200;
-                const previewY = h - previewHeight - 10;
-                
-                ctx.save();
-                ctx.fillStyle = "#2d2d2d";
-                ctx.fillRect(10, previewY, w - 20, previewHeight);
-                
-                ctx.strokeStyle = "#444";
-                ctx.strokeRect(10, previewY, w - 20, previewHeight);
-                
-                ctx.fillStyle = "#d4d4d4";
-                ctx.font = "12px monospace";
-                
-                // Split text into lines and draw
-                const lines = this.previewText.split('\n');
-                const lineHeight = 14;
-                const maxLines = Math.floor((previewHeight - 20) / lineHeight);
-                const visibleLines = lines.slice(0, maxLines);
-                
-                visibleLines.forEach((line, idx) => {
-                    // Truncate long lines
-                    const maxChars = Math.floor((w - 40) / 7);
-                    const truncatedLine = line.length > maxChars ? line.substring(0, maxChars) + "..." : line;
-                    ctx.fillText(truncatedLine, 15, previewY + 15 + idx * lineHeight);
-                });
-                
-                if (lines.length > maxLines) {
-                    ctx.fillText("...", 15, previewY + 15 + maxLines * lineHeight);
-                }
-                
-                ctx.restore();
-            }
-        };
+            // Calculate available space for preview using helper function
+            // Use extra spacing (30px) to prevent overlap with buttons
+            const { margin, startY, availableWidth, availableHeight } = calculateAvailableSpace(this, 15, 30);
 
-        // Override computeSize to account for preview area
-        const computeSize = nodeType.prototype.computeSize;
-        nodeType.prototype.computeSize = function(out) {
-            const size = computeSize ? computeSize.apply(this, arguments) : [this.size[0], this.size[1]];
-            
-            const modeWidget = this.widgets?.find(w => w.name === "mode");
-            if (modeWidget && modeWidget.value === "Builtin") {
-                let requiredExtraHeight = 0;
-                let requiredMinWidth = size[0];
+            if (this.previewImage && this.previewImage.complete) {
+                // Draw image preview with auto-resize
+                const { height: drawnHeight } = drawImagePreview(
+                    ctx, 
+                    this.previewImage, 
+                    margin, 
+                    startY, 
+                    availableWidth, 
+                    availableHeight
+                );
                 
-                if (this.previewImage) {
-                    requiredExtraHeight = 310; // Space for image preview
-                    // Calculate minimum width based on image aspect ratio
-                    const imgAspect = this.previewImage.width / this.previewImage.height;
-                    const previewHeight = 300;
-                    requiredMinWidth = Math.max(requiredMinWidth, Math.min(this.previewImage.width, previewHeight * imgAspect) + 40);
-                } else if (this.previewText) {
-                    requiredExtraHeight = 210; // Space for text preview
-                    requiredMinWidth = Math.max(requiredMinWidth, 300); // Minimum width for text preview
+                // Auto-resize node to fit image if needed
+                const minHeight = startY + drawnHeight + margin;
+                if (this.size[1] < minHeight) {
+                    this.size[1] = minHeight;
                 }
+            } else if (this.previewText) {
+                // Draw text preview with minimum height
+                const textPreviewHeight = Math.max(200, Math.min(availableHeight, 400));
+                drawTextPreview(
+                    ctx, 
+                    this.previewText, 
+                    margin, 
+                    startY, 
+                    availableWidth, 
+                    textPreviewHeight
+                );
                 
-                // Calculate minimum required height (base height + preview area)
-                const minRequiredHeight = size[1] + requiredExtraHeight;
-                
-                // Allow user to resize, but enforce minimum dimensions
-                // Use the larger of: computed minimum size or user's manual resize
-                size[0] = Math.max(size[0], requiredMinWidth);
-                size[1] = Math.max(size[1], minRequiredHeight);
+                // Auto-resize node to fit text preview if needed
+                const minHeight = startY + textPreviewHeight + margin;
+                if (this.size[1] < minHeight) {
+                    this.size[1] = minHeight;
+                }
             }
-            
-            return size;
         };
 
         // Add preview dialog method to node prototype
         nodeType.prototype.showPreviewDialog = function(data) {
-            const dialog = document.createElement("div");
-            dialog.style.position = "fixed";
-            dialog.style.top = "50%";
-            dialog.style.left = "50%";
-            dialog.style.transform = "translate(-50%, -50%)";
-            dialog.style.backgroundColor = "#1e1e1e";
-            dialog.style.border = "2px solid #444";
-            dialog.style.borderRadius = "8px";
-            dialog.style.padding = "20px";
-            dialog.style.zIndex = "10000";
-            dialog.style.maxWidth = "80vw";
-            dialog.style.maxHeight = "80vh";
-            dialog.style.overflow = "auto";
-            dialog.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.5)";
-
-            // Title bar
-            const titleBar = document.createElement("div");
-            titleBar.style.display = "flex";
-            titleBar.style.justifyContent = "space-between";
-            titleBar.style.alignItems = "center";
-            titleBar.style.marginBottom = "15px";
-            titleBar.style.paddingBottom = "10px";
-            titleBar.style.borderBottom = "1px solid #444";
-
-            const title = document.createElement("h3");
-            title.textContent = `Preview: ${data.filename}`;
-            title.style.margin = "0";
-            title.style.color = "#fff";
-            title.style.fontSize = "18px";
-
-            const closeButton = document.createElement("button");
-            closeButton.textContent = "×";
-            closeButton.style.fontSize = "24px";
-            closeButton.style.border = "none";
-            closeButton.style.background = "none";
-            closeButton.style.color = "#fff";
-            closeButton.style.cursor = "pointer";
-            closeButton.style.padding = "0 8px";
-            closeButton.onclick = () => {
-                document.body.removeChild(overlay);
-            };
-
-            titleBar.appendChild(title);
-            titleBar.appendChild(closeButton);
-            dialog.appendChild(titleBar);
-
-            // Content container
-            const contentContainer = document.createElement("div");
-            contentContainer.style.color = "#fff";
-            contentContainer.style.minWidth = "400px";
+            // Create dialog using utility function
+            const { contentContainer, overlay } = createPreviewDialog(
+                `Preview: ${data.filename}`,
+                null
+            );
 
             if (data.content_type === "image") {
                 // Display image
@@ -330,18 +227,8 @@ app.registerExtension({
                 img.style.margin = "0 auto";
                 contentContainer.appendChild(img);
             } else if (data.content_type === "text") {
-                // Display text
-                let textContent = data.base64;
-                
-                // If it's base64 encoded text, try to decode it
-                if (!data.format.startsWith("text/")) {
-                    try {
-                        textContent = atob(data.base64);
-                    } catch (e) {
-                        // If decode fails, show as-is
-                        textContent = data.base64;
-                    }
-                }
+                // Display text using helper function to decode
+                const textContent = decodeBase64Text(data.base64, data.format);
 
                 const textArea = document.createElement("textarea");
                 textArea.value = textContent;
@@ -373,24 +260,6 @@ app.registerExtension({
                 contentContainer.appendChild(info);
             }
 
-            dialog.appendChild(contentContainer);
-
-            // Overlay background
-            const overlay = document.createElement("div");
-            overlay.style.position = "fixed";
-            overlay.style.top = "0";
-            overlay.style.left = "0";
-            overlay.style.width = "100%";
-            overlay.style.height = "100%";
-            overlay.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
-            overlay.style.zIndex = "9999";
-            overlay.onclick = (e) => {
-                if (e.target === overlay) {
-                    document.body.removeChild(overlay);
-                }
-            };
-
-            overlay.appendChild(dialog);
             document.body.appendChild(overlay);
         };
     },

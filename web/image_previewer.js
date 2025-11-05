@@ -1,5 +1,6 @@
 import { app } from "../../../scripts/app.js";
 import { apiPost, apiSilent } from "./api_utils.js";
+import { calculateAvailableSpace, drawImagePreview } from "./preview_utils.js";
 
 app.registerExtension({
     name: "EasyToolkit.Image.ImagePreviewer",
@@ -94,35 +95,21 @@ app.registerExtension({
             }
             
             if (this.previewImage && this.previewImage.complete) {
-                const margin = 15;
-                const widgetHeight = this.widgets?.reduce((sum, w) => sum + (w.computedHeight || 30), 0) || 0;
-                const headerHeight = 30;
-                const y = headerHeight + widgetHeight + margin;
+                // Calculate available space using utility function
+                const { margin, startY, availableWidth, availableHeight } = calculateAvailableSpace(this);
                 
-                // Calculate available space
-                const availableWidth = this.size[0] - 2 * margin;
-                const availableHeight = this.size[1] - y - margin;
+                // Draw image preview using utility function
+                const { height: drawnHeight } = drawImagePreview(
+                    ctx,
+                    this.previewImage,
+                    margin,
+                    startY,
+                    availableWidth,
+                    availableHeight
+                );
                 
-                // Calculate scaled dimensions
-                const imgAspect = this.previewImage.width / this.previewImage.height;
-                let drawWidth = availableWidth;
-                let drawHeight = drawWidth / imgAspect;
-                
-                if (drawHeight > availableHeight) {
-                    drawHeight = availableHeight;
-                    drawWidth = drawHeight * imgAspect;
-                }
-                
-                // Center the image
-                const x = (this.size[0] - drawWidth) / 2;
-                
-                // Draw image
-                ctx.save();
-                ctx.drawImage(this.previewImage, x, y, drawWidth, drawHeight);
-                ctx.restore();
-                
-                // Resize node to fit image if needed
-                const minHeight = y + drawHeight + margin;
+                // Auto-resize node to fit image if needed
+                const minHeight = startY + drawnHeight + margin;
                 if (this.size[1] < minHeight) {
                     this.size[1] = minHeight;
                 }
