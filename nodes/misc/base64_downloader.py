@@ -1,7 +1,7 @@
 from aiohttp import web
 from ... import register_node, register_route
 from ...utils.format import format_filename, all_resource_formats, file_format_to_suffix
-from ...utils.context import get_persistent_context, has_persistent_context, update_persistent_context
+from ...utils.context import get_context, has_context, update_context
 from ...utils.config import get_config
 from .base64_context import Base64Context
 
@@ -46,7 +46,7 @@ class Base64Downloader:
         filename = f"{basename}.{file_format_to_suffix(format)}"
         # Save to persistent context using Base64Context
         context = Base64Context(base64, filename)
-        get_persistent_context(uuid).set_value(context)
+        get_context(uuid).set_value(context)
 
         return {"result": (base64,uuid,)}
 
@@ -60,10 +60,10 @@ async def handle_download(request):
     basename = data.get("basename", None)
     format = data.get("format", None)
 
-    if not uuid or not has_persistent_context(uuid):
+    if not uuid or not has_context(uuid):
         return web.json_response({"success": False, "error": "没有base64数据。"})
     
-    context = get_persistent_context(uuid).get_value()
+    context = get_context(uuid).get_value()
 
     if not context or not isinstance(context, Base64Context):
         return web.json_response({"success": False, "error": "没有base64数据。"})
@@ -95,11 +95,11 @@ async def handle_update_access(request):
     if not uuid:
         return web.json_response({"success": False, "error": "UUID is required."})
 
-    if not has_persistent_context(uuid):
+    if not has_context(uuid):
         return web.json_response({"success": False, "error": "Context not found."})
     
     # Update access time
-    update_persistent_context(uuid)
+    update_context(uuid)
     return web.json_response({"success": True})
 
 @register_route("/base64_cache_downloader/config", method="GET")

@@ -1,4 +1,5 @@
 import { app } from "../../../scripts/app.js";
+import { apiPost } from "./api_utils.js";
 
 app.registerExtension({
     name: "EasyToolkit.Misc.Base64ContextLoader",
@@ -30,7 +31,7 @@ app.registerExtension({
             }, { values: ["NONE"] });
 
             // Add preview container widget (read-only text display)
-            let previewWidget = this.addWidget("text", "preview_info", "等待预览...", () => {});
+            let previewWidget = this.addWidget("text", "preview_info", "Waiting for preview...", () => {});
             previewWidget.disabled = true;
 
             // Store preview data
@@ -41,16 +42,8 @@ app.registerExtension({
             // Function to refresh keys from backend
             const refreshKeys = async () => {
                 try {
-                    const response = await fetch("/base64_context_previewer/get_keys", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const data = await response.json();
+                    const data = await apiPost("/base64_context_previewer/get_keys");
+                    
                     if (data.success && data.keys) {
                         keyWidget.options.values = data.keys;
                         // Preserve current selection if still valid
@@ -59,7 +52,7 @@ app.registerExtension({
                         }
                     }
                 } catch (error) {
-                    console.error("获取 keys 失败:", error);
+                    console.error("Failed to get keys:", error);
                 }
             };
 
@@ -67,30 +60,23 @@ app.registerExtension({
             await refreshKeys();
 
             // Add preview button
-            this.addWidget("button", "预览数据", null, async () => {
+            this.addWidget("button", "Preview Data", null, async () => {
                 try {
                     if (!keyWidget.value || keyWidget.value === "NONE") {
-                        alert("请先选择一个有效的 key");
-                        previewWidget.value = "未选择 key";
+                        alert("Please select a valid key first");
+                        previewWidget.value = "No key selected";
                         return;
                     }
 
-                    previewWidget.value = "正在加载...";
+                    previewWidget.value = "Loading...";
 
-                    const response = await fetch("/base64_context_previewer/get_data", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ "key": keyWidget.value }),
+                    const data = await apiPost("/base64_context_previewer/get_data", {
+                        key: keyWidget.value
                     });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const data = await response.json();
+                    
                     if (!data.success) {
                         alert(data.error);
-                        previewWidget.value = `错误: ${data.error}`;
+                        previewWidget.value = `Error: ${data.error}`;
                         return;
                     }
 
@@ -110,30 +96,30 @@ app.registerExtension({
 
                     app.extensionManager.toast.add({
                         severity: "info",
-                        summary: "加载成功",
-                        detail: `已加载 ${data.filename}`,
+                        summary: "Load successful",
+                        detail: `Loaded ${data.filename}`,
                         life: 3000
                     });
                 } catch (error) {
-                    console.error("预览数据失败:", error);
-                    alert(`预览数据失败: ${error.message}`);
-                    previewWidget.value = `错误: ${error.message}`;
+                    console.error("Preview data failed:", error);
+                    alert(`Preview data failed: ${error.message}`);
+                    previewWidget.value = `Error: ${error.message}`;
                 }
             });
 
             // Add refresh button to reload available keys
-            this.addWidget("button", "刷新列表", null, async () => {
+            this.addWidget("button", "Refresh Key List", null, async () => {
                 try {
                     await refreshKeys();
                     app.extensionManager.toast.add({
                         severity: "info",
-                        summary: "刷新成功",
-                        detail: "键列表已刷新",
+                        summary: "Refresh successful",
+                        detail: "Key list refreshed",
                         life: 3000
                     });
                 } catch (error) {
-                    console.error("刷新列表失败:", error);
-                    alert(`刷新列表失败: ${error.message}`);
+                    console.error("Failed to refresh list:", error);
+                    alert(`Failed to refresh list: ${error.message}`);
                 }
             });
         };
@@ -307,7 +293,7 @@ app.registerExtension({
             titleBar.style.borderBottom = "1px solid #444";
 
             const title = document.createElement("h3");
-            title.textContent = `预览: ${data.filename}`;
+            title.textContent = `Preview: ${data.filename}`;
             title.style.margin = "0";
             title.style.color = "#fff";
             title.style.fontSize = "18px";
@@ -374,13 +360,13 @@ app.registerExtension({
             } else {
                 // Unknown type
                 const message = document.createElement("p");
-                message.textContent = `不支持的内容类型: ${data.content_type}`;
+                message.textContent = `Unsupported content type: ${data.content_type}`;
                 message.style.color = "#ff6b6b";
                 message.style.fontSize = "16px";
                 contentContainer.appendChild(message);
 
                 const info = document.createElement("p");
-                info.textContent = `文件格式: ${data.format}\n后缀: ${data.suffix}`;
+                info.textContent = `File format: ${data.format}\nExtension: ${data.suffix}`;
                 info.style.whiteSpace = "pre-wrap";
                 info.style.fontSize = "14px";
                 info.style.marginTop = "10px";
@@ -409,4 +395,3 @@ app.registerExtension({
         };
     },
 });
-

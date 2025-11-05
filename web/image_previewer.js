@@ -1,4 +1,5 @@
 import { app } from "../../../scripts/app.js";
+import { apiPost, apiSilent } from "./api_utils.js";
 
 app.registerExtension({
     name: "EasyToolkit.Image.ImagePreviewer",
@@ -17,8 +18,8 @@ app.registerExtension({
                     uuid_widget.value = crypto.randomUUID();
                 }
             } catch (error) {
-                console.error("生成UUID失败:", error);
-                alert(`生成UUID失败: ${error.message}`);
+                console.error("Failed to generate UUID:", error);
+                alert(`Failed to generate UUID: ${error.message}`);
             }
 
             uuid_widget.disabled = true;
@@ -27,24 +28,16 @@ app.registerExtension({
             this.accessUpdateTimer = null;
             this.previewImage = null;
             
-            // Function to update access time
+            // Function to update access time - simplified with apiSilent
             const updateAccess = async () => {
-                try {
-                    const currentUuid = this.widgets?.find(w => w.name === "uuid")?.value;
-                    if (!currentUuid) return;
-                    
-                    const response = await fetch("/image_previewer/update_access", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ "uuid": currentUuid }),
-                    });
-                    
-                    if (!response.ok) {
-                        console.warn("Failed to update access time");
-                    }
-                } catch (error) {
-                    console.warn("Access update error:", error);
-                }
+                const currentUuid = this.widgets?.find(w => w.name === "uuid")?.value;
+                if (!currentUuid) return;
+                
+                // Silent update, failure doesn't affect main flow
+                await apiSilent("/image_previewer/update_access", {
+                    method: "POST",
+                    data: { uuid: currentUuid }
+                });
             };
             
             // Start periodic access updates (every 30 seconds)
@@ -54,33 +47,23 @@ app.registerExtension({
             
             // Function to load and display image
             const loadPreviewImage = async () => {
-                try {
-                    const currentUuid = this.widgets?.find(w => w.name === "uuid")?.value;
-                    if (!currentUuid) return;
-                    
-                    const response = await fetch("/image_previewer/get_image", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ "uuid": currentUuid }),
-                    });
-                    
-                    if (!response.ok) {
-                        console.warn("Failed to load preview image");
-                        return;
-                    }
-                    
-                    const data = await response.json();
-                    if (data.success && data.base64) {
-                        // Create image element
-                        const img = new Image();
-                        img.src = `data:${data.format};base64,${data.base64}`;
-                        img.onload = () => {
-                            this.previewImage = img;
-                            this.setDirtyCanvas(true, true);
-                        };
-                    }
-                } catch (error) {
-                    console.error("Failed to load preview image:", error);
+                const currentUuid = this.widgets?.find(w => w.name === "uuid")?.value;
+                if (!currentUuid) return;
+                
+                // Use silent mode since preview loading is optional
+                const data = await apiSilent("/image_previewer/get_image", {
+                    method: "POST",
+                    data: { uuid: currentUuid }
+                });
+                
+                if (data.success && data.base64) {
+                    // Create image element
+                    const img = new Image();
+                    img.src = `data:${data.format};base64,${data.base64}`;
+                    img.onload = () => {
+                        this.previewImage = img;
+                        this.setDirtyCanvas(true, true);
+                    };
                 }
             };
             
@@ -155,15 +138,12 @@ app.registerExtension({
                 this.accessUpdateTimer = null;
             }
             
-            // Clear the context data
+            // Clear the context data - simplified with apiSilent
             const uuid_widget = this.widgets?.find(w => w.name === "uuid");
             if (uuid_widget && uuid_widget.value) {
-                fetch("/image_previewer/clear", {
+                apiSilent("/context/remove_key", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ "uuid": uuid_widget.value }),
-                }).catch(error => {
-                    console.warn("Failed to clear context on node removal:", error);
+                    data: { key: uuid_widget.value }
                 });
             }
             
@@ -176,4 +156,3 @@ app.registerExtension({
         };
     },
 });
-

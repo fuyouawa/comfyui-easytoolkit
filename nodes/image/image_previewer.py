@@ -1,7 +1,7 @@
 from aiohttp import web
 from ... import register_node, register_route
 from ...utils.image import image_to_base64
-from ...utils.context import get_persistent_context, has_persistent_context, update_persistent_context
+from ...utils.context import get_context, has_context, update_context
 
 @register_node
 class ImagePreviewer:
@@ -31,7 +31,7 @@ class ImagePreviewer:
         base64_data = image_to_base64(image, format="image/png")
         
         # Store base64 data in persistent context
-        get_persistent_context(uuid).set_value({
+        get_context(uuid).set_value({
             "base64": base64_data,
             "format": "image/png"
         })
@@ -48,10 +48,10 @@ async def handle_get_image(request):
     if not uuid:
         return web.json_response({"success": False, "error": "UUID is required"})
     
-    if not has_persistent_context(uuid):
+    if not has_context(uuid):
         return web.json_response({"success": False, "error": f"Context not found for uuid '{uuid}'"})
     
-    context = get_persistent_context(uuid).get_value()
+    context = get_context(uuid).get_value()
 
     if not context or not isinstance(context, dict):
         return web.json_response({"success": False, "error": "Invalid context data"})
@@ -75,21 +75,9 @@ async def handle_update_access(request):
     if not uuid:
         return web.json_response({"success": False, "error": "UUID is required."})
 
-    if not has_persistent_context(uuid):
+    if not has_context(uuid):
         return web.json_response({"success": False, "error": "Context not found."})
     
     # Update access time
-    update_persistent_context(uuid)
-    return web.json_response({"success": True})
-
-@register_route("/image_previewer/clear")
-async def handle_clear(request):
-    data = await request.json()
-    uuid = data.get("uuid", "")
-
-    if not uuid or not has_persistent_context(uuid):
-        return web.json_response({"success": False, "error": "没有base64数据。"})
-    
-    # Clear the persistent context by setting it to None
-    get_persistent_context(uuid).set_value(None)
+    update_context(uuid)
     return web.json_response({"success": True})

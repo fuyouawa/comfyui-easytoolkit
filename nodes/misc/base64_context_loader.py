@@ -1,6 +1,6 @@
 from aiohttp import web
 from ... import register_node, register_route
-from ...utils.context import resolve_persistent_contexts_by_value_type, get_persistent_context, has_persistent_context
+from ...utils.context import resolve_contexts_by_value_type, get_context, has_context
 from .base64_context import Base64Context
 
 @register_node
@@ -25,7 +25,7 @@ class Base64ContextLoader:
     OUTPUT_NODE = True
 
     def run(self, key, mode):
-        base64_context = get_persistent_context(key).get_value()
+        base64_context = get_context(key).get_value()
         if not base64_context or not isinstance(base64_context, Base64Context):
             return {"result": (None, None, None,)}
         
@@ -37,7 +37,7 @@ class Base64ContextLoader:
 @register_route("/base64_context_previewer/get_keys")
 async def handle_get_keys(request):
     """Get available base64 context keys"""
-    base64_contexts = resolve_persistent_contexts_by_value_type(Base64Context)
+    base64_contexts = resolve_contexts_by_value_type(Base64Context)
     keys = [x.get_key() for x in base64_contexts]
     keys.insert(0, "NONE")
     return web.json_response({"success": True, "keys": keys})
@@ -51,10 +51,10 @@ async def handle_get_data(request):
     if not key or key == "NONE":
         return web.json_response({"success": False, "error": "请选择一个有效的 key"})
     
-    if not has_persistent_context(key):
+    if not has_context(key):
         return web.json_response({"success": False, "error": f"未找到 key '{key}' 对应的上下文"})
     
-    context = get_persistent_context(key).get_value()
+    context = get_context(key).get_value()
 
     if not context or not isinstance(context, Base64Context):
         return web.json_response({"success": False, "error": "上下文数据不是 Base64Context 类型"})

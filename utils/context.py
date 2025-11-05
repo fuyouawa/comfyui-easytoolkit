@@ -6,6 +6,7 @@ import atexit
 from concurrent.futures import ThreadPoolExecutor
 import folder_paths
 from .config import get_config
+from .. import register_route
 
 class PersistentContext:
     def __init__(self, value: any, key: str = None, cache=None):
@@ -77,6 +78,14 @@ class PersistentContextCache:
         self.update_context_access_time(key)
         self._cleanup_expired()
         return key in self._data
+
+    def remove_context(self, key: str):
+        self._start_timeout = True
+        self.update_context_access_time(key)
+        self._cleanup_expired()
+        if key in self._data:
+            del self._data[key]
+        self.save()
 
     def create_context(self, key: str, value: any) -> PersistentContext:
         self._start_timeout = True
@@ -166,18 +175,21 @@ class PersistentContextCache:
     
 _global_context_cache = PersistentContextCache()
 
-def has_persistent_context(key: str) -> bool:
+def has_context(key: str) -> bool:
     return _global_context_cache.has_context(key)
 
-def get_persistent_context(key: str, default_value = None) -> PersistentContext:
-    if has_persistent_context(key):
+def remove_context(key: str):
+    return _global_context_cache.remove_context(key)
+
+def get_context(key: str, default_value = None) -> PersistentContext:
+    if has_context(key):
         return _global_context_cache.get_context(key)
     return _global_context_cache.create_context(key, default_value)
 
-def update_persistent_context(key: str):
+def update_context(key: str):
     return _global_context_cache.update_context_access_time(key)
 
-def resolve_persistent_contexts_by_value_type(value_type: type) -> list[PersistentContext]:
+def resolve_contexts_by_value_type(value_type: type) -> list[PersistentContext]:
     """Get all persistent contexts whose value is an instance of the specified type
     
     Args:
@@ -207,3 +219,17 @@ def _shutdown_handler():
 
 # Register shutdown handler
 atexit.register(_shutdown_handler)
+
+
+@register_route("/context/remove_key")
+async def handle_clear(request):
+    """Clear the persistent context for a given key"""
+    data = await request.json()
+    key = data.get("key", "")
+
+    if not key or not has_context(key):
+        return web.json_response({"success": False, "error": "没有上下文数据。"})
+    
+    # Clear the persistent context by setting it to None
+    remove_context(key)
+    return web.json_response({"success": True})

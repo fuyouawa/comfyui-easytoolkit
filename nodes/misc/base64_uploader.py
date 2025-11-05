@@ -3,7 +3,7 @@ import time
 import asyncio
 from aiohttp import web
 from ... import register_node, register_route
-from ...utils.context import get_persistent_context, has_persistent_context, update_persistent_context
+from ...utils.context import get_context, has_context, update_context
 from ...utils.config import get_config
 from .base64_context import Base64Context
 
@@ -64,7 +64,7 @@ class Base64Uploader:
     OUTPUT_NODE = True
 
     def run(self, filename: str, uuid):
-        context = get_persistent_context(uuid).get_value()
+        context = get_context(uuid).get_value()
         if not context or not isinstance(context, Base64Context):
             raise Exception("There is no base64 data at all.")
 
@@ -166,7 +166,7 @@ async def handle_finalize_upload(request):
 
     # Save to persistent context using Base64Context
     context = Base64Context(base64_data, upload_info["filename"])
-    get_persistent_context(uuid).set_value(context)
+    get_context(uuid).set_value(context)
 
     # Clean up temporary data
     del _chunk_uploads[uuid]
@@ -183,27 +183,12 @@ async def handle_update_access(request):
     if not uuid:
         return web.json_response({"success": False, "error": "UUID is required."})
 
-    if not has_persistent_context(uuid):
+    if not has_context(uuid):
         return web.json_response({"success": False, "error": "Context not found."})
     
     # Update access time
-    update_persistent_context(uuid)
+    update_context(uuid)
     return web.json_response({"success": True})
-
-
-@register_route("/base64_cache_loader/clear")
-async def handle_clear(request):
-    """Clear the persistent context for a given UUID"""
-    data = await request.json()
-    uuid = data.get("uuid", "")
-
-    if not uuid or not has_persistent_context(uuid):
-        return web.json_response({"success": False, "error": "没有base64数据。"})
-    
-    # Clear the persistent context by setting it to None
-    get_persistent_context(uuid).set_value(None)
-    return web.json_response({"success": True})
-
 
 @register_route("/base64_cache_loader/config", method="GET")
 async def handle_get_config(request):

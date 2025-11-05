@@ -1,4 +1,5 @@
 import { app } from "../../../scripts/app.js";
+import { apiGet, apiPost, apiSilent } from "./api_utils.js";
 
 app.registerExtension({
     name: "EasyToolkit.Misc.Base64Uploader",
@@ -15,8 +16,8 @@ app.registerExtension({
                     uuid_widget.value = crypto.randomUUID();
                 }
             } catch (error) {
-                console.error("生成UUID失败:", error);
-                alert(`生成UUID失败: ${error.message}`);
+                console.error("Failed to generate UUID:", error);
+                alert(`Failed to generate UUID: ${error.message}`);
             }
 
             uuid_widget.disabled = true;
@@ -24,52 +25,40 @@ app.registerExtension({
             // Initialize progress tracking
             this.uploadProgress = 0; // 0-100
             this.isUploading = false;
-            this.uploadStatus = "待命中..."; // Status message
+            this.uploadStatus = "Standby..."; // Status message
 
             // Initialize access update timer
             this.accessUpdateTimer = null;
             
-            // Function to update access time
+            // Function to update access time - simplified with apiSilent
             const updateAccess = async () => {
-                try {
-                    const currentUuid = this.widgets?.find(w => w.name === "uuid")?.value;
-                    if (!currentUuid) return;
-                    
-                    const response = await fetch("/base64_cache_loader/update_access", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ "uuid": currentUuid }),
-                    });
-                    
-                    // Silently update, only log errors
-                    if (!response.ok) {
-                        console.warn("Failed to update access time");
-                    }
-                } catch (error) {
-                    console.warn("Access update error:", error);
-                }
+                const currentUuid = this.widgets?.find(w => w.name === "uuid")?.value;
+                if (!currentUuid) return;
+                
+                await apiSilent("/base64_cache_loader/update_access", {
+                    method: "POST",
+                    data: { uuid: currentUuid }
+                });
             };
             
-            // Get configuration from backend
+            // Get configuration from backend - simplified with apiGet
             try {
-                const configResponse = await fetch("/base64_cache_loader/config");
-                if (configResponse.ok) {
-                    const configData = await configResponse.json();
-                    if (configData.success && configData.access_update_interval > 0) {
-                        const intervalMs = configData.access_update_interval * 1000;
-                        
-                        // Immediately update access time on initialization
-                        await updateAccess();
-                        
-                        // Start periodic access updates
-                        this.accessUpdateTimer = setInterval(updateAccess, intervalMs);
-                    }
+                const configData = await apiGet("/base64_cache_loader/config");
+                
+                if (configData.success && configData.access_update_interval > 0) {
+                    const intervalMs = configData.access_update_interval * 1000;
+                    
+                    // Immediately update access time on initialization
+                    await updateAccess();
+                    
+                    // Start periodic access updates
+                    this.accessUpdateTimer = setInterval(updateAccess, intervalMs);
                 }
             } catch (error) {
                 console.error("Failed to get config for access updates:", error);
             }
 
-            this.addWidget("button", "选择文件上传", null, async () => {
+            this.addWidget("button", "Upload File", null, async () => {
                 try {
                     const input = document.createElement("input");
                     input.type = "file";
@@ -89,49 +78,49 @@ app.registerExtension({
                             }
                             filename_widget.value = file.name;
 
-                            // 准备上传
-                            this.uploadStatus = "正在准备上传...";
+                            // Prepare upload
+                            this.uploadStatus = "Preparing upload...";
                             this.isUploading = true;
                             this.uploadProgress = 0;
                             app.canvas.setDirty(true);
 
                             try {
-                                // 使用分块上传避免大文件卡死
+                                // Use chunked upload to avoid freezing with large files
                                 await this.uploadFileInChunks(file, uuid_widget.value, file.name);
-                                this.uploadStatus = "上传完成！";
+                                this.uploadStatus = "Upload complete!";
                                 this.isUploading = false;
                                 this.uploadProgress = 100;
                                 app.canvas.setDirty(true);
                                 app.extensionManager.toast.add({
                                     severity: "info",
-                                    summary: "上传成功",
-                                    detail: `文件 ${file.name} 已上传`,
+                                    summary: "Upload successful",
+                                    detail: `File ${file.name} uploaded`,
                                     life: 3000
                                 });
                                 // Reset progress after a delay
                                 setTimeout(() => {
                                     this.uploadProgress = 0;
-                                    this.uploadStatus = "待命中...";
+                                    this.uploadStatus = "Standby...";
                                     app.canvas.setDirty(true);
                                 }, 2000);
                             } catch (error) {
                                 console.error("Upload failed:", error);
-                                this.uploadStatus = `上传失败: ${error.message}`;
+                                this.uploadStatus = `Upload failed: ${error.message}`;
                                 this.isUploading = false;
                                 this.uploadProgress = 0;
                                 app.canvas.setDirty(true);
-                                alert(`上传失败: ${error.message}`);
+                                alert(`Upload failed: ${error.message}`);
                             }
                         } catch (error) {
-                            console.error("文件选择处理失败:", error);
-                            alert(`文件选择处理失败: ${error.message}`);
+                            console.error("File selection handling failed:", error);
+                            alert(`File selection handling failed: ${error.message}`);
                         }
                     };
 
-                    input.click(); // 打开文件选择对话框
+                    input.click(); // Open file selection dialog
                 } catch (error) {
-                    console.error("创建文件选择器失败:", error);
-                    alert(`创建文件选择器失败: ${error.message}`);
+                    console.error("Failed to create file selector:", error);
+                    alert(`Failed to create file selector: ${error.message}`);
                 }
             });
 
@@ -195,15 +184,12 @@ app.registerExtension({
                 this.accessUpdateTimer = null;
             }
             
-            // Clear the context data
+            // Clear the context data - simplified with apiSilent
             const uuid_widget = this.widgets?.find(w => w.name === "uuid");
             if (uuid_widget && uuid_widget.value) {
-                fetch("/base64_cache_loader/clear", {
+                apiSilent("/context/remove_key", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ "uuid": uuid_widget.value }),
-                }).catch(error => {
-                    console.warn("Failed to clear context on node removal:", error);
+                    data: { key: uuid_widget.value }
                 });
             }
             
@@ -214,7 +200,7 @@ app.registerExtension({
     },
 });
 
-// 添加分块上传方法到节点原型
+// Add chunked upload method to node prototype
 app.registerExtension({
     name: "EasyToolkit.Misc.Base64Uploader.Upload",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
@@ -225,32 +211,23 @@ app.registerExtension({
                 const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
                 const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
-                // 先初始化上传
+                // Initialize upload - simplified with apiPost
                 this.uploadProgress = 0;
-                this.uploadStatus = "正在初始化上传...";
+                this.uploadStatus = "Initializing upload...";
                 app.canvas.setDirty(true);
                 
-                const initResponse = await fetch("/base64_cache_loader/init_upload", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        "uuid": uuid,
-                        "filename": filename,
-                        "total_chunks": totalChunks,
-                        "file_size": file.size
-                    }),
+                const initResult = await apiPost("/base64_cache_loader/init_upload", {
+                    uuid: uuid,
+                    filename: filename,
+                    total_chunks: totalChunks,
+                    file_size: file.size
                 });
 
-                if (!initResponse.ok) {
-                    throw new Error(`HTTP error! status: ${initResponse.status}`);
-                }
-
-                const initResult = await initResponse.json();
                 if (!initResult.success) {
                     throw new Error(initResult.error || "Initialization failed");
                 }
 
-                // 分块上传文件
+                // Upload file in chunks
                 for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
                     const start = chunkIndex * CHUNK_SIZE;
                     const end = Math.min(start + CHUNK_SIZE, file.size);
@@ -258,56 +235,40 @@ app.registerExtension({
 
                     // Update progress
                     this.uploadProgress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
-                    this.uploadStatus = `上传中... (${chunkIndex + 1}/${totalChunks})`;
+                    this.uploadStatus = `Uploading... (${chunkIndex + 1}/${totalChunks})`;
                     app.canvas.setDirty(true);
 
-                    // 给UI一个更新的机会
+                    // Give UI a chance to update
                     await new Promise(resolve => setTimeout(resolve, 0));
 
+                    // Upload chunk with FormData
                     const formData = new FormData();
                     formData.append("uuid", uuid);
                     formData.append("chunk_index", chunkIndex.toString());
                     formData.append("chunk_data", chunk);
 
-                    const response = await fetch("/base64_cache_loader/upload_chunk", {
-                        method: "POST",
-                        body: formData,
-                    });
+                    const result = await apiPost("/base64_cache_loader/upload_chunk", formData);
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const result = await response.json();
                     if (!result.success) {
                         throw new Error(result.error || `Upload chunk ${chunkIndex + 1} failed`);
                     }
                 }
 
-                // 完成上传
+                // Finalize upload - simplified with apiPost
                 this.uploadProgress = 100;
-                this.uploadStatus = "正在完成上传...";
+                this.uploadStatus = "Finalizing upload...";
                 app.canvas.setDirty(true);
                 
-                const finalizeResponse = await fetch("/base64_cache_loader/finalize_upload", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        "uuid": uuid
-                    }),
+                const finalizeResult = await apiPost("/base64_cache_loader/finalize_upload", {
+                    uuid: uuid
                 });
 
-                if (!finalizeResponse.ok) {
-                    throw new Error(`HTTP error! status: ${finalizeResponse.status}`);
-                }
-
-                const finalizeResult = await finalizeResponse.json();
                 if (!finalizeResult.success) {
                     throw new Error(finalizeResult.error || "Finalization failed");
                 }
             } catch (error) {
-                console.error("分块上传失败:", error);
-                throw error; // 重新抛出错误以便外层处理
+                console.error("Chunked upload failed:", error);
+                throw error; // Re-throw error for outer handling
             }
         };
     },
