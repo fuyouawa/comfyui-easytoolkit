@@ -7,7 +7,7 @@ from .base64_context import Base64Context
 routes = PromptServer.instance.routes
 
 @register_node
-class Base64ContextPreviewer:
+class Base64ContextLoader:
     def __init__(self):
         pass
 
@@ -17,17 +17,25 @@ class Base64ContextPreviewer:
             "required": {},
             "hidden": {
                 "key": ("STRING", {"default": "NONE"}),
+                "mode": (["Builtin", "Dialog"], {"default": "Builtin"}),
             },
         }
 
-    RETURN_TYPES = ()
-    RETURN_NAMES = ()
+    RETURN_TYPES = ("STRING", "STRING", "STRING")
+    RETURN_NAMES = ("base64", "basename", "suffix")
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Misc"
     OUTPUT_NODE = True
 
-    def run(self, key):
-        return {}
+    def run(self, key, mode):
+        base64_context = get_persistent_context(key).get_value()
+        if not base64_context or not isinstance(base64_context, Base64Context):
+            raise Exception("There is no base64 data at all.")
+        
+        base64 = base64_context.get_base64()
+        basename = base64_context.get_basename()
+        suffix = base64_context.get_suffix()
+        return {"result": (base64, basename, suffix,)}
 
 @routes.post("/base64_context_previewer/get_keys")
 async def handle_get_keys(request):

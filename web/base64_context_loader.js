@@ -1,13 +1,26 @@
 import { app } from "../../../scripts/app.js";
 
 app.registerExtension({
-    name: "EasyToolkit.Misc.Base64ContextPreviewer",
+    name: "EasyToolkit.Misc.Base64ContextLoader",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name !== "Base64ContextPreviewer") return;
+        if (nodeData.name !== "Base64ContextLoader") return;
 
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = async function () {
             if (onNodeCreated) onNodeCreated.apply(this, arguments);
+
+            // Add mode selector
+            let modeWidget = this.addWidget("combo", "mode", "Builtin", (value) => {
+                // Update preview visibility based on mode
+                if (value === "Builtin" && this.previewData) {
+                    this.updateBuiltinPreview(this.previewData);
+                } else if (value === "Dialog") {
+                    // Hide builtin preview
+                    this.previewImage = null;
+                    this.previewText = null;
+                    this.setSize(this.computeSize());
+                }
+            }, { values: ["Builtin", "Dialog"] });
 
             // Create key combo widget dynamically
             // This widget name matches the hidden parameter "key" in backend
@@ -19,6 +32,11 @@ app.registerExtension({
             // Add preview container widget (read-only text display)
             let previewWidget = this.addWidget("text", "preview_info", "等待预览...", () => {});
             previewWidget.disabled = true;
+
+            // Store preview data
+            this.previewData = null;
+            this.previewImage = null;
+            this.previewText = null;
 
             // Function to refresh keys from backend
             const refreshKeys = async () => {
@@ -80,8 +98,15 @@ app.registerExtension({
                     const fileInfo = `${data.filename}`;
                     previewWidget.value = fileInfo;
 
-                    // Create preview dialog
-                    this.showPreviewDialog(data);
+                    // Store preview data
+                    this.previewData = data;
+
+                    // Show preview based on mode
+                    if (modeWidget.value === "Builtin") {
+                        this.updateBuiltinPreview(data);
+                    } else {
+                        this.showPreviewDialog(data);
+                    }
 
                     app.extensionManager.toast.add({
                         severity: "info",
@@ -111,6 +136,148 @@ app.registerExtension({
                     alert(`刷新列表失败: ${error.message}`);
                 }
             });
+        };
+
+        // Add builtin preview update method
+        nodeType.prototype.updateBuiltinPreview = function(data) {
+            if (data.content_type === "image") {
+                // Load image
+                const img = new Image();
+                img.onload = () => {
+                    this.previewImage = img;
+                    this.previewText = null;
+                    this.setSize(this.computeSize());
+                };
+                img.src = `data:${data.format};base64,${data.base64}`;
+            } else if (data.content_type === "text") {
+                // Decode text if needed
+                let textContent = data.base64;
+                if (!data.format.startsWith("text/")) {
+                    try {
+                        textContent = atob(data.base64);
+                    } catch (e) {
+                        textContent = data.base64;
+                    }
+                }
+                this.previewText = textContent;
+                this.previewImage = null;
+                this.setSize(this.computeSize());
+            } else {
+                this.previewImage = null;
+                this.previewText = null;
+                this.setSize(this.computeSize());
+            }
+        };
+
+        // Override onDrawForeground to render preview on node
+        const onDrawForeground = nodeType.prototype.onDrawForeground;
+        nodeType.prototype.onDrawForeground = function(ctx) {
+            if (onDrawForeground) {
+                onDrawForeground.apply(this, arguments);
+            }
+
+            // Only draw builtin preview if mode is "Builtin"
+            const modeWidget = this.widgets?.find(w => w.name === "mode");
+            if (!modeWidget || modeWidget.value !== "Builtin") {
+                return;
+            }
+
+            if (this.previewImage) {
+                // Draw image preview
+                const [w, h] = this.size;
+                const previewHeight = 300;
+                const previewY = h - previewHeight - 10;
+                
+                // Calculate image dimensions to fit in preview area
+                const maxWidth = w - 20;
+                const maxHeight = previewHeight;
+                let imgWidth = this.previewImage.width;
+                let imgHeight = this.previewImage.height;
+                
+                const aspectRatio = imgWidth / imgHeight;
+                if (imgWidth > maxWidth) {
+                    imgWidth = maxWidth;
+                    imgHeight = imgWidth / aspectRatio;
+                }
+                if (imgHeight > maxHeight) {
+                    imgHeight = maxHeight;
+                    imgWidth = imgHeight * aspectRatio;
+                }
+                
+                const imgX = (w - imgWidth) / 2;
+                const imgY = previewY + (maxHeight - imgHeight) / 2;
+                
+                ctx.save();
+                ctx.drawImage(this.previewImage, imgX, imgY, imgWidth, imgHeight);
+                ctx.restore();
+            } else if (this.previewText) {
+                // Draw text preview
+                const [w, h] = this.size;
+                const previewHeight = 200;
+                const previewY = h - previewHeight - 10;
+                
+                ctx.save();
+                ctx.fillStyle = "#2d2d2d";
+                ctx.fillRect(10, previewY, w - 20, previewHeight);
+                
+                ctx.strokeStyle = "#444";
+                ctx.strokeRect(10, previewY, w - 20, previewHeight);
+                
+                ctx.fillStyle = "#d4d4d4";
+                ctx.font = "12px monospace";
+                
+                // Split text into lines and draw
+                const lines = this.previewText.split('\n');
+                const lineHeight = 14;
+                const maxLines = Math.floor((previewHeight - 20) / lineHeight);
+                const visibleLines = lines.slice(0, maxLines);
+                
+                visibleLines.forEach((line, idx) => {
+                    // Truncate long lines
+                    const maxChars = Math.floor((w - 40) / 7);
+                    const truncatedLine = line.length > maxChars ? line.substring(0, maxChars) + "..." : line;
+                    ctx.fillText(truncatedLine, 15, previewY + 15 + idx * lineHeight);
+                });
+                
+                if (lines.length > maxLines) {
+                    ctx.fillText("...", 15, previewY + 15 + maxLines * lineHeight);
+                }
+                
+                ctx.restore();
+            }
+        };
+
+        // Override computeSize to account for preview area
+        const computeSize = nodeType.prototype.computeSize;
+        nodeType.prototype.computeSize = function(out) {
+            const size = computeSize ? computeSize.apply(this, arguments) : [this.size[0], this.size[1]];
+            
+            const modeWidget = this.widgets?.find(w => w.name === "mode");
+            if (modeWidget && modeWidget.value === "Builtin") {
+                let requiredExtraHeight = 0;
+                let requiredMinWidth = size[0];
+                
+                if (this.previewImage) {
+                    requiredExtraHeight = 310; // Space for image preview
+                    // Calculate minimum width based on image aspect ratio
+                    const imgAspect = this.previewImage.width / this.previewImage.height;
+                    const previewHeight = 300;
+                    requiredMinWidth = Math.max(requiredMinWidth, Math.min(this.previewImage.width, previewHeight * imgAspect) + 40);
+                } else if (this.previewText) {
+                    requiredExtraHeight = 210; // Space for text preview
+                    requiredMinWidth = Math.max(requiredMinWidth, 300); // Minimum width for text preview
+                }
+                
+                // Calculate minimum required height (base height + preview area)
+                const minRequiredHeight = size[1] + requiredExtraHeight;
+                
+                // Allow user to resize, but enforce minimum dimensions
+                // Use the larger of: computed minimum size or user's manual resize
+                size[0] = Math.max(size[0], requiredMinWidth);
+                size[1] = Math.max(size[1], minRequiredHeight);
+            }
+            
+            return size;
         };
 
         // Add preview dialog method to node prototype
