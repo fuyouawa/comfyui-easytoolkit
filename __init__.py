@@ -1,12 +1,5 @@
 import re
-# Add custom API routes, using router
-# from aiohttp import web
-# from server import PromptServer
-
-# @PromptServer.instance.routes.get("/hello")
-# async def get_hello(request):
-#     return web.json_response("hello")
-
+from server import PromptServer
 
 # A dictionary that contains all nodes you want to export with their names
 # NOTE: names should be globally unique
@@ -24,6 +17,37 @@ def register_node(c):
     NODE_CLASS_MAPPINGS[c.__name__] = c
     NODE_DISPLAY_NAME_MAPPINGS[c.__name__] = camel_to_spaced(c.__name__)
     return c
+
+def register_route(path, method="POST"):
+    """
+    Decorator to register API routes more conveniently.
+    
+    Usage:
+        @register_route("/my_endpoint", method="POST")
+        async def my_handler(request):
+            return web.json_response({"success": True})
+    
+    Args:
+        path: The API endpoint path
+        method: HTTP method (GET, POST, PUT, DELETE, etc.)
+    """
+    def decorator(func):
+        routes = PromptServer.instance.routes
+        method_lower = method.lower()
+        
+        if method_lower == "get":
+            routes.get(path)(func)
+        elif method_lower == "post":
+            routes.post(path)(func)
+        elif method_lower == "put":
+            routes.put(path)(func)
+        elif method_lower == "delete":
+            routes.delete(path)(func)
+        else:
+            raise ValueError(f"Unsupported HTTP method: {method}")
+        
+        return func
+    return decorator
 
 # Import all nodes
 from .nodes import *

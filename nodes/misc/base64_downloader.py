@@ -1,12 +1,9 @@
 from aiohttp import web
-from server import PromptServer
-from ... import register_node
+from ... import register_node, register_route
 from ...utils.format import format_filename, all_resource_formats, file_format_to_suffix
 from ...utils.context import get_persistent_context, has_persistent_context, update_persistent_context
 from ...utils.config import get_config
 from .base64_context import Base64Context
-
-routes = PromptServer.instance.routes
 
 _download_counter = 0
 
@@ -54,7 +51,7 @@ class Base64Downloader:
         return {"result": (base64,uuid,)}
 
     
-@routes.post("/base64_cache_downloader/download")
+@register_route("/base64_cache_downloader/download")
 async def handle_download(request):
     global _download_counter
 
@@ -89,7 +86,7 @@ async def handle_download(request):
             "format": format
         })
 
-@routes.post("/base64_cache_downloader/update_access")
+@register_route("/base64_cache_downloader/update_access")
 async def handle_update_access(request):
     """Update the access time for a context to prevent it from being cleaned up"""
     data = await request.json()
@@ -105,20 +102,7 @@ async def handle_update_access(request):
     update_persistent_context(uuid)
     return web.json_response({"success": True})
 
-@routes.post("/base64_cache_downloader/clear")
-async def handle_clear(request):
-    data = await request.json()
-    uuid = data.get("uuid", "")
-
-    if not uuid or not has_persistent_context(uuid):
-        return web.json_response({"success": False, "error": "没有base64数据。"})
-    
-    # Clear the persistent context by setting it to None
-    get_persistent_context(uuid).set_value(None)
-    return web.json_response({"success": True})
-
-
-@routes.get("/base64_cache_downloader/config")
+@register_route("/base64_cache_downloader/config", method="GET")
 async def handle_get_config(request):
     """Get the access update interval configuration"""
     config = get_config().get_persistent_context_config()

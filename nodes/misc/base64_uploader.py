@@ -2,13 +2,10 @@ import base64
 import time
 import asyncio
 from aiohttp import web
-from server import PromptServer
-from ... import register_node
+from ... import register_node, register_route
 from ...utils.context import get_persistent_context, has_persistent_context, update_persistent_context
 from ...utils.config import get_config
 from .base64_context import Base64Context
-
-routes = PromptServer.instance.routes
 
 # Store temporary data for chunked uploads
 _chunk_uploads = {}
@@ -76,7 +73,7 @@ class Base64Uploader:
         suffix = context.get_suffix()
         return {"result": (base64, basename, suffix,)}
 
-@routes.post("/base64_cache_loader/init_upload")
+@register_route("/base64_cache_loader/init_upload")
 async def handle_init_upload(request):
     data = await request.json()
     uuid = data.get("uuid", None)
@@ -108,7 +105,7 @@ async def handle_init_upload(request):
     return web.json_response({"success": True})
 
 
-@routes.post("/base64_cache_loader/upload_chunk")
+@register_route("/base64_cache_loader/upload_chunk")
 async def handle_upload_chunk(request):
     data = await request.post()
     uuid = data.get("uuid", None)
@@ -140,7 +137,7 @@ async def handle_upload_chunk(request):
     return web.json_response({"success": True, "received_chunks": upload_info["received_chunks"]})
 
 
-@routes.post("/base64_cache_loader/finalize_upload")
+@register_route("/base64_cache_loader/finalize_upload")
 async def handle_finalize_upload(request):
     data = await request.json()
     uuid = data.get("uuid", None)
@@ -177,7 +174,7 @@ async def handle_finalize_upload(request):
     return web.json_response({"success": True})
 
 
-@routes.post("/base64_cache_loader/update_access")
+@register_route("/base64_cache_loader/update_access")
 async def handle_update_access(request):
     """Update the access time for a context to prevent it from being cleaned up"""
     data = await request.json()
@@ -194,7 +191,7 @@ async def handle_update_access(request):
     return web.json_response({"success": True})
 
 
-@routes.post("/base64_cache_loader/clear")
+@register_route("/base64_cache_loader/clear")
 async def handle_clear(request):
     """Clear the persistent context for a given UUID"""
     data = await request.json()
@@ -208,7 +205,7 @@ async def handle_clear(request):
     return web.json_response({"success": True})
 
 
-@routes.get("/base64_cache_loader/config")
+@register_route("/base64_cache_loader/config", method="GET")
 async def handle_get_config(request):
     """Get the access update interval configuration"""
     config = get_config().get_persistent_context_config()

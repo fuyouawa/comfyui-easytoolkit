@@ -1,10 +1,7 @@
 from aiohttp import web
-from server import PromptServer
-from ... import register_node
+from ... import register_node, register_route
 from ...utils.image import image_to_base64
 from ...utils.context import get_persistent_context, has_persistent_context, update_persistent_context
-
-routes = PromptServer.instance.routes
 
 @register_node
 class ImagePreviewer:
@@ -42,7 +39,7 @@ class ImagePreviewer:
         return {"result": (image,), "ui": {"uuid": [uuid]}}
 
 
-@routes.post("/image_previewer/get_image")
+@register_route("/image_previewer/get_image")
 async def handle_get_image(request):
     """Get base64 image data from context by uuid"""
     data = await request.json()
@@ -69,7 +66,7 @@ async def handle_get_image(request):
     })
 
 
-@routes.post("/image_previewer/update_access")
+@register_route("/image_previewer/update_access")
 async def handle_update_access(request):
     """Update the access time for a context to prevent it from being cleaned up"""
     data = await request.json()
@@ -85,7 +82,7 @@ async def handle_update_access(request):
     update_persistent_context(uuid)
     return web.json_response({"success": True})
 
-@routes.post("/image_previewer/clear")
+@register_route("/image_previewer/clear")
 async def handle_clear(request):
     data = await request.json()
     uuid = data.get("uuid", "")

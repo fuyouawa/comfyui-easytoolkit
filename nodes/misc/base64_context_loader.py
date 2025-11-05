@@ -1,10 +1,7 @@
 from aiohttp import web
-from server import PromptServer
-from ... import register_node
+from ... import register_node, register_route
 from ...utils.context import resolve_persistent_contexts_by_value_type, get_persistent_context, has_persistent_context
 from .base64_context import Base64Context
-
-routes = PromptServer.instance.routes
 
 @register_node
 class Base64ContextLoader:
@@ -37,7 +34,7 @@ class Base64ContextLoader:
         suffix = base64_context.get_suffix()
         return {"result": (base64, basename, suffix,)}
 
-@routes.post("/base64_context_previewer/get_keys")
+@register_route("/base64_context_previewer/get_keys")
 async def handle_get_keys(request):
     """Get available base64 context keys"""
     base64_contexts = resolve_persistent_contexts_by_value_type(Base64Context)
@@ -45,7 +42,7 @@ async def handle_get_keys(request):
     keys.insert(0, "NONE")
     return web.json_response({"success": True, "keys": keys})
 
-@routes.post("/base64_context_previewer/get_data")
+@register_route("/base64_context_previewer/get_data")
 async def handle_get_data(request):
     """Get base64 data from context by key"""
     data = await request.json()
