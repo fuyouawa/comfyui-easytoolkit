@@ -10,7 +10,7 @@ from ...utils.video import image_batch_to_video_bytes, ffmpeg_path
 from ... import register_node
 
 @register_node
-class ImageBatchBase64Encoder:
+class VideoBase64Encoder:
     @classmethod
     def INPUT_TYPES(s):
 
