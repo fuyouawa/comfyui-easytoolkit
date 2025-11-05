@@ -105,6 +105,18 @@ async def handle_update_access(request):
     update_persistent_context(uuid)
     return web.json_response({"success": True})
 
+@routes.post("/base64_cache_downloader/clear")
+async def handle_clear(request):
+    data = await request.json()
+    uuid = data.get("uuid", "")
+
+    if not uuid or not has_persistent_context(uuid):
+        return web.json_response({"success": False, "error": "没有base64数据。"})
+    
+    # Clear the persistent context by setting it to None
+    get_persistent_context(uuid).set_value(None)
+    return web.json_response({"success": True})
+
 
 @routes.get("/base64_cache_downloader/config")
 async def handle_get_config(request):

@@ -30,7 +30,7 @@ class Base64ContextLoader:
     def run(self, key, mode):
         base64_context = get_persistent_context(key).get_value()
         if not base64_context or not isinstance(base64_context, Base64Context):
-            raise Exception("There is no base64 data at all.")
+            return {"result": (None, None, None,)}
         
         base64 = base64_context.get_base64()
         basename = base64_context.get_basename()
