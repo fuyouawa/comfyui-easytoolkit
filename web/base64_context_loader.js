@@ -67,11 +67,10 @@ app.registerExtension({
             // Initial load of keys
             await refreshKeys();
 
-            // Add preview button
-            this.addWidget("button", "Preview Data", null, async () => {
+            // Function to load preview data
+            const loadPreview = async () => {
                 try {
                     if (!keyWidget.value || keyWidget.value === "NONE") {
-                        alert("Please select a valid key first");
                         previewWidget.value = "No key selected";
                         return;
                     }
@@ -83,7 +82,6 @@ app.registerExtension({
                     });
                     
                     if (!data.success) {
-                        alert(data.error);
                         previewWidget.value = `Error: ${data.error}`;
                         return;
                     }
@@ -110,9 +108,22 @@ app.registerExtension({
                     });
                 } catch (error) {
                     console.error("Preview data failed:", error);
-                    alert(`Preview data failed: ${error.message}`);
                     previewWidget.value = `Error: ${error.message}`;
                 }
+            };
+
+            // Auto-load preview on initialization if in Builtin mode
+            if (modeWidget.value === "Builtin" && keyWidget.value && keyWidget.value !== "NONE") {
+                await loadPreview();
+            }
+
+            // Add preview button
+            this.addWidget("button", "Preview Data", null, async () => {
+                if (!keyWidget.value || keyWidget.value === "NONE") {
+                    alert("Please select a valid key first");
+                    return;
+                }
+                await loadPreview();
             });
 
             // Add refresh button to reload available keys

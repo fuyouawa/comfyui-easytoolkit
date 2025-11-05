@@ -70,6 +70,9 @@ app.registerExtension({
             
             // Store the load function for later use
             this.loadPreviewImage = loadPreviewImage;
+            
+            // Try to load preview image on node creation (if exists)
+            await loadPreviewImage();
         };
 
         // Override onExecuted to load image after execution
