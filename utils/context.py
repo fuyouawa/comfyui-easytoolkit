@@ -4,7 +4,6 @@ import pickle
 import threading
 import atexit
 from concurrent.futures import ThreadPoolExecutor
-import folder_paths
 from aiohttp import web
 from .config import get_config
 from .. import register_route
@@ -47,17 +46,10 @@ class PersistentContextCache:
     def __init__(self):
         # Load configuration from config file
         config = get_config().get_persistent_context_config()
-        self._timeout = config.get('timeout', 300.0)
-        self._check_interval = config.get('check_interval', 60.0)
         self._auto_save_interval = config.get('auto_save_interval', 60.0)
-        self._start_timeout_on_first_access = config.get('start_timeout_on_first_access', True)
-
-        self._start_timeout = not self._start_timeout_on_first_access
         
         self._data: dict[str, PersistentContext] = {}
-        self._last_cleanup_time = 0 if self._start_timeout else time.time()
-        self._last_save_time = 0 if self._start_timeout else time.time()
-        self._storage_file = self._get_storage_path()
+        self._last_save_time = time.time()
         
         # Thread pool for async disk operations
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="persistent_context_saver")
@@ -67,32 +59,24 @@ class PersistentContextCache:
         self._save_future = None
 
     def get_context(self, key: str) -> PersistentContext:
-        self._start_timeout = True
         self.update_context_access_time(key)
-        self._cleanup_expired()
         if key in self._data:
             return self._data[key]
         raise KeyError(f"Context with key '{key}' not found")
 
     def has_context(self, key: str) -> bool:
-        self._start_timeout = True
         self.update_context_access_time(key)
-        self._cleanup_expired()
         return key in self._data
 
     def remove_context(self, key: str):
-        self._start_timeout = True
         self.update_context_access_time(key)
-        self._cleanup_expired()
         if key in self._data:
             del self._data[key]
         self.save()
 
     def create_context(self, key: str, value: any) -> PersistentContext:
-        self._start_timeout = True
         context = PersistentContext(value, key=key, cache=self)
         self._data[key] = context
-        self._cleanup_expired()
         return context
 
     def resolve_contexts_by_value_type(self, value_type: type) -> list[PersistentContext]:
@@ -104,54 +88,16 @@ class PersistentContextCache:
         Returns:
             List of PersistentContext objects whose values match the specified type
         """
-        self._start_timeout = True
         result = []
         for context in self._data.values():
             if isinstance(context.get_value(), value_type):
                 result.append(context)
-        self._cleanup_expired()
         return result
 
     def update_context_access_time(self, key: str):
         if key in self._data:
             self._data[key].update_access_time()
-
-    def _cleanup_expired(self):
-        if not self._start_timeout:
-            return
-
-        if self._last_cleanup_time == 0:
-            self._last_cleanup_time = time.time()
-
-        current_time = time.time()
-        # Only perform cleanup if enough time has passed since last cleanup
-        if current_time - self._last_cleanup_time < self._check_interval:
-            return
-
-        expired_keys = []
-        for key, context in self._data.items():
-            if current_time - context._last_access_time > self._timeout or context.get_value() is None:
-                expired_keys.append(key)
-
-        for key in expired_keys:
-            del self._data[key]
-
-        self._last_cleanup_time = current_time
-        
-        # Save to disk asynchronously if any contexts were removed
-        if expired_keys:
-            self.save()
     
-    def _auto_save_check(self):
-        """Check if it's time to auto-save and save if needed"""
-        # Skip if auto-save is disabled (interval <= 0)
-        if self._auto_save_interval <= 0:
-            return
-        
-        current_time = time.time()
-        if current_time - self._last_save_time >= self._auto_save_interval:
-            self.save()
-
     def save(self):
         pass
     
@@ -162,17 +108,6 @@ class PersistentContextCache:
         
         # Shutdown the thread pool (will wait for all tasks to complete)
         self._executor.shutdown(wait=True)
-    
-    def _get_storage_path(self) -> str:
-        """Get the storage path for persistent context data"""
-        user_dir = folder_paths.get_user_directory()
-        storage_dir = os.path.join(user_dir, "default", "comfyui-easytoolkit")
-        
-        # Create directory if it doesn't exist
-        if not os.path.exists(storage_dir):
-            os.makedirs(storage_dir)
-        
-        return os.path.join(storage_dir, "persistent_context.pkl")
     
 _global_context_cache = PersistentContextCache()
 
