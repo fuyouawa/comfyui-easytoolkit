@@ -21,9 +21,10 @@ app.registerExtension({
 
             uuid_widget.disabled = true;
 
-            let progressWidget = this.addWidget("text", "upload_progress", "正在准备上传...", () => {});
-            progressWidget.disabled = true;
-            progressWidget.value = "待命中...";
+            // Initialize progress tracking
+            this.uploadProgress = 0; // 0-100
+            this.isUploading = false;
+            this.uploadStatus = "待命中..."; // Status message
 
             // Initialize access update timer
             this.accessUpdateTimer = null;
@@ -82,29 +83,43 @@ app.registerExtension({
 
                             uuid_widget = this.widgets?.find(w => w.name === "uuid");
                             let filename_widget = this.widgets?.find(w => w.name === "filename");
-                            progressWidget = this.widgets?.find(w => w.name === "upload_progress");
-                            if (!uuid_widget || !filename_widget || !progressWidget) {
-                                alert("Cannot find uuid or filename or progress widget.");
+                            if (!uuid_widget || !filename_widget) {
+                                alert("Cannot find uuid or filename widget.");
                                 return;
                             }
                             filename_widget.value = file.name;
 
-                            // 查找或创建进度显示
-                            progressWidget.value = "正在准备上传...";
+                            // 准备上传
+                            this.uploadStatus = "正在准备上传...";
+                            this.isUploading = true;
+                            this.uploadProgress = 0;
+                            app.canvas.setDirty(true);
 
                             try {
                                 // 使用分块上传避免大文件卡死
-                                await this.uploadFileInChunks(file, uuid_widget.value, file.name, progressWidget);
-                                progressWidget.value = "上传完成！";
+                                await this.uploadFileInChunks(file, uuid_widget.value, file.name);
+                                this.uploadStatus = "上传完成！";
+                                this.isUploading = false;
+                                this.uploadProgress = 100;
+                                app.canvas.setDirty(true);
                                 app.extensionManager.toast.add({
                                     severity: "info",
                                     summary: "上传成功",
                                     detail: `文件 ${file.name} 已上传`,
                                     life: 3000
                                 });
+                                // Reset progress after a delay
+                                setTimeout(() => {
+                                    this.uploadProgress = 0;
+                                    this.uploadStatus = "待命中...";
+                                    app.canvas.setDirty(true);
+                                }, 2000);
                             } catch (error) {
                                 console.error("Upload failed:", error);
-                                progressWidget.value = `上传失败: ${error.message}`;
+                                this.uploadStatus = `上传失败: ${error.message}`;
+                                this.isUploading = false;
+                                this.uploadProgress = 0;
+                                app.canvas.setDirty(true);
                                 alert(`上传失败: ${error.message}`);
                             }
                         } catch (error) {
@@ -120,71 +135,55 @@ app.registerExtension({
                 }
             });
 
-            this.addWidget("button", "删除缓存", null, async () => {
-                try {
-                    uuid_widget = this.widgets?.find(w => w.name === "uuid");
-                    const response = await fetch("/base64_cache_loader/clear", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ "uuid": uuid_widget.value }),
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    if (data.success) {
-                        app.extensionManager.toast.add({
-                            severity: "info",
-                            summary: "删除成功",
-                            detail: "缓存已清除",
-                            life: 3000
-                        });
-                    } else {
-                        alert(data.error);
-                    }
-                } catch (error) {
-                    console.error("删除缓存失败:", error);
-                    alert(`删除缓存失败: ${error.message}`);
+            // Draw progress bar
+            const onDrawForeground = this.onDrawForeground;
+            this.onDrawForeground = function(ctx) {
+                if (onDrawForeground) {
+                    onDrawForeground.apply(this, arguments);
                 }
-            });
 
-            this.addWidget("button", "重新生成UUID", null, async () => {
-                try {
-                    uuid_widget = this.widgets?.find(w => w.name === "uuid");
-                    uuid_widget.value = crypto.randomUUID();
-                    app.extensionManager.toast.add({
-                        severity: "info",
-                        summary: "生成成功",
-                        detail: "新的UUID已生成",
-                        life: 3000
-                    });
-                } catch (error) {
-                    console.error("生成UUID失败:", error);
-                    alert(`生成UUID失败: ${error.message}`);
-                }
-            });
+                if (this.isUploading && this.uploadProgress > 0) {
+                    const margin = 15;
+                    const barHeight = 20;
+                    const statusTextHeight = 16;
+                    const spacing = 8;
+                    const totalHeight = statusTextHeight + spacing + barHeight;
+                    const barY = this.size[1] - totalHeight - margin;
+                    const statusY = barY - spacing;
+                    const barWidth = this.size[0] - margin * 2;
 
-            this.addWidget("button", "复制UUID", null, async () => {
-                try {
-                    uuid_widget = this.widgets?.find(w => w.name === "uuid");
-                    if (!uuid_widget || !uuid_widget.value) {
-                        alert("UUID不存在");
-                        return;
-                    }
-                    await navigator.clipboard.writeText(uuid_widget.value);
-                    app.extensionManager.toast.add({
-                        severity: "info",
-                        summary: "复制成功",
-                        detail: "UUID已复制到剪切板",
-                        life: 3000
-                    });
-                } catch (error) {
-                    console.error("复制UUID失败:", error);
-                    alert(`复制UUID失败: ${error.message}`);
+                    // Draw status text
+                    ctx.fillStyle = "#cccccc";
+                    ctx.font = "12px Arial";
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "bottom";
+                    ctx.fillText(this.uploadStatus || "", margin, statusY);
+
+                    // Draw background
+                    ctx.fillStyle = "#2a2a2a";
+                    ctx.fillRect(margin, barY, barWidth, barHeight);
+
+                    // Draw progress
+                    const progressWidth = (barWidth * this.uploadProgress) / 100;
+                    const gradient = ctx.createLinearGradient(margin, barY, margin + progressWidth, barY);
+                    gradient.addColorStop(0, "#4a9eff");
+                    gradient.addColorStop(1, "#2d7dd2");
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(margin, barY, progressWidth, barHeight);
+
+                    // Draw border
+                    ctx.strokeStyle = "#555";
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(margin, barY, barWidth, barHeight);
+
+                    // Draw percentage text
+                    ctx.fillStyle = "#ffffff";
+                    ctx.font = "12px Arial";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(`${Math.round(this.uploadProgress)}%`, margin + barWidth / 2, barY + barHeight / 2);
                 }
-            });
+            };
         };
 
         // Clean up timer and context data when node is removed
@@ -221,13 +220,16 @@ app.registerExtension({
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name !== "Base64Uploader") return;
 
-        nodeType.prototype.uploadFileInChunks = async function(file, uuid, filename, progressWidget) {
+        nodeType.prototype.uploadFileInChunks = async function(file, uuid, filename) {
             try {
                 const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
                 const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
                 // 先初始化上传
-                progressWidget.value = "正在初始化上传...";
+                this.uploadProgress = 0;
+                this.uploadStatus = "正在初始化上传...";
+                app.canvas.setDirty(true);
+                
                 const initResponse = await fetch("/base64_cache_loader/init_upload", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -254,7 +256,10 @@ app.registerExtension({
                     const end = Math.min(start + CHUNK_SIZE, file.size);
                     const chunk = file.slice(start, end);
 
-                    progressWidget.value = `上传中... ${Math.round(((chunkIndex + 1) / totalChunks) * 100)}% (${chunkIndex + 1}/${totalChunks})`;
+                    // Update progress
+                    this.uploadProgress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+                    this.uploadStatus = `上传中... (${chunkIndex + 1}/${totalChunks})`;
+                    app.canvas.setDirty(true);
 
                     // 给UI一个更新的机会
                     await new Promise(resolve => setTimeout(resolve, 0));
@@ -280,7 +285,10 @@ app.registerExtension({
                 }
 
                 // 完成上传
-                progressWidget.value = "正在完成上传...";
+                this.uploadProgress = 100;
+                this.uploadStatus = "正在完成上传...";
+                app.canvas.setDirty(true);
+                
                 const finalizeResponse = await fetch("/base64_cache_loader/finalize_upload", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
