@@ -55,8 +55,6 @@ class VideoBase64Encoder:
         prompt=None,
         extra_pnginfo=None,
     ):
-        images=image_batch
-
         metadata = PngInfo()
         video_metadata = {}
         if save_metadata:
@@ -70,7 +68,7 @@ class VideoBase64Encoder:
 
         # Use new generic function to generate video bytes
         video_bytes, ext = image_batch_to_video_bytes(
-            image_batch=images,
+            image_batch=image_batch,
             frame_rate=frame_rate,
             video_format=video_format,
             pingpong=pingpong,

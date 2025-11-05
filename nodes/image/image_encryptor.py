@@ -35,7 +35,7 @@ class ImageEncryptor:
 
     def run(self, image, enable, operation):
         """
-        Main function for processing images
+        Main function for processing image
         """
         if not enable:
             return (image,)

@@ -9,7 +9,7 @@ class ImageBatchSelector:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "images": ("IMAGE",),
+                "image_batch": ("IMAGE",),
                 "select": ("INT", {
                     "default": 0,
                     "min": 0,
@@ -24,8 +24,8 @@ class ImageBatchSelector:
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Image"
 
-    def run(self, images, select):
-        n, h, w, c = images.shape
+    def run(self, image_batch, select):
+        n, h, w, c = image_batch.shape
         if select >= n:
             select = n - 1
-        return (images[select].reshape(1, h, w, c),)
+        return (image_batch[select].reshape(1, h, w, c),)

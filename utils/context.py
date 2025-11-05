@@ -5,6 +5,7 @@ import threading
 import atexit
 from concurrent.futures import ThreadPoolExecutor
 import folder_paths
+from aiohttp import web
 from .config import get_config
 from .. import register_route
 
