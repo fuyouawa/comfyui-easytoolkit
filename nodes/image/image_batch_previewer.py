@@ -2,6 +2,7 @@ from aiohttp import web
 from ... import register_node, register_route
 from ...utils.image import image_batch_to_base64_list
 from ...utils.context import get_context, has_context, update_context
+from ...utils.format import static_image_formats
 
 @register_node
 class ImageBatchPreviewer:
@@ -16,7 +17,8 @@ class ImageBatchPreviewer:
         return {
             "required": {
                 "image_batch": ("IMAGE",),
-                "fps": ("INT", {"default": 8, "min": 1, "max": 60, "step": 1}),
+                "format": (static_image_formats, {"default": "image/jpeg"}),
+                "fps": ("INT", {"default": 16, "min": 1, "max": 60, "step": 1}),
                 "uuid": ("STRING", {"default": ""}),
             },
         }
@@ -27,14 +29,14 @@ class ImageBatchPreviewer:
     CATEGORY = "EasyToolkit/Image"
     OUTPUT_NODE = True
 
-    def run(self, image_batch, fps, uuid):
+    def run(self, image_batch, format, fps, uuid):
         # Convert image batch to base64 list
-        base64_list = image_batch_to_base64_list(image_batch, format="image/png")
+        base64_list = image_batch_to_base64_list(image_batch, format=format)
         
         # Store base64 data list in persistent context
         get_context(uuid).set_value({
             "base64_list": base64_list,
-            "format": "image/png",
+            "format": format,
             "fps": fps,
             "frame_count": len(base64_list)
         })

@@ -2,6 +2,7 @@ from aiohttp import web
 from ... import register_node, register_route
 from ...utils.image import image_to_base64
 from ...utils.context import get_context, has_context, update_context
+from ...utils.format import static_image_formats
 
 @register_node
 class ImagePreviewer:
@@ -16,6 +17,7 @@ class ImagePreviewer:
         return {
             "required": {
                 "image": ("IMAGE",),
+                "format": (static_image_formats, {"default": "image/jpeg"}),
                 "uuid": ("STRING", {"default": ""}),
             },
         }
@@ -26,14 +28,14 @@ class ImagePreviewer:
     CATEGORY = "EasyToolkit/Image"
     OUTPUT_NODE = True
 
-    def run(self, image, uuid):
+    def run(self, image, format, uuid):
         # Convert image to base64
-        base64_data = image_to_base64(image, format="image/png")
+        base64_data = image_to_base64(image, format=format)
         
         # Store base64 data in persistent context
         get_context(uuid).set_value({
             "base64": base64_data,
-            "format": "image/png"
+            "format": format
         })
         
         return {"result": (image,), "ui": {"uuid": [uuid]}}
