@@ -158,3 +158,111 @@ def base64_list_to_image_batch(base64_list):
     else:
         # Return empty tensors if no images
         return torch.empty(0), torch.empty(0)
+
+
+def tensor_to_base64(tensor):
+    """
+    Convert a raw tensor to base64 string
+    
+    Args:
+        tensor: torch.Tensor with shape (H, W, C) or (1, H, W, C)
+    
+    Returns:
+        Base64 encoded string of the raw tensor data
+    """
+    # If it's a torch.Tensor, convert to numpy first
+    if isinstance(tensor, torch.Tensor):
+        tensor = tensor.detach().cpu()
+    else:
+        tensor = torch.from_numpy(tensor)
+    
+    # Remove batch dimension if present
+    if tensor.ndim == 4 and tensor.shape[0] == 1:
+        tensor = tensor[0]
+    
+    # Serialize tensor to bytes
+    buffer = io.BytesIO()
+    torch.save(tensor, buffer)
+    buffer.seek(0)
+    
+    # Encode to base64
+    return base64.b64encode(buffer.read()).decode("utf-8")
+
+
+def base64_to_tensor(base64_data):
+    """
+    Convert base64 string back to tensor
+    
+    Args:
+        base64_data: Base64 encoded string
+    
+    Returns:
+        torch.Tensor with shape (1, H, W, C)
+    """
+    # Decode from base64
+    tensor_bytes = base64.b64decode(base64_data)
+    buffer = io.BytesIO(tensor_bytes)
+    
+    # Load tensor
+    tensor = torch.load(buffer)
+    
+    # Add batch dimension if not present
+    if tensor.ndim == 3:
+        tensor = tensor.unsqueeze(0)
+    
+    return tensor
+
+
+def tensor_batch_to_base64_list(tensors):
+    """
+    Convert a batch of tensors to a list of base64 strings
+    
+    Args:
+        tensors: torch.Tensor with shape (N, H, W, C) where N is batch size
+    
+    Returns:
+        List of base64 encoded strings
+    """
+    if isinstance(tensors, torch.Tensor):
+        tensors = tensors.detach().cpu()
+    else:
+        tensors = torch.from_numpy(tensors)
+    
+    base64_list = []
+    # Handle batch dimension
+    if tensors.ndim == 4:
+        for i in range(tensors.shape[0]):
+            tensor = tensors[i]
+            base64_str = tensor_to_base64(tensor)
+            base64_list.append(base64_str)
+    elif tensors.ndim == 3:
+        # Single tensor
+        base64_str = tensor_to_base64(tensors)
+        base64_list.append(base64_str)
+    
+    return base64_list
+
+
+def base64_list_to_tensor_batch(base64_list):
+    """
+    Convert a list of base64 strings to a batch of tensors
+    
+    Args:
+        base64_list: List of base64 encoded strings
+    
+    Returns:
+        torch.Tensor with shape (N, H, W, C)
+    """
+    tensors = []
+    
+    for base64_data in base64_list:
+        tensor = base64_to_tensor(base64_data)
+        tensors.append(tensor)
+    
+    # Concatenate all tensors into a batch
+    if len(tensors) > 0:
+        tensors_batch = torch.cat(tensors, dim=0)
+        return tensors_batch
+    else:
+        # Return empty tensor if no tensors
+        return torch.empty(0)
