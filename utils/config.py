@@ -108,7 +108,7 @@ class Config:
             return fallback_dir
         
         config = self.get_persistent_context_config()
-        cache_dir_type = config.get('cache_directory', 'temp')
+        cache_dir_type = config.get('cache_directory', 'input')
         
         # Get the base directory from ComfyUI's folder_paths
         base_dir = None
@@ -139,6 +139,12 @@ class Config:
         """Get maximum upload file size in MB"""
         config = self.get_base64_uploader_config()
         return config.get('max_upload_file_size_mb', 100)
+    
+    def reload(self):
+        """Reload configuration from disk"""
+        print("[comfyui-easytoolkit] Reloading configuration...")
+        self._load_config()
+        print("[comfyui-easytoolkit] Configuration reloaded successfully")
 
 
 # Global config instance

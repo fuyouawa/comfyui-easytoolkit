@@ -125,8 +125,7 @@ app.registerExtension({
                     
                     if (data.success) {
                         app.ui.dialog.show(
-                            "Configuration saved successfully!\n" +
-                            "Restart ComfyUI to apply the changes."
+                            "Configuration saved successfully!"
                         );
                         console.log("[EasyToolkit] Configuration saved");
                     } else {

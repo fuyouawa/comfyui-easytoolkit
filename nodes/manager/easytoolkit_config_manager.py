@@ -96,6 +96,10 @@ async def handle_save_override(request):
         with open(override_path, 'w', encoding='utf-8') as f:
             f.write(yaml_text)
         
+        # Reload configuration to apply changes immediately
+        config = get_config()
+        config.reload()
+        
         return web.json_response({
             "success": True,
             "message": f"Configuration override saved to {override_path}",
@@ -124,6 +128,10 @@ async def handle_delete_override(request):
             })
         
         os.remove(override_path)
+        
+        # Reload configuration to apply changes immediately
+        config = get_config()
+        config.reload()
         
         return web.json_response({
             "success": True,

@@ -5,14 +5,12 @@ import gzip
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from .config import get_config
-from .. import register_route
 
 class PersistentContext:
     def __init__(self, value: any, key: str = None, cache=None, auto_save: bool = True):
         self._value = value
         self._key = key
         self._cache = cache
-        self._auto_save = auto_save
         self._last_access_time = 0.0
         self._dirty = True  # Mark as dirty when created
 
@@ -26,12 +24,19 @@ class PersistentContext:
         self.update_access_time()
         return self._value
     
+    def _get_auto_save(self) -> bool:
+        """Get auto_save setting from config (real-time) via cache"""
+        if self._cache is not None:
+            return self._cache._get_auto_save()
+        # Default to False if no cache is available
+        return False
+    
     def set_value(self, value: any, save: bool = None):
         self._value = value
         self._dirty = True  # Mark as dirty when value changes
         self.update_access_time()
         # Save to disk based on auto_save setting or explicit save parameter
-        should_save = save if save is not None else self._auto_save
+        should_save = save if save is not None else self._get_auto_save()
         if self._cache is not None and should_save:
             self._cache.save()
     
@@ -60,17 +65,10 @@ class PersistentContext:
         # These fields will be set by the cache after loading
         self._key = None
         self._cache = None
-        self._auto_save = True
         self._dirty = False  # Not dirty when loaded from disk
 
 class PersistentContextCache:
     def __init__(self):
-        # Load configuration from config file
-        config = get_config().get_persistent_context_config()
-        # Get cache directory directly
-        self._cache_dir = get_config().get_cache_directory_path()
-        self._auto_save = config.get('auto_save', True)
-        
         self._data: dict[str, PersistentContext] = {}
         self._last_save_time = time.time()
         
@@ -82,17 +80,44 @@ class PersistentContextCache:
         self._save_future = None
         
         # Create cache directory if it doesn't exist
-        os.makedirs(self._cache_dir, exist_ok=True)
+        os.makedirs(self._get_cache_dir(), exist_ok=True)
         
         # Load existing cache from disk
         self._load()
-        
-        # Load cleanup configuration
-        self._max_cache_size_bytes = config.get('max_cache_size_mb', 100) * 1024 * 1024
-        self._old_data_threshold_seconds = config.get('old_data_threshold_hours', 24) * 3600
-        self._absolute_max_cache_size_bytes = config.get('absolute_max_cache_size_mb', 200) * 1024 * 1024
-        self._max_context_size_bytes = config.get('max_context_size_mb', 50) * 1024 * 1024
-        self._max_key_length = config.get('max_key_length', 256)
+    
+    def _get_cache_dir(self) -> str:
+        """Get cache directory from config (real-time)"""
+        return get_config().get_cache_directory_path()
+    
+    def _get_auto_save(self) -> bool:
+        """Get auto_save setting from config (real-time)"""
+        config = get_config().get_persistent_context_config()
+        return config.get('auto_save', False)
+    
+    def _get_max_cache_size_bytes(self) -> int:
+        """Get max cache size from config (real-time)"""
+        config = get_config().get_persistent_context_config()
+        return config.get('max_cache_size_mb', 100) * 1024 * 1024
+    
+    def _get_old_data_threshold_seconds(self) -> float:
+        """Get old data threshold from config (real-time)"""
+        config = get_config().get_persistent_context_config()
+        return config.get('old_data_threshold_hours', 24) * 3600
+    
+    def _get_absolute_max_cache_size_bytes(self) -> int:
+        """Get absolute max cache size from config (real-time)"""
+        config = get_config().get_persistent_context_config()
+        return config.get('absolute_max_cache_size_mb', 200) * 1024 * 1024
+    
+    def _get_max_context_size_bytes(self) -> int:
+        """Get max context size from config (real-time)"""
+        config = get_config().get_persistent_context_config()
+        return config.get('max_context_size_mb', 50) * 1024 * 1024
+    
+    def _get_max_key_length(self) -> int:
+        """Get max key length from config (real-time)"""
+        config = get_config().get_persistent_context_config()
+        return config.get('max_key_length', 256)
     
     @staticmethod
     def _sanitize_filename(key: str) -> str:
@@ -111,7 +136,7 @@ class PersistentContextCache:
     def _get_context_file_path(self, key: str) -> str:
         """Get the file path for a context key"""
         filename = self._sanitize_filename(key)
-        return os.path.join(self._cache_dir, filename)
+        return os.path.join(self._get_cache_dir(), filename)
     
     def _validate_key(self, key: str):
         """Validate key length and format
@@ -122,8 +147,9 @@ class PersistentContextCache:
         if not key:
             raise ValueError("Context key cannot be empty")
         
-        if self._max_key_length > 0 and len(key) > self._max_key_length:
-            raise ValueError(f"Context key length ({len(key)}) exceeds maximum allowed length ({self._max_key_length})")
+        max_key_length = self._get_max_key_length()
+        if max_key_length > 0 and len(key) > max_key_length:
+            raise ValueError(f"Context key length ({len(key)}) exceeds maximum allowed length ({max_key_length})")
 
     def get_context(self, key: str) -> PersistentContext:
         self._validate_key(key)
@@ -156,10 +182,10 @@ class PersistentContextCache:
 
     def create_context(self, key: str, value: any) -> PersistentContext:
         self._validate_key(key)
-        context = PersistentContext(value, key=key, cache=self, auto_save=self._auto_save)
+        context = PersistentContext(value, key=key, cache=self)
         self._data[key] = context
         # Trigger an async save after creating a new context (if auto_save is enabled)
-        if self._auto_save:
+        if self._get_auto_save():
             self.save()
         return context
 
@@ -188,8 +214,9 @@ class PersistentContextCache:
     
     def _load(self):
         """Load cache from disk - scan directory for individual context files"""
-        if not os.path.exists(self._cache_dir):
-            print(f"[comfyui-easytoolkit] No existing cache directory found at {self._cache_dir}")
+        cache_dir = self._get_cache_dir()
+        if not os.path.exists(cache_dir):
+            print(f"[comfyui-easytoolkit] No existing cache directory found at {cache_dir}")
             return
         
         # Scan directory for .pkl files
@@ -197,11 +224,11 @@ class PersistentContextCache:
             loaded_count = 0
             failed_count = 0
             
-            for filename in os.listdir(self._cache_dir):
+            for filename in os.listdir(cache_dir):
                 if not filename.endswith('.pkl'):
                     continue
                 
-                file_path = os.path.join(self._cache_dir, filename)
+                file_path = os.path.join(cache_dir, filename)
                 
                 try:
                     # Load and decompress the context from file
@@ -224,7 +251,6 @@ class PersistentContextCache:
                     # Restore the fields that were not serialized
                     context_obj._key = key
                     context_obj._cache = self
-                    context_obj._auto_save = self._auto_save
                     context_obj._dirty = False  # Loaded from disk, so not dirty
                     
                     # Check if value is empty (indicates serialization failure)
@@ -247,7 +273,7 @@ class PersistentContextCache:
                     print(f"[comfyui-easytoolkit] Warning: Failed to load context from {filename}: {e}")
                     continue
             
-            print(f"[comfyui-easytoolkit] Loaded {loaded_count} context(s) from {self._cache_dir}")
+            print(f"[comfyui-easytoolkit] Loaded {loaded_count} context(s) from {cache_dir}")
             if failed_count > 0:
                 print(f"[comfyui-easytoolkit] Failed to load {failed_count} context file(s)")
                 
@@ -307,10 +333,11 @@ class PersistentContextCache:
                     data_size = len(compressed_data)
                     
                     # Check if data size exceeds limit (if limit is set)
-                    if self._max_context_size_bytes > 0 and data_size > self._max_context_size_bytes:
+                    max_context_size = self._get_max_context_size_bytes()
+                    if max_context_size > 0 and data_size > max_context_size:
                         oversized_count += 1
                         size_mb = data_size / 1024 / 1024
-                        limit_mb = self._max_context_size_bytes / 1024 / 1024
+                        limit_mb = max_context_size / 1024 / 1024
                         print(f"[comfyui-easytoolkit] Warning: Context '{key}' size ({size_mb:.2f} MB) exceeds limit ({limit_mb:.2f} MB), skipping save")
                         # Mark as clean to avoid repeated attempts to save
                         context.mark_clean()
@@ -349,7 +376,7 @@ class PersistentContextCache:
             self._last_save_time = time.time()
             
             if saved_count > 0:
-                print(f"[comfyui-easytoolkit] Saved {saved_count} context(s) to {self._cache_dir}")
+                print(f"[comfyui-easytoolkit] Saved {saved_count} context(s) to {self._get_cache_dir()}")
             if removed_count > 0:
                 print(f"[comfyui-easytoolkit] Removed {removed_count} context(s) with empty values")
             if oversized_count > 0:
@@ -365,14 +392,15 @@ class PersistentContextCache:
         """Calculate total size of all cache files in bytes"""
         total_size = 0
         try:
-            if not os.path.exists(self._cache_dir):
+            cache_dir = self._get_cache_dir()
+            if not os.path.exists(cache_dir):
                 return 0
             
-            for filename in os.listdir(self._cache_dir):
+            for filename in os.listdir(cache_dir):
                 if not filename.endswith('.pkl'):
                     continue
                 
-                file_path = os.path.join(self._cache_dir, filename)
+                file_path = os.path.join(cache_dir, filename)
                 try:
                     total_size += os.path.getsize(file_path)
                 except Exception as e:
@@ -389,20 +417,25 @@ class PersistentContextCache:
             # Calculate current cache size
             current_size = self._calculate_total_cache_size()
             
+            # Get thresholds from config
+            max_cache_size = self._get_max_cache_size_bytes()
+            absolute_max_cache_size = self._get_absolute_max_cache_size_bytes()
+            old_data_threshold = self._get_old_data_threshold_seconds()
+            
             # If below normal threshold, no cleanup needed
-            if current_size <= self._max_cache_size_bytes:
+            if current_size <= max_cache_size:
                 return
             
-            print(f"[comfyui-easytoolkit] Cache size ({current_size / 1024 / 1024:.2f} MB) exceeds threshold ({self._max_cache_size_bytes / 1024 / 1024:.2f} MB)")
+            print(f"[comfyui-easytoolkit] Cache size ({current_size / 1024 / 1024:.2f} MB) exceeds threshold ({max_cache_size / 1024 / 1024:.2f} MB)")
             
             # Get current time
             current_time = time.time()
             
             # Determine if we need forced cleanup (exceeds absolute maximum)
-            force_cleanup = current_size > self._absolute_max_cache_size_bytes and self._absolute_max_cache_size_bytes > 0
+            force_cleanup = current_size > absolute_max_cache_size and absolute_max_cache_size > 0
             
             if force_cleanup:
-                print(f"[comfyui-easytoolkit] Cache size exceeds absolute maximum ({self._absolute_max_cache_size_bytes / 1024 / 1024:.2f} MB), forcing cleanup")
+                print(f"[comfyui-easytoolkit] Cache size exceeds absolute maximum ({absolute_max_cache_size / 1024 / 1024:.2f} MB), forcing cleanup")
             
             # Collect all contexts with their metadata
             all_contexts = []
@@ -420,7 +453,7 @@ class PersistentContextCache:
                     all_contexts.append(context_info)
                     
                     # Also track which are "old" based on threshold
-                    if age >= self._old_data_threshold_seconds:
+                    if age >= old_data_threshold:
                         old_contexts.append(context_info)
                 except Exception as e:
                     print(f"[comfyui-easytoolkit] Warning: Failed to get size for context '{key}': {e}")
@@ -431,16 +464,16 @@ class PersistentContextCache:
             if force_cleanup:
                 # Forced cleanup: use all contexts, sorted by age (oldest first)
                 contexts_to_clean = sorted(all_contexts, key=lambda x: x[1])
-                target_size = self._max_cache_size_bytes  # Clean down to normal threshold
+                target_size = max_cache_size  # Clean down to normal threshold
                 print(f"[comfyui-easytoolkit] Forced cleanup mode: will clean oldest data regardless of age")
             else:
                 # Normal cleanup: only clean old data
                 if not old_contexts:
-                    print(f"[comfyui-easytoolkit] No old data found (threshold: {self._old_data_threshold_seconds / 3600:.1f} hours), skipping cleanup")
+                    print(f"[comfyui-easytoolkit] No old data found (threshold: {old_data_threshold / 3600:.1f} hours), skipping cleanup")
                     return
                 
                 contexts_to_clean = sorted(old_contexts, key=lambda x: x[1])
-                target_size = self._max_cache_size_bytes
+                target_size = max_cache_size
             
             # Remove contexts until size is below target
             removed_count = 0
