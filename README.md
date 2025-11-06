@@ -10,6 +10,7 @@
   - [编码/解码节点](#编码解码节点)
   - [图像处理节点](#图像处理节点)
   - [杂项工具节点](#杂项工具节点)
+  - [管理工具节点](#管理工具节点)
 - [配置说明](#配置说明)
 - [许可证](#许可证)
 
@@ -37,6 +38,11 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 - Base64 文件上传器（支持大文件分块上传）
 - Base64 文件下载器
 - Base64 上下文加载器（支持预览数据）
+
+⚙️ **管理工具**
+- 可视化配置节点（EasyToolkitConfig）
+- 支持配置覆盖机制
+- 实时配置加载和保存
 
 ## 安装
 
@@ -361,9 +367,38 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 - 支持预览缓存的文件内容
 - 可查看所有可用的上下文键
 
-## 配置说明
+### 管理工具节点
 
-项目配置文件位于 `config.yaml`，包含以下配置项：
+#### EasyToolkitConfig（可视化配置编辑器）
+
+可视化地编辑和管理 EasyToolkit 的 YAML 配置文件，无需手动编辑配置文件。
+
+**分类：** `EasyToolkit/Manager`
+
+**输入：**
+- `config_yaml`（字符串，多行文本框）：YAML 格式的配置内容
+
+**功能：**
+- **自动加载配置**：节点创建时自动从 `config.override.yaml` 或 `config.yaml` 加载当前配置
+- **实时编辑**：在文本框中编辑 YAML 配置，保留注释和格式
+- **Save 按钮**：保存配置到 `config.override.yaml`（覆盖配置文件）
+- **Restore 按钮**：删除覆盖配置文件，恢复到默认配置
+
+**工作流：**
+1. 添加 EasyToolkitConfigManager 节点到工作流
+2. 节点自动加载当前配置到文本框
+3. 在文本框中编辑配置
+4. 点击 **Save** 保存修改
+5. 如需恢复默认配置，点击 **Restore**
+
+**配置继承机制：**
+
+配置系统采用类似继承的覆盖机制：
+- `config.yaml`：基础配置文件（默认设置）
+- `config.override.yaml`：覆盖配置文件（用户自定义设置）
+- 最终配置 = 基础配置 + 覆盖配置
+
+这样你可以在不修改原始配置文件的情况下自定义设置，便于版本控制和更新。使用 EasyToolkitConfigManager 节点可以轻松管理这些配置。
 
 ### 持久化上下文缓存设置
 
@@ -374,8 +409,8 @@ persistent_context:
   # false：模块导入时立即加载缓存
   lazy_initialization: true
   
-  # 启用自动保存（默认：true）
-  auto_save: true
+  # 启用自动保存（默认：false）
+  auto_save: false
   
   # 缓存目录：'input'、'output' 或 'temp'
   # 每个上下文将保存为单独的文件在：

@@ -20,14 +20,16 @@ class Config:
         return cls._instance
     
     def _load_config(self):
-        """Load configuration from config.yaml"""
-        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.yaml')
+        """Load configuration from config.yaml and merge with config.override.yaml if it exists"""
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        config_path = os.path.join(base_dir, 'config.yaml')
+        override_path = os.path.join(base_dir, 'config.override.yaml')
         
         # Default configuration
         self._config = {
             'persistent_context': {
                 'lazy_initialization': True,
-                'auto_save': True,
+                'auto_save': False,
                 'cache_directory': 'temp',
                 'max_cache_size_mb': 100,
                 'old_data_threshold_hours': 24,
@@ -40,19 +42,45 @@ class Config:
             }
         }
         
+        # Load base configuration
         try:
             if os.path.exists(config_path):
                 with open(config_path, 'r', encoding='utf-8') as f:
                     loaded_config = yaml.safe_load(f)
                     if loaded_config:
-                        # Merge loaded config with defaults
-                        self._config.update(loaded_config)
+                        # Deep merge loaded config with defaults
+                        self._deep_merge(self._config, loaded_config)
                 print(f"[comfyui-easytoolkit] Configuration loaded from {config_path}")
             else:
                 print(f"[comfyui-easytoolkit] Config file not found, using defaults")
         except Exception as e:
             print(f"[comfyui-easytoolkit] Warning: Failed to load config file: {e}")
             print(f"[comfyui-easytoolkit] Using default configuration")
+        
+        # Load and merge override configuration
+        try:
+            if os.path.exists(override_path):
+                with open(override_path, 'r', encoding='utf-8') as f:
+                    override_config = yaml.safe_load(f)
+                    if override_config:
+                        # Deep merge override config (overrides take precedence)
+                        self._deep_merge(self._config, override_config)
+                print(f"[comfyui-easytoolkit] Override configuration loaded from {override_path}")
+        except Exception as e:
+            print(f"[comfyui-easytoolkit] Warning: Failed to load override file: {e}")
+    
+    def _deep_merge(self, base_dict, override_dict):
+        """
+        Deep merge override_dict into base_dict
+        Override values take precedence
+        """
+        for key, value in override_dict.items():
+            if key in base_dict and isinstance(base_dict[key], dict) and isinstance(value, dict):
+                # Recursively merge nested dictionaries
+                self._deep_merge(base_dict[key], value)
+            else:
+                # Override the value
+                base_dict[key] = value
     
     def get(self, key: str, default=None):
         """Get a configuration value by key (supports dot notation)"""
