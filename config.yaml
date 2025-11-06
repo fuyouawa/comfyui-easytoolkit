@@ -17,10 +17,6 @@ persistent_context:
   # <directory>/comfyui-easytoolkit/persistent_context/
   cache_directory: 'input'
   
-  # Cache filename base (used for determining the parent directory)
-  # Individual context files will be saved in a 'persistent_context' subfolder
-  cache_filename: 'persistent_context_cache.pkl'
-  
   # Maximum total cache size in MB (default: 100)
   # When exceeded, old data will be cleaned up
   max_cache_size_mb: 100

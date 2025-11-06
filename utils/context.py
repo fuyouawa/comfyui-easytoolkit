@@ -69,10 +69,8 @@ class PersistentContextCache:
     def __init__(self):
         # Load configuration from config file
         config = get_config().get_persistent_context_config()
-        # Change from file path to directory path, add persistent_context subfolder
-        cache_file_path = get_config().get_cache_file_path()
-        base_dir = os.path.dirname(cache_file_path)
-        self._cache_dir = os.path.join(base_dir, 'persistent_context')
+        # Get cache directory directly
+        self._cache_dir = get_config().get_cache_directory_path()
         self._auto_save = config.get('auto_save', True)
         
         self._data: dict[str, PersistentContext] = {}

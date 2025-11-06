@@ -384,9 +384,6 @@ persistent_context:
   # <目录>/comfyui-easytoolkit/persistent_context/
   cache_directory: 'input'
   
-  # 缓存文件名基础（用于确定父目录）
-  cache_filename: 'persistent_context_cache.pkl'
-  
   # 最大缓存总大小（MB），默认 100
   # 超出时将清理旧数据
   max_cache_size_mb: 100

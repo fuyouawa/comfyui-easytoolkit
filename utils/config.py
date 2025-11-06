@@ -29,7 +29,6 @@ class Config:
                 'lazy_initialization': True,
                 'auto_save': True,
                 'cache_directory': 'temp',
-                'cache_filename': 'persistent_context_cache.pkl',
                 'max_cache_size_mb': 100,
                 'old_data_threshold_hours': 24,
                 'absolute_max_cache_size_mb': 200,
@@ -73,10 +72,12 @@ class Config:
         return self._config.get('persistent_context', {})
     
     def get_cache_directory_path(self):
-        """Get the full path to the cache directory"""
+        """Get the full path to the persistent context cache directory"""
         if folder_paths is None:
             # Fallback to a local directory if folder_paths is not available
-            return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
+            fallback_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache', 'persistent_context')
+            os.makedirs(fallback_dir, exist_ok=True)
+            return fallback_dir
         
         config = self.get_persistent_context_config()
         cache_dir_type = config.get('cache_directory', 'temp')
@@ -94,20 +95,13 @@ class Config:
             base_dir = folder_paths.get_temp_directory()
             print(f"[comfyui-easytoolkit] Warning: Invalid cache_directory '{cache_dir_type}', using 'temp'")
         
-        # Create comfyui-easytoolkit subdirectory
-        cache_dir = os.path.join(base_dir, 'comfyui-easytoolkit')
+        # Create comfyui-easytoolkit/persistent_context subdirectory
+        cache_dir = os.path.join(base_dir, 'comfyui-easytoolkit', 'persistent_context')
         
         # Ensure the directory exists
         os.makedirs(cache_dir, exist_ok=True)
         
         return cache_dir
-    
-    def get_cache_file_path(self):
-        """Get the full path to the cache file"""
-        config = self.get_persistent_context_config()
-        cache_filename = config.get('cache_filename', 'persistent_context_cache.pkl')
-        cache_dir = self.get_cache_directory_path()
-        return os.path.join(cache_dir, cache_filename)
     
     def get_base64_uploader_config(self):
         """Get base64 uploader configuration"""
