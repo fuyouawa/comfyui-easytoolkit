@@ -55,9 +55,22 @@ app.registerExtension({
             
             // Store the load function for later use
             this.loadPreviewImage = loadPreviewImage;
+        };
+
+        // Override onConfigure to load preview when node is copied or loaded
+        const onConfigure = nodeType.prototype.onConfigure;
+        nodeType.prototype.onConfigure = function(info) {
+            if (onConfigure) {
+                onConfigure.apply(this, arguments);
+            }
             
-            // Try to load preview image on node creation (if exists)
-            await loadPreviewImage();
+            // Load preview image after configuration (this ensures UUID is properly set)
+            if (this.loadPreviewImage) {
+                // Use setTimeout to ensure widget values are fully updated
+                setTimeout(() => {
+                    this.loadPreviewImage();
+                }, 50);
+            }
         };
 
         // Override onExecuted to load image after execution
