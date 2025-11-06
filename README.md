@@ -388,7 +388,7 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 1. 添加 EasyToolkitConfigManager 节点到工作流
 2. 节点自动加载当前配置到文本框
 3. 在文本框中编辑配置
-4. 点击 **Save YAML** 保存修改
+4. 点击 **Save YAML** 保存并应用修改
 5. 如需恢复默认配置，点击 **Restore YAML**
 
 **配置继承机制：**
@@ -409,7 +409,7 @@ persistent_context:
   # false：模块导入时立即加载缓存
   lazy_initialization: true
   
-  # 启用自动保存（默认：false）
+  # 启用自动保存（默认：false）（实验性）
   auto_save: false
   
   # 缓存目录：'input'、'output' 或 'temp'
@@ -450,12 +450,6 @@ base64_uploader:
   # 设为 0 禁用文件大小限制
   max_upload_file_size_mb: 100
 ```
-
-## 依赖项
-
-- `numpy`：数值计算
-- `imageio-ffmpeg`：视频编码（用于 FFmpeg 视频格式）
-- `pyyaml`：配置文件解析
 
 ## 许可证
 

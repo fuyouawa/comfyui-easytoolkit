@@ -7,7 +7,7 @@ persistent_context:
   # If false, cache loads immediately when module is imported
   lazy_initialization: true
   
-  # Enable auto-save (default: false)
+  # Enable auto-save (default: false) (experimental)
   auto_save: false
   
   # Directory to save cache files: 'input', 'output', or 'temp'
