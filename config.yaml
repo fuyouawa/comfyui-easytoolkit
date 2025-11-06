@@ -13,9 +13,11 @@ persistent_context:
   auto_save: true
   
   # Directory to save cache files: 'input', 'output', or 'temp'
-  # Cache will be saved in <directory>/comfyui-easytoolkit/
+  # Each context will be saved as a separate file in:
+  # <directory>/comfyui-easytoolkit/persistent_context/
   cache_directory: 'input'
   
-  # Cache file name (will be saved with .pkl extension)
+  # Cache filename base (used for determining the parent directory)
+  # Individual context files will be saved in a 'persistent_context' subfolder
   cache_filename: 'persistent_context_cache.pkl'
 

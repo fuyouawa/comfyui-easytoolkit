@@ -15,6 +15,7 @@ class PersistentContext:
         self._cache = cache
         self._auto_save = auto_save
         self._last_access_time = 0.0
+        self._dirty = True  # Mark as dirty when created
 
     def update_access_time(self):
         self._last_access_time = time.time()
@@ -28,11 +29,20 @@ class PersistentContext:
     
     def set_value(self, value: any, save: bool = None):
         self._value = value
+        self._dirty = True  # Mark as dirty when value changes
         self.update_access_time()
         # Save to disk based on auto_save setting or explicit save parameter
         should_save = save if save is not None else self._auto_save
         if self._cache is not None and should_save:
             self._cache.save()
+    
+    def is_dirty(self) -> bool:
+        """Check if this context has unsaved changes"""
+        return self._dirty
+    
+    def mark_clean(self):
+        """Mark this context as clean (saved)"""
+        self._dirty = False
     
     def __getstate__(self):
         """Only serialize _last_access_time and _value fields"""
@@ -52,12 +62,16 @@ class PersistentContext:
         self._key = None
         self._cache = None
         self._auto_save = True
+        self._dirty = False  # Not dirty when loaded from disk
 
 class PersistentContextCache:
     def __init__(self):
         # Load configuration from config file
         config = get_config().get_persistent_context_config()
-        self._cache_file_path = get_config().get_cache_file_path()
+        # Change from file path to directory path, add persistent_context subfolder
+        cache_file_path = get_config().get_cache_file_path()
+        base_dir = os.path.dirname(cache_file_path)
+        self._cache_dir = os.path.join(base_dir, 'persistent_context')
         self._auto_save = config.get('auto_save', True)
         
         self._data: dict[str, PersistentContext] = {}
@@ -71,8 +85,30 @@ class PersistentContextCache:
         self._save_future = None
         self._shutdown_flag = False
         
+        # Create cache directory if it doesn't exist
+        os.makedirs(self._cache_dir, exist_ok=True)
+        
         # Load existing cache from disk
         self._load()
+    
+    @staticmethod
+    def _sanitize_filename(key: str) -> str:
+        """Convert a key to a safe filename by URL-encoding special characters"""
+        import urllib.parse
+        # URL encode the key to make it filesystem-safe
+        safe_name = urllib.parse.quote(key, safe='')
+        # Limit filename length to avoid filesystem issues (留一些空间给扩展名)
+        if len(safe_name) > 200:
+            # Use hash for very long keys
+            import hashlib
+            hash_suffix = hashlib.md5(safe_name.encode()).hexdigest()[:16]
+            safe_name = safe_name[:180] + '_' + hash_suffix
+        return safe_name + '.pkl'
+    
+    def _get_context_file_path(self, key: str) -> str:
+        """Get the file path for a context key"""
+        filename = self._sanitize_filename(key)
+        return os.path.join(self._cache_dir, filename)
 
     def get_context(self, key: str) -> PersistentContext:
         self.update_context_access_time(key)
@@ -88,7 +124,14 @@ class PersistentContextCache:
         self.update_context_access_time(key)
         if key in self._data:
             del self._data[key]
-        self.save()
+            # Delete the file from disk
+            file_path = self._get_context_file_path(key)
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"[comfyui-easytoolkit] Removed context file: {file_path}")
+            except Exception as e:
+                print(f"[comfyui-easytoolkit] Error removing context file {file_path}: {e}")
 
     def create_context(self, key: str, value: any) -> PersistentContext:
         context = PersistentContext(value, key=key, cache=self, auto_save=self._auto_save)
@@ -118,88 +161,146 @@ class PersistentContextCache:
             self._data[key].update_access_time()
     
     def _load(self):
-        """Load cache from disk"""
-        if not os.path.exists(self._cache_file_path):
-            print(f"[comfyui-easytoolkit] No existing cache file found at {self._cache_file_path}")
+        """Load cache from disk - scan directory for individual context files"""
+        if not os.path.exists(self._cache_dir):
+            print(f"[comfyui-easytoolkit] No existing cache directory found at {self._cache_dir}")
             return
         
+        # Scan directory for .pkl files
         try:
-            with open(self._cache_file_path, 'rb') as f:
-                self._data = pickle.load(f)
+            loaded_count = 0
+            failed_count = 0
             
-            # Restore fields and check for empty values after deserialization
-            failed_keys = []
-            for key, context in self._data.items():
-                # Restore the fields that were not serialized
-                context._key = key
-                context._cache = self
-                context._auto_save = self._auto_save
+            for filename in os.listdir(self._cache_dir):
+                if not filename.endswith('.pkl'):
+                    continue
                 
-                # Check if value is empty (indicates serialization failure)
-                value = context.get_value()
-                if value is None or (hasattr(value, '__len__') and len(value) == 0):
-                    failed_keys.append(key)
-                    print(f"[comfyui-easytoolkit] Error: Context '{key}' has empty value, serialization may have failed previously")
+                file_path = os.path.join(self._cache_dir, filename)
+                
+                try:
+                    # Load the context from file (new format with metadata)
+                    with open(file_path, 'rb') as f:
+                        data = pickle.load(f)
+                    
+                    # Extract key and context from saved data
+                    if not isinstance(data, dict) or 'key' not in data or 'context' not in data:
+                        failed_count += 1
+                        print(f"[comfyui-easytoolkit] Error: Invalid format in {filename}, skipping")
+                        continue
+                    
+                    key = data['key']
+                    context_obj = data['context']
+                    
+                    # Restore the fields that were not serialized
+                    context_obj._key = key
+                    context_obj._cache = self
+                    context_obj._auto_save = self._auto_save
+                    context_obj._dirty = False  # Loaded from disk, so not dirty
+                    
+                    # Check if value is empty (indicates serialization failure)
+                    value = context_obj.get_value()
+                    if value is None or (hasattr(value, '__len__') and len(value) == 0):
+                        failed_count += 1
+                        print(f"[comfyui-easytoolkit] Error: Context '{key}' has empty value, skipping")
+                        # Delete the corrupted file
+                        try:
+                            os.remove(file_path)
+                        except:
+                            pass
+                        continue
+                    
+                    self._data[key] = context_obj
+                    loaded_count += 1
+                    
+                except Exception as e:
+                    failed_count += 1
+                    print(f"[comfyui-easytoolkit] Warning: Failed to load context from {filename}: {e}")
+                    continue
             
-            # Remove contexts with failed serialization
-            for key in failed_keys:
-                del self._data[key]
-            
-            loaded_count = len(self._data)
-            print(f"[comfyui-easytoolkit] Loaded {loaded_count} context(s) from {self._cache_file_path}")
-            if failed_keys:
-                print(f"[comfyui-easytoolkit] Removed {len(failed_keys)} context(s) with empty values (serialization failures)")
+            print(f"[comfyui-easytoolkit] Loaded {loaded_count} context(s) from {self._cache_dir}")
+            if failed_count > 0:
+                print(f"[comfyui-easytoolkit] Failed to load {failed_count} context file(s)")
+                
         except Exception as e:
-            print(f"[comfyui-easytoolkit] Warning: Failed to load cache file: {e}")
+            print(f"[comfyui-easytoolkit] Warning: Failed to scan cache directory: {e}")
             print(f"[comfyui-easytoolkit] Starting with empty cache")
             self._data = {}
     
     def _do_save(self):
-        """Internal method to perform the actual save operation"""
+        """Internal method to perform the actual save operation - save only dirty contexts"""
         try:
-            # Filter out contexts with empty values before saving
-            filtered_data = {}
-            removed_keys = []
+            saved_count = 0
+            removed_count = 0
+            skipped_count = 0
             
-            for key, context in self._data.items():
+            # Only save dirty contexts
+            for key, context in list(self._data.items()):
+                # Skip if not dirty
+                if not context.is_dirty():
+                    skipped_count += 1
+                    continue
+                
                 value = context.get_value()
+                
                 # Check if value is empty (None, empty string, empty list, empty dict, etc.)
                 if value is None or (hasattr(value, '__len__') and len(value) == 0):
-                    removed_keys.append(key)
-                    print(f"[comfyui-easytoolkit] Warning: Skipping context '{key}' with empty value during save")
-                else:
-                    filtered_data[key] = context
-            
-            # Remove empty contexts from memory
-            for key in removed_keys:
-                del self._data[key]
-            
-            # Create a temporary file first to avoid data corruption
-            temp_file = self._cache_file_path + '.tmp'
-            
-            with open(temp_file, 'wb') as f:
-                pickle.dump(filtered_data, f, protocol=pickle.HIGHEST_PROTOCOL)
-            
-            # Replace the old file with the new one atomically
-            if os.path.exists(self._cache_file_path):
-                os.replace(temp_file, self._cache_file_path)
-            else:
-                os.rename(temp_file, self._cache_file_path)
+                    removed_count += 1
+                    print(f"[comfyui-easytoolkit] Warning: Removing context '{key}' with empty value")
+                    # Remove from memory
+                    del self._data[key]
+                    # Remove file if exists
+                    file_path = self._get_context_file_path(key)
+                    try:
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                    except:
+                        pass
+                    continue
+                
+                # Save this context to its own file
+                file_path = self._get_context_file_path(key)
+                temp_file = file_path + '.tmp'
+                
+                try:
+                    # Save with metadata (key and context)
+                    data = {
+                        'key': key,
+                        'context': context
+                    }
+                    
+                    with open(temp_file, 'wb') as f:
+                        pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+                    
+                    # Replace the old file with the new one atomically
+                    if os.path.exists(file_path):
+                        os.replace(temp_file, file_path)
+                    else:
+                        os.rename(temp_file, file_path)
+                    
+                    # Mark as clean after successful save
+                    context.mark_clean()
+                    saved_count += 1
+                    
+                except Exception as e:
+                    print(f"[comfyui-easytoolkit] Error saving context '{key}': {e}")
+                    # Clean up temp file if it exists
+                    try:
+                        if os.path.exists(temp_file):
+                            os.remove(temp_file)
+                    except:
+                        pass
             
             self._last_save_time = time.time()
-            saved_count = len(filtered_data)
-            print(f"[comfyui-easytoolkit] Saved {saved_count} context(s) to {self._cache_file_path}")
-            if removed_keys:
-                print(f"[comfyui-easytoolkit] Removed {len(removed_keys)} context(s) with empty values")
+            
+            if saved_count > 0:
+                print(f"[comfyui-easytoolkit] Saved {saved_count} context(s) to {self._cache_dir}")
+            if removed_count > 0:
+                print(f"[comfyui-easytoolkit] Removed {removed_count} context(s) with empty values")
+            
             return True
+            
         except Exception as e:
-            print(f"[comfyui-easytoolkit] Error saving cache: {e}")
-            # Clean up temp file if it exists
-            try:
-                if os.path.exists(temp_file):
-                    os.remove(temp_file)
-            except:
-                pass
+            print(f"[comfyui-easytoolkit] Error during save operation: {e}")
             return False
     
     def _save_task(self):
