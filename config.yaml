@@ -2,11 +2,19 @@
 
 # Persistent Context Cache Settings
 persistent_context:
+  # Enable lazy initialization (default: true)
+  # If true, cache loading and auto-save thread only start on first API call
+  # If false, cache loads immediately when module is imported
+  lazy_initialization: true
+  
   # Interval in seconds between automatic saves to disk (default: 60 = 1 minute)
   # Set to 0 to disable automatic periodic saves (only saves on create/update)
   auto_save_interval: 60.0
   
-  # Interval in seconds for frontend nodes to ping backend to keep context alive (default: 60 = 1 minute)
-  # Set to 0 to disable automatic access updates from frontend
-  access_update_interval: 60.0
+  # Directory to save cache files: 'input', 'output', or 'temp'
+  # Cache will be saved in <directory>/comfyui-easytoolkit/
+  cache_directory: 'input'
+  
+  # Cache file name (will be saved with .pkl extension)
+  cache_filename: 'persistent_context_cache.pkl'
 

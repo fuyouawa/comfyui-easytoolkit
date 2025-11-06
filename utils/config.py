@@ -1,6 +1,12 @@
 import os
 import yaml
 
+try:
+    import folder_paths
+except ImportError:
+    folder_paths = None
+    print("[comfyui-easytoolkit] Warning: Could not import folder_paths from ComfyUI")
+
 class Config:
     """Configuration loader for comfyui-easytoolkit"""
     
@@ -20,8 +26,10 @@ class Config:
         # Default configuration
         self._config = {
             'persistent_context': {
+                'lazy_initialization': True,
                 'auto_save_interval': 30.0,
-                'access_update_interval': 60.0
+                'cache_directory': 'temp',
+                'cache_filename': 'persistent_context_cache.pkl'
             }
         }
         
@@ -55,6 +63,43 @@ class Config:
     def get_persistent_context_config(self):
         """Get persistent context configuration"""
         return self._config.get('persistent_context', {})
+    
+    def get_cache_directory_path(self):
+        """Get the full path to the cache directory"""
+        if folder_paths is None:
+            # Fallback to a local directory if folder_paths is not available
+            return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
+        
+        config = self.get_persistent_context_config()
+        cache_dir_type = config.get('cache_directory', 'temp')
+        
+        # Get the base directory from ComfyUI's folder_paths
+        base_dir = None
+        if cache_dir_type == 'input':
+            base_dir = folder_paths.get_input_directory()
+        elif cache_dir_type == 'output':
+            base_dir = folder_paths.get_output_directory()
+        elif cache_dir_type == 'temp':
+            base_dir = folder_paths.get_temp_directory()
+        else:
+            # Default to temp if invalid value
+            base_dir = folder_paths.get_temp_directory()
+            print(f"[comfyui-easytoolkit] Warning: Invalid cache_directory '{cache_dir_type}', using 'temp'")
+        
+        # Create comfyui-easytoolkit subdirectory
+        cache_dir = os.path.join(base_dir, 'comfyui-easytoolkit')
+        
+        # Ensure the directory exists
+        os.makedirs(cache_dir, exist_ok=True)
+        
+        return cache_dir
+    
+    def get_cache_file_path(self):
+        """Get the full path to the cache file"""
+        config = self.get_persistent_context_config()
+        cache_filename = config.get('cache_filename', 'persistent_context_cache.pkl')
+        cache_dir = self.get_cache_directory_path()
+        return os.path.join(cache_dir, cache_filename)
 
 
 # Global config instance

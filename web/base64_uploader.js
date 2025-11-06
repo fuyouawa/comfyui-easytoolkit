@@ -1,5 +1,5 @@
 import { app } from "../../../scripts/app.js";
-import { apiGet, apiPost, apiSilent } from "./api_utils.js";
+import { apiPost, apiSilent } from "./api_utils.js";
 
 app.registerExtension({
     name: "EasyToolkit.Misc.Base64Uploader",
@@ -26,37 +26,6 @@ app.registerExtension({
             this.uploadProgress = 0; // 0-100
             this.isUploading = false;
             this.uploadStatus = "Standby..."; // Status message
-
-            // Initialize access update timer
-            this.accessUpdateTimer = null;
-            
-            // Function to update access time - simplified with apiSilent
-            const updateAccess = async () => {
-                const currentUuid = this.widgets?.find(w => w.name === "uuid")?.value;
-                if (!currentUuid) return;
-                
-                await apiSilent("/base64_cache_loader/update_access", {
-                    method: "POST",
-                    data: { uuid: currentUuid }
-                });
-            };
-            
-            // Get configuration from backend - simplified with apiGet
-            try {
-                const configData = await apiGet("/base64_cache_loader/config");
-                
-                if (configData.success && configData.access_update_interval > 0) {
-                    const intervalMs = configData.access_update_interval * 1000;
-                    
-                    // Immediately update access time on initialization
-                    await updateAccess();
-                    
-                    // Start periodic access updates
-                    this.accessUpdateTimer = setInterval(updateAccess, intervalMs);
-                }
-            } catch (error) {
-                console.error("Failed to get config for access updates:", error);
-            }
 
             this.addWidget("button", "Upload File", null, async () => {
                 try {
@@ -175,19 +144,13 @@ app.registerExtension({
             };
         };
 
-        // Clean up timer and context data when node is removed
+        // Clean up context data when node is removed
         const onRemoved = nodeType.prototype.onRemoved;
         nodeType.prototype.onRemoved = function () {
-            // Clear the timer
-            if (this.accessUpdateTimer) {
-                clearInterval(this.accessUpdateTimer);
-                this.accessUpdateTimer = null;
-            }
-            
             // Clear the context data - simplified with apiSilent
             const uuid_widget = this.widgets?.find(w => w.name === "uuid");
             if (uuid_widget && uuid_widget.value) {
-                apiSilent("/context/remove_key", {
+                apiSilent("/persistent_context/remove_key", {
                     method: "POST",
                     data: { key: uuid_widget.value }
                 });

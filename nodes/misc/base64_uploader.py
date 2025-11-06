@@ -3,8 +3,7 @@ import time
 import asyncio
 from aiohttp import web
 from ... import register_node, register_route
-from ...utils.context import get_context, has_context, update_context
-from ...utils.config import get_config
+from ...utils.context import get_persistent_context, has_persistent_context
 from .base64_context import Base64Context
 
 # Store temporary data for chunked uploads
@@ -64,7 +63,7 @@ class Base64Uploader:
     OUTPUT_NODE = True
 
     def run(self, filename: str, uuid):
-        context = get_context(uuid).get_value()
+        context = get_persistent_context(uuid).get_value()
         if not context or not isinstance(context, Base64Context):
             raise Exception("There is no base64 data at all.")
 
@@ -166,36 +165,9 @@ async def handle_finalize_upload(request):
 
     # Save to persistent context using Base64Context
     context = Base64Context(base64_data, upload_info["filename"])
-    get_context(uuid).set_value(context)
+    get_persistent_context(uuid).set_value(context)
 
     # Clean up temporary data
     del _chunk_uploads[uuid]
 
     return web.json_response({"success": True})
-
-
-@register_route("/base64_cache_loader/update_access")
-async def handle_update_access(request):
-    """Update the access time for a context to prevent it from being cleaned up"""
-    data = await request.json()
-    uuid = data.get("uuid", "")
-
-    if not uuid:
-        return web.json_response({"success": False, "error": "UUID is required."})
-
-    if not has_context(uuid):
-        return web.json_response({"success": False, "error": "Context not found."})
-    
-    # Update access time
-    update_context(uuid)
-    return web.json_response({"success": True})
-
-@register_route("/base64_cache_loader/config", method="GET")
-async def handle_get_config(request):
-    """Get the access update interval configuration"""
-    config = get_config().get_persistent_context_config()
-    access_update_interval = config.get('access_update_interval', 60.0)
-    return web.json_response({
-        "success": True,
-        "access_update_interval": access_update_interval
-    })

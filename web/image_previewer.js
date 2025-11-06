@@ -25,26 +25,8 @@ app.registerExtension({
 
             uuid_widget.disabled = true;
 
-            // Initialize access update timer
-            this.accessUpdateTimer = null;
+            // Initialize preview state
             this.previewImage = null;
-            
-            // Function to update access time - simplified with apiSilent
-            const updateAccess = async () => {
-                const currentUuid = this.widgets?.find(w => w.name === "uuid")?.value;
-                if (!currentUuid) return;
-                
-                // Silent update, failure doesn't affect main flow
-                await apiSilent("/image_previewer/update_access", {
-                    method: "POST",
-                    data: { uuid: currentUuid }
-                });
-            };
-            
-            // Start periodic access updates (every 30 seconds)
-            const intervalMs = 30000;
-            await updateAccess();
-            this.accessUpdateTimer = setInterval(updateAccess, intervalMs);
             
             // Function to load and display image
             const loadPreviewImage = async () => {
@@ -56,7 +38,7 @@ app.registerExtension({
                     method: "POST",
                     data: { uuid: currentUuid }
                 });
-                
+
                 if (data.success && data.base64) {
                     // Create image element
                     const img = new Image();
@@ -65,6 +47,9 @@ app.registerExtension({
                         this.previewImage = img;
                         this.setDirtyCanvas(true, true);
                     };
+                }
+                else {
+                    console.error("Failed to load preview image:", data.error || "Unknown error");
                 }
             };
             
@@ -119,19 +104,13 @@ app.registerExtension({
             }
         };
         
-        // Clean up timer when node is removed
+        // Clean up when node is removed
         const onRemoved = nodeType.prototype.onRemoved;
         nodeType.prototype.onRemoved = function () {
-            // Clear the timer
-            if (this.accessUpdateTimer) {
-                clearInterval(this.accessUpdateTimer);
-                this.accessUpdateTimer = null;
-            }
-            
             // Clear the context data - simplified with apiSilent
             const uuid_widget = this.widgets?.find(w => w.name === "uuid");
             if (uuid_widget && uuid_widget.value) {
-                apiSilent("/context/remove_key", {
+                apiSilent("/persistent_context/remove_key", {
                     method: "POST",
                     data: { key: uuid_widget.value }
                 });

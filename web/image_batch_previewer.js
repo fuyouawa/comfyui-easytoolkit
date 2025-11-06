@@ -25,29 +25,11 @@ app.registerExtension({
 
             uuid_widget.disabled = true;
 
-            // Initialize access update timer
-            this.accessUpdateTimer = null;
+            // Initialize preview state
             this.previewImages = [];
             this.currentFrameIndex = 0;
             this.animationTimer = null;
             this.fps = 8;
-            
-            // Function to update access time - simplified with apiSilent
-            const updateAccess = async () => {
-                const currentUuid = this.widgets?.find(w => w.name === "uuid")?.value;
-                if (!currentUuid) return;
-                
-                // Silent update, failure doesn't affect main flow
-                await apiSilent("/image_batch_previewer/update_access", {
-                    method: "POST",
-                    data: { uuid: currentUuid }
-                });
-            };
-            
-            // Start periodic access updates (every 30 seconds)
-            const intervalMs = 30000;
-            await updateAccess();
-            this.accessUpdateTimer = setInterval(updateAccess, intervalMs);
             
             // Function to start animation
             const startAnimation = () => {
@@ -107,6 +89,9 @@ app.registerExtension({
                     } catch (error) {
                         console.error("Failed to load preview images:", error);
                     }
+                }
+                else {
+                    console.error("Failed to load preview images:", data.error || "Unknown error");
                 }
             };
             
@@ -176,12 +161,6 @@ app.registerExtension({
         // Clean up timers when node is removed
         const onRemoved = nodeType.prototype.onRemoved;
         nodeType.prototype.onRemoved = function () {
-            // Clear the access update timer
-            if (this.accessUpdateTimer) {
-                clearInterval(this.accessUpdateTimer);
-                this.accessUpdateTimer = null;
-            }
-            
             // Clear the animation timer
             if (this.animationTimer) {
                 clearInterval(this.animationTimer);
@@ -191,7 +170,7 @@ app.registerExtension({
             // Clear the context data - simplified with apiSilent
             const uuid_widget = this.widgets?.find(w => w.name === "uuid");
             if (uuid_widget && uuid_widget.value) {
-                apiSilent("/context/remove_key", {
+                apiSilent("/persistent_context/remove_key", {
                     method: "POST",
                     data: { key: uuid_widget.value }
                 });

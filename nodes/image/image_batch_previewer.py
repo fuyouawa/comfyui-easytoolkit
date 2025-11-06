@@ -1,7 +1,7 @@
 from aiohttp import web
 from ... import register_node, register_route
 from ...utils.image import image_batch_to_base64_list
-from ...utils.context import get_context, has_context, update_context
+from ...utils.context import get_persistent_context, has_persistent_context
 from ...utils.format import static_image_formats
 
 @register_node
@@ -34,7 +34,7 @@ class ImageBatchPreviewer:
         base64_list = image_batch_to_base64_list(image_batch, format=format)
         
         # Store base64 data list in persistent context
-        get_context(uuid).set_value({
+        get_persistent_context(uuid).set_value({
             "base64_list": base64_list,
             "format": format,
             "fps": fps,
@@ -53,10 +53,10 @@ async def handle_get_images(request):
     if not uuid:
         return web.json_response({"success": False, "error": "UUID is required"})
     
-    if not has_context(uuid):
+    if not has_persistent_context(uuid):
         return web.json_response({"success": False, "error": f"Context not found for uuid '{uuid}'"})
     
-    context = get_context(uuid).get_value()
+    context = get_persistent_context(uuid).get_value()
 
     if not context or not isinstance(context, dict):
         return web.json_response({"success": False, "error": "Invalid context data"})
@@ -73,21 +73,3 @@ async def handle_get_images(request):
         "fps": fps,
         "frame_count": frame_count
     })
-
-
-@register_route("/image_batch_previewer/update_access")
-async def handle_update_access(request):
-    """Update the access time for a context to prevent it from being cleaned up"""
-    data = await request.json()
-    uuid = data.get("uuid", "")
-
-    if not uuid:
-        return web.json_response({"success": False, "error": "UUID is required."})
-
-    if not has_context(uuid):
-        return web.json_response({"success": False, "error": "Context not found."})
-    
-    # Update access time
-    update_context(uuid)
-    return web.json_response({"success": True})
-
