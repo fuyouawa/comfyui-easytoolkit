@@ -184,19 +184,6 @@ app.registerExtension({
                 this.animationTimer = null;
             }
             
-            // Clear the context data - simplified with apiSilent
-            const uuid_widget = this.widgets?.find(w => w.name === "uuid");
-            if (uuid_widget && uuid_widget.value) {
-                apiSilent("/persistent_context/remove_key", {
-                    method: "POST",
-                    data: { key: uuid_widget.value }
-                });
-            }
-            
-            // Clear preview images
-            this.previewImages = [];
-            this.currentFrameIndex = 0;
-            
             if (onRemoved) {
                 return onRemoved.apply(this, arguments);
             }

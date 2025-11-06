@@ -5,7 +5,6 @@ import gzip
 import threading
 import atexit
 from concurrent.futures import ThreadPoolExecutor
-from aiohttp import web
 from .config import get_config
 from .. import register_route
 
@@ -619,19 +618,3 @@ config = get_config().get_persistent_context_config()
 if not config.get('lazy_initialization', True):
     print("[comfyui-easytoolkit] Lazy initialization disabled, initializing persistent context cache immediately...")
     _global_context_cache = PersistentContextCache()
-
-
-@register_route("/persistent_context/remove_key")
-async def handle_remove_key(request):
-    """Clear the persistent context for a given key"""
-    _ensure_initialized()
-    
-    data = await request.json()
-    key = data.get("key", "")
-
-    if not key or not has_persistent_context(key):
-        return web.json_response({"success": False, "error": "No context data."})
-    
-    # Clear the persistent context by setting it to None
-    remove_persistent_context(key)
-    return web.json_response({"success": True})

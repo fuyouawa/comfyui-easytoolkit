@@ -121,24 +121,5 @@ app.registerExtension({
             }
         };
         
-        // Clean up when node is removed
-        const onRemoved = nodeType.prototype.onRemoved;
-        nodeType.prototype.onRemoved = function () {
-            // Clear the context data - simplified with apiSilent
-            const uuid_widget = this.widgets?.find(w => w.name === "uuid");
-            if (uuid_widget && uuid_widget.value) {
-                apiSilent("/persistent_context/remove_key", {
-                    method: "POST",
-                    data: { key: uuid_widget.value }
-                });
-            }
-            
-            // Clear preview image
-            this.previewImage = null;
-            
-            if (onRemoved) {
-                return onRemoved.apply(this, arguments);
-            }
-        };
     },
 });

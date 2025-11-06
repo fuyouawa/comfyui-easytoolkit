@@ -1,5 +1,5 @@
 import { app } from "../../../scripts/app.js";
-import { apiPost, apiSilent } from "./api_utils.js";
+import { apiPost } from "./api_utils.js";
 import { checkAndRegenerateUUID } from "./node_utils.js";
 
 function downloadBase64(b64, basename, format) {
@@ -115,21 +115,5 @@ app.registerExtension({
             checkAndRegenerateUUID(this, app);
         };
 
-        // Clean up context data when node is removed
-        const onRemoved = nodeType.prototype.onRemoved;
-        nodeType.prototype.onRemoved = function () {
-            // Clear the context data - simplified with apiSilent
-            const uuid_widget = this.widgets?.find(w => w.name === "uuid");
-            if (uuid_widget && uuid_widget.value) {
-                apiSilent("/persistent_context/remove_key", {
-                    method: "POST",
-                    data: { key: uuid_widget.value }
-                });
-            }
-            
-            if (onRemoved) {
-                return onRemoved.apply(this, arguments);
-            }
-        };
     },
 });
