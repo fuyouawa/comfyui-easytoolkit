@@ -97,6 +97,7 @@ class PersistentContextCache:
         self._old_data_threshold_seconds = config.get('old_data_threshold_hours', 24) * 3600
         self._absolute_max_cache_size_bytes = config.get('absolute_max_cache_size_mb', 200) * 1024 * 1024
         self._max_context_size_bytes = config.get('max_context_size_mb', 50) * 1024 * 1024
+        self._max_key_length = config.get('max_key_length', 256)
     
     @staticmethod
     def _sanitize_filename(key: str) -> str:
@@ -116,18 +117,36 @@ class PersistentContextCache:
         """Get the file path for a context key"""
         filename = self._sanitize_filename(key)
         return os.path.join(self._cache_dir, filename)
+    
+    def _validate_key(self, key: str):
+        """Validate key length and format
+        
+        Raises:
+            ValueError: If key is invalid
+        """
+        if not key:
+            raise ValueError("Context key cannot be empty")
+        
+        if self._max_key_length > 0 and len(key) > self._max_key_length:
+            raise ValueError(f"Context key length ({len(key)}) exceeds maximum allowed length ({self._max_key_length})")
 
     def get_context(self, key: str) -> PersistentContext:
+        self._validate_key(key)
         self.update_context_access_time(key)
         if key in self._data:
             return self._data[key]
         raise KeyError(f"Context with key '{key}' not found")
 
     def has_context(self, key: str) -> bool:
+        try:
+            self._validate_key(key)
+        except ValueError:
+            return False
         self.update_context_access_time(key)
         return key in self._data
 
     def remove_context(self, key: str):
+        self._validate_key(key)
         self.update_context_access_time(key)
         if key in self._data:
             del self._data[key]
@@ -141,6 +160,7 @@ class PersistentContextCache:
                 print(f"[comfyui-easytoolkit] Error removing context file {file_path}: {e}")
 
     def create_context(self, key: str, value: any) -> PersistentContext:
+        self._validate_key(key)
         context = PersistentContext(value, key=key, cache=self, auto_save=self._auto_save)
         self._data[key] = context
         # Trigger an async save after creating a new context (if auto_save is enabled)
@@ -164,6 +184,10 @@ class PersistentContextCache:
         return result
 
     def update_context_access_time(self, key: str):
+        try:
+            self._validate_key(key)
+        except ValueError:
+            return
         if key in self._data:
             self._data[key].update_access_time()
     
@@ -608,7 +632,7 @@ async def handle_remove_key(request):
     key = data.get("key", "")
 
     if not key or not has_persistent_context(key):
-        return web.json_response({"success": False, "error": "没有上下文数据。"})
+        return web.json_response({"success": False, "error": "No context data."})
     
     # Clear the persistent context by setting it to None
     remove_persistent_context(key)

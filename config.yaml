@@ -40,6 +40,11 @@ persistent_context:
   # Contexts larger than this size will not be saved to disk
   # Set to 0 to disable size limit (not recommended)
   max_context_size_mb: 50
+  
+  # Maximum key length (default: 256)
+  # Keys longer than this will be rejected
+  # Set to 0 to disable key length limit (not recommended)
+  max_key_length: 256
 
 # Base64 Uploader Settings
 base64_uploader:

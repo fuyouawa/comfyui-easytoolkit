@@ -49,15 +49,15 @@ async def handle_get_data(request):
     key = data.get("key", None)
 
     if not key or key == "NONE":
-        return web.json_response({"success": False, "error": "请选择一个有效的 key"})
+        return web.json_response({"success": False, "error": "Please select a valid key"})
     
     if not has_persistent_context(key):
-        return web.json_response({"success": False, "error": f"未找到 key '{key}' 对应的上下文"})
+        return web.json_response({"success": False, "error": f"Context not found for key '{key}'"})
     
     context = get_persistent_context(key).get_value()
 
     if not context or not isinstance(context, Base64Context):
-        return web.json_response({"success": False, "error": "上下文数据不是 Base64Context 类型"})
+        return web.json_response({"success": False, "error": "Context data is not of Base64Context type"})
 
     base64_data = context.get_base64()
     filename = context.get_filename()

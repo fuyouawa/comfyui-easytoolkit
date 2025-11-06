@@ -60,12 +60,12 @@ async def handle_download(request):
     format = data.get("format", None)
 
     if not uuid or not has_persistent_context(uuid):
-        return web.json_response({"success": False, "error": "没有base64数据。"})
+        return web.json_response({"success": False, "error": "No base64 data."})
     
     context = get_persistent_context(uuid).get_value()
 
     if not context or not isinstance(context, Base64Context):
-        return web.json_response({"success": False, "error": "没有base64数据。"})
+        return web.json_response({"success": False, "error": "No base64 data."})
 
     # Use basename and format from request, or fall back to context values
     if not basename:

@@ -15,7 +15,7 @@ class ImageBatchBase64Encoder:
         """
         return {
             "required": {
-                "images": ("IMAGE",),
+                "image_batch": ("IMAGE",),
                 "format": (static_image_formats, {
                     "default": static_image_formats[0]
                 }),
@@ -28,12 +28,12 @@ class ImageBatchBase64Encoder:
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, images, format="image/png"):
+    def run(self, image_batch, format="image/png"):
         """
         Encode a batch of images to base64 strings
         
         Args:
-            images: Batch of images (N, H, W, C)
+            image_batch: Batch of images (N, H, W, C)
             format: Image format
             
         Returns:
@@ -42,7 +42,7 @@ class ImageBatchBase64Encoder:
             - count: Number of images in the batch
             - suffix: File extension
         """
-        base64_list = image_batch_to_base64_list(images, format)
+        base64_list = image_batch_to_base64_list(image_batch, format)
         
         # Join with newlines for easy splitting later
         base64_text = "\n".join(base64_list)
