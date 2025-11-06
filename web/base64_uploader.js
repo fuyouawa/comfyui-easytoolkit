@@ -1,5 +1,6 @@
 import { app } from "../../../scripts/app.js";
 import { apiPost, apiSilent } from "./api_utils.js";
+import { checkAndRegenerateUUID } from "./node_utils.js";
 
 app.registerExtension({
     name: "EasyToolkit.Misc.Base64Uploader",
@@ -142,6 +143,17 @@ app.registerExtension({
                     ctx.fillText(`${Math.round(this.uploadProgress)}%`, margin + barWidth / 2, barY + barHeight / 2);
                 }
             };
+        };
+
+        // Override onConfigure to check for duplicate UUID
+        const onConfigure = nodeType.prototype.onConfigure;
+        nodeType.prototype.onConfigure = function(info) {
+            if (onConfigure) {
+                onConfigure.apply(this, arguments);
+            }
+            
+            // Check for duplicate UUID and regenerate if necessary
+            checkAndRegenerateUUID(this, app);
         };
 
         // Clean up context data when node is removed

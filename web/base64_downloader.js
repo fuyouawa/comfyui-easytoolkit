@@ -1,5 +1,6 @@
 import { app } from "../../../scripts/app.js";
 import { apiPost, apiSilent } from "./api_utils.js";
+import { checkAndRegenerateUUID } from "./node_utils.js";
 
 function downloadBase64(b64, basename, format) {
     try {
@@ -101,6 +102,17 @@ app.registerExtension({
                     alert(`Download failed: ${error.message}`);
                 }
             });
+        };
+
+        // Override onConfigure to check for duplicate UUID
+        const onConfigure = nodeType.prototype.onConfigure;
+        nodeType.prototype.onConfigure = function(info) {
+            if (onConfigure) {
+                onConfigure.apply(this, arguments);
+            }
+            
+            // Check for duplicate UUID and regenerate if necessary
+            checkAndRegenerateUUID(this, app);
         };
 
         // Clean up context data when node is removed

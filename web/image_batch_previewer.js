@@ -1,6 +1,7 @@
 import { app } from "../../../scripts/app.js";
 import { apiPost, apiSilent } from "./api_utils.js";
 import { calculateAvailableSpace, drawImagePreview } from "./preview_utils.js";
+import { checkAndRegenerateUUID } from "./node_utils.js";
 
 app.registerExtension({
     name: "EasyToolkit.Image.ImageBatchPreviewer",
@@ -105,6 +106,9 @@ app.registerExtension({
             if (onConfigure) {
                 onConfigure.apply(this, arguments);
             }
+            
+            // Check for duplicate UUID and regenerate if necessary
+            checkAndRegenerateUUID(this, app);
             
             // Load preview images after configuration (this ensures UUID is properly set)
             if (this.loadPreviewImages) {
