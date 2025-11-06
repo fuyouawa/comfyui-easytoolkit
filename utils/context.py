@@ -3,7 +3,6 @@ import os
 import pickle
 import gzip
 import threading
-import atexit
 from concurrent.futures import ThreadPoolExecutor
 from .config import get_config
 from .. import register_route
@@ -81,7 +80,6 @@ class PersistentContextCache:
         self._pending_save = False
         self._needs_another_save = False
         self._save_future = None
-        self._shutdown_flag = False
         
         # Create cache directory if it doesn't exist
         os.makedirs(self._cache_dir, exist_ok=True)
@@ -482,7 +480,7 @@ class PersistentContextCache:
         with self._save_lock:
             self._pending_save = False
             # If another save was requested while we were saving, do it now
-            if self._needs_another_save and not self._shutdown_flag:
+            if self._needs_another_save:
                 self._save_future = self._executor.submit(self._save_task)
             else:
                 self._save_future = None
@@ -491,9 +489,6 @@ class PersistentContextCache:
     
     def save(self, force_sync=False):
         """Save cache to disk asynchronously (or synchronously if force_sync=True)"""
-        if self._shutdown_flag:
-            return
-        
         if force_sync:
             # Synchronous save
             success = self._do_save()
@@ -509,25 +504,7 @@ class PersistentContextCache:
             else:
                 # Submit a new save task
                 self._save_future = self._executor.submit(self._save_task)
-    
-    def shutdown(self):
-        """Shutdown the cache and save all pending data"""
-        print("[comfyui-easytoolkit] Shutting down persistent context cache...")
-        self._shutdown_flag = True
-        
-        # Wait for any pending save to complete
-        if self._save_future is not None:
-            try:
-                self._save_future.result(timeout=5.0)
-            except Exception as e:
-                print(f"[comfyui-easytoolkit] Error waiting for pending save: {e}")
-        
-        # Perform a final synchronous save
-        self._do_save()
-        
-        # Shutdown the thread pool (will wait for all tasks to complete)
-        self._executor.shutdown(wait=True)
-    
+
 # Global context cache (initialized lazily)
 _global_context_cache = None
 _initialization_lock = threading.Lock()
@@ -595,23 +572,6 @@ def resolve_persistent_contexts_by_value_type(value_type: type) -> list[Persiste
     """
     _ensure_initialized()
     return _global_context_cache.resolve_contexts_by_value_type(value_type)
-
-def _shutdown_handler():
-    """Handler to ensure data is saved on program exit"""
-    global _global_context_cache
-    
-    # Only shutdown if cache was initialized
-    if _global_context_cache is None:
-        return
-    
-    try:
-        _global_context_cache.shutdown()
-        print("[comfyui-easytoolkit] Persistent context cache shutdown complete")
-    except Exception as e:
-        print(f"[comfyui-easytoolkit] Error during shutdown: {e}")
-
-# Register shutdown handler
-atexit.register(_shutdown_handler)
 
 # Initialize immediately if lazy_initialization is disabled
 config = get_config().get_persistent_context_config()

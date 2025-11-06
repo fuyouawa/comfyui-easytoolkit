@@ -8,8 +8,6 @@ persistent_context:
   lazy_initialization: true
   
   # Enable auto-save (default: true)
-  # If true, cache saves automatically whenever data is modified
-  # If false, cache only saves manually or on shutdown
   auto_save: true
   
   # Directory to save cache files: 'input', 'output', or 'temp'

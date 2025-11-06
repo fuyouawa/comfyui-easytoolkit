@@ -375,8 +375,6 @@ persistent_context:
   lazy_initialization: true
   
   # 启用自动保存（默认：true）
-  # true：数据修改时自动保存
-  # false：仅手动或关闭时保存
   auto_save: true
   
   # 缓存目录：'input'、'output' 或 'temp'
