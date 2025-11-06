@@ -27,7 +27,7 @@ class Config:
         self._config = {
             'persistent_context': {
                 'lazy_initialization': True,
-                'auto_save_interval': 30.0,
+                'auto_save': True,
                 'cache_directory': 'temp',
                 'cache_filename': 'persistent_context_cache.pkl'
             }

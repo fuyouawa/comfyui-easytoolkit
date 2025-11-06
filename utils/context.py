@@ -9,10 +9,11 @@ from .config import get_config
 from .. import register_route
 
 class PersistentContext:
-    def __init__(self, value: any, key: str = None, cache=None):
+    def __init__(self, value: any, key: str = None, cache=None, auto_save: bool = True):
         self._value = value
         self._key = key
         self._cache = cache
+        self._auto_save = auto_save
         self._last_access_time = 0.0
 
     def update_access_time(self):
@@ -25,29 +26,39 @@ class PersistentContext:
         self.update_access_time()
         return self._value
     
-    def set_value(self, value: any, save: bool = True):
+    def set_value(self, value: any, save: bool = None):
         self._value = value
         self.update_access_time()
-        # Save to disk whenever value is set
-        if self._cache is not None and save:
+        # Save to disk based on auto_save setting or explicit save parameter
+        should_save = save if save is not None else self._auto_save
+        if self._cache is not None and should_save:
             self._cache.save()
     
     def __getstate__(self):
-        """Exclude _cache when pickling to avoid circular reference issues"""
-        state = self.__dict__.copy()
-        state['_cache'] = None
-        return state
+        """Only serialize _last_access_time and _value fields"""
+        # Only save these two fields, other fields will be restored during deserialization
+        return {
+            '_last_access_time': self._last_access_time,
+            '_value': self._value
+        }
     
     def __setstate__(self, state):
-        """Restore state when unpickling"""
-        self.__dict__.update(state)
+        """Restore state when unpickling and check for empty values"""
+        # Restore the serialized fields
+        self._last_access_time = state.get('_last_access_time', 0.0)
+        self._value = state.get('_value', None)
+        
+        # These fields will be set by the cache after loading
+        self._key = None
+        self._cache = None
+        self._auto_save = True
 
 class PersistentContextCache:
     def __init__(self):
         # Load configuration from config file
         config = get_config().get_persistent_context_config()
-        self._auto_save_interval = config.get('auto_save_interval', 60.0)
         self._cache_file_path = get_config().get_cache_file_path()
+        self._auto_save = config.get('auto_save', True)
         
         self._data: dict[str, PersistentContext] = {}
         self._last_save_time = time.time()
@@ -62,17 +73,6 @@ class PersistentContextCache:
         
         # Load existing cache from disk
         self._load()
-        
-        # Start auto-save background thread
-        if self._auto_save_interval > 0:
-            self._auto_save_thread = threading.Thread(
-                target=self._auto_save_loop,
-                daemon=True,
-                name="persistent_context_auto_saver"
-            )
-            self._auto_save_thread.start()
-        else:
-            self._auto_save_thread = None
 
     def get_context(self, key: str) -> PersistentContext:
         self.update_context_access_time(key)
@@ -91,10 +91,11 @@ class PersistentContextCache:
         self.save()
 
     def create_context(self, key: str, value: any) -> PersistentContext:
-        context = PersistentContext(value, key=key, cache=self)
+        context = PersistentContext(value, key=key, cache=self, auto_save=self._auto_save)
         self._data[key] = context
-        # Trigger an async save after creating a new context
-        self.save()
+        # Trigger an async save after creating a new context (if auto_save is enabled)
+        if self._auto_save:
+            self.save()
         return context
 
     def resolve_contexts_by_value_type(self, value_type: type) -> list[PersistentContext]:
@@ -126,11 +127,28 @@ class PersistentContextCache:
             with open(self._cache_file_path, 'rb') as f:
                 self._data = pickle.load(f)
             
-            # Restore cache reference for all loaded contexts
-            for context in self._data.values():
+            # Restore fields and check for empty values after deserialization
+            failed_keys = []
+            for key, context in self._data.items():
+                # Restore the fields that were not serialized
+                context._key = key
                 context._cache = self
+                context._auto_save = self._auto_save
+                
+                # Check if value is empty (indicates serialization failure)
+                value = context.get_value()
+                if value is None or (hasattr(value, '__len__') and len(value) == 0):
+                    failed_keys.append(key)
+                    print(f"[comfyui-easytoolkit] Error: Context '{key}' has empty value, serialization may have failed previously")
             
-            print(f"[comfyui-easytoolkit] Loaded {len(self._data)} context(s) from {self._cache_file_path}")
+            # Remove contexts with failed serialization
+            for key in failed_keys:
+                del self._data[key]
+            
+            loaded_count = len(self._data)
+            print(f"[comfyui-easytoolkit] Loaded {loaded_count} context(s) from {self._cache_file_path}")
+            if failed_keys:
+                print(f"[comfyui-easytoolkit] Removed {len(failed_keys)} context(s) with empty values (serialization failures)")
         except Exception as e:
             print(f"[comfyui-easytoolkit] Warning: Failed to load cache file: {e}")
             print(f"[comfyui-easytoolkit] Starting with empty cache")
@@ -139,11 +157,28 @@ class PersistentContextCache:
     def _do_save(self):
         """Internal method to perform the actual save operation"""
         try:
+            # Filter out contexts with empty values before saving
+            filtered_data = {}
+            removed_keys = []
+            
+            for key, context in self._data.items():
+                value = context.get_value()
+                # Check if value is empty (None, empty string, empty list, empty dict, etc.)
+                if value is None or (hasattr(value, '__len__') and len(value) == 0):
+                    removed_keys.append(key)
+                    print(f"[comfyui-easytoolkit] Warning: Skipping context '{key}' with empty value during save")
+                else:
+                    filtered_data[key] = context
+            
+            # Remove empty contexts from memory
+            for key in removed_keys:
+                del self._data[key]
+            
             # Create a temporary file first to avoid data corruption
             temp_file = self._cache_file_path + '.tmp'
             
             with open(temp_file, 'wb') as f:
-                pickle.dump(self._data, f, protocol=pickle.HIGHEST_PROTOCOL)
+                pickle.dump(filtered_data, f, protocol=pickle.HIGHEST_PROTOCOL)
             
             # Replace the old file with the new one atomically
             if os.path.exists(self._cache_file_path):
@@ -152,7 +187,10 @@ class PersistentContextCache:
                 os.rename(temp_file, self._cache_file_path)
             
             self._last_save_time = time.time()
-            print(f"[comfyui-easytoolkit] Saved {len(self._data)} context(s) to {self._cache_file_path}")
+            saved_count = len(filtered_data)
+            print(f"[comfyui-easytoolkit] Saved {saved_count} context(s) to {self._cache_file_path}")
+            if removed_keys:
+                print(f"[comfyui-easytoolkit] Removed {len(removed_keys)} context(s) with empty values")
             return True
         except Exception as e:
             print(f"[comfyui-easytoolkit] Error saving cache: {e}")
@@ -200,39 +238,10 @@ class PersistentContextCache:
                 # Submit a new save task
                 self._save_future = self._executor.submit(self._save_task)
     
-    def should_auto_save(self) -> bool:
-        """Check if it's time for an automatic save"""
-        if self._auto_save_interval <= 0:
-            return False
-        return (time.time() - self._last_save_time) >= self._auto_save_interval
-    
-    def _auto_save_loop(self):
-        """Background thread that periodically saves the cache"""
-        print("[comfyui-easytoolkit] Auto-save thread started")
-        
-        while not self._shutdown_flag:
-            try:
-                # Sleep for a short interval to check shutdown flag regularly
-                time.sleep(min(1.0, self._auto_save_interval))
-                
-                if self._shutdown_flag:
-                    break
-                
-                if self.should_auto_save():
-                    self.save()
-            except Exception as e:
-                print(f"[comfyui-easytoolkit] Error in auto-save loop: {e}")
-        
-        print("[comfyui-easytoolkit] Auto-save thread stopped")
-    
     def shutdown(self):
         """Shutdown the cache and save all pending data"""
         print("[comfyui-easytoolkit] Shutting down persistent context cache...")
         self._shutdown_flag = True
-        
-        # Wait for auto-save thread to finish
-        if self._auto_save_thread is not None and self._auto_save_thread.is_alive():
-            self._auto_save_thread.join(timeout=2.0)
         
         # Wait for any pending save to complete
         if self._save_future is not None:
