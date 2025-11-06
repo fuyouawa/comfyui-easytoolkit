@@ -3,20 +3,38 @@ import { apiGet, apiPost, apiSilent } from "./api_utils.js";
 
 function downloadBase64(b64, basename, format) {
     try {
-        let suffix = format.split("/").pop();
+        // Format to suffix mapping, consistent with format.py's file_format_to_suffix
+        const formatMapping = {
+            "image/png": "png",
+            "image/jpeg": "jpeg",
+            "image/gif": "gif",
+            "image/webp": "webp",
+            "video/mp4": "mp4",
+            "video/webm": "webm",
+            "text/plain": "txt",
+            "application/octet-stream": "bin"
+        };
+        
+        // Get suffix from mapping, fallback to splitting format or default to "bin"
+        let suffix = formatMapping[format.toLowerCase()];
+        if (!suffix) {
+            // Fallback: try to extract suffix from format string (e.g., "image/png" -> "png")
+            suffix = format.split("/").pop() || "bin";
+        }
+        
         let blob = null;
-        if (format == "text/plain") {
-            suffix = "txt";
+        if (format === "text/plain") {
+            // For plain text, treat b64 as raw text content
             blob = new Blob([b64], { type: format });
         }
         else {
+            // For all other formats, decode base64 to binary
             const byteCharacters = atob(b64);
             const byteNumbers = new Array(byteCharacters.length);
             for (let i = 0; i < byteCharacters.length; i++) {
                 byteNumbers[i] = byteCharacters.charCodeAt(i);
             }
             const byteArray = new Uint8Array(byteNumbers);
-
             blob = new Blob([byteArray], { type: format });
         }
 
