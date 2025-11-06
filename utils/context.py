@@ -90,6 +90,11 @@ class PersistentContextCache:
         
         # Load existing cache from disk
         self._load()
+        
+        # Load cleanup configuration
+        self._max_cache_size_bytes = config.get('max_cache_size_mb', 100) * 1024 * 1024
+        self._old_data_threshold_seconds = config.get('old_data_threshold_hours', 24) * 3600
+        self._absolute_max_cache_size_bytes = config.get('absolute_max_cache_size_mb', 200) * 1024 * 1024
     
     @staticmethod
     def _sanitize_filename(key: str) -> str:
@@ -303,6 +308,110 @@ class PersistentContextCache:
             print(f"[comfyui-easytoolkit] Error during save operation: {e}")
             return False
     
+    def _calculate_total_cache_size(self) -> int:
+        """Calculate total size of all cache files in bytes"""
+        total_size = 0
+        try:
+            if not os.path.exists(self._cache_dir):
+                return 0
+            
+            for filename in os.listdir(self._cache_dir):
+                if not filename.endswith('.pkl'):
+                    continue
+                
+                file_path = os.path.join(self._cache_dir, filename)
+                try:
+                    total_size += os.path.getsize(file_path)
+                except Exception as e:
+                    print(f"[comfyui-easytoolkit] Warning: Failed to get size of {filename}: {e}")
+            
+            return total_size
+        except Exception as e:
+            print(f"[comfyui-easytoolkit] Error calculating cache size: {e}")
+            return 0
+    
+    def _cleanup_old_data(self):
+        """Clean up old data when cache size exceeds threshold"""
+        try:
+            # Calculate current cache size
+            current_size = self._calculate_total_cache_size()
+            
+            # If below normal threshold, no cleanup needed
+            if current_size <= self._max_cache_size_bytes:
+                return
+            
+            print(f"[comfyui-easytoolkit] Cache size ({current_size / 1024 / 1024:.2f} MB) exceeds threshold ({self._max_cache_size_bytes / 1024 / 1024:.2f} MB)")
+            
+            # Get current time
+            current_time = time.time()
+            
+            # Determine if we need forced cleanup (exceeds absolute maximum)
+            force_cleanup = current_size > self._absolute_max_cache_size_bytes and self._absolute_max_cache_size_bytes > 0
+            
+            if force_cleanup:
+                print(f"[comfyui-easytoolkit] Cache size exceeds absolute maximum ({self._absolute_max_cache_size_bytes / 1024 / 1024:.2f} MB), forcing cleanup")
+            
+            # Collect all contexts with their metadata
+            all_contexts = []
+            old_contexts = []
+            
+            for key, context in self._data.items():
+                last_access = context._last_access_time
+                age = current_time - last_access
+                
+                # Get file size for this context
+                file_path = self._get_context_file_path(key)
+                try:
+                    file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+                    context_info = (key, last_access, file_size, age)
+                    all_contexts.append(context_info)
+                    
+                    # Also track which are "old" based on threshold
+                    if age >= self._old_data_threshold_seconds:
+                        old_contexts.append(context_info)
+                except Exception as e:
+                    print(f"[comfyui-easytoolkit] Warning: Failed to get size for context '{key}': {e}")
+            
+            # Decide which contexts to clean
+            contexts_to_clean = []
+            
+            if force_cleanup:
+                # Forced cleanup: use all contexts, sorted by age (oldest first)
+                contexts_to_clean = sorted(all_contexts, key=lambda x: x[1])
+                target_size = self._max_cache_size_bytes  # Clean down to normal threshold
+                print(f"[comfyui-easytoolkit] Forced cleanup mode: will clean oldest data regardless of age")
+            else:
+                # Normal cleanup: only clean old data
+                if not old_contexts:
+                    print(f"[comfyui-easytoolkit] No old data found (threshold: {self._old_data_threshold_seconds / 3600:.1f} hours), skipping cleanup")
+                    return
+                
+                contexts_to_clean = sorted(old_contexts, key=lambda x: x[1])
+                target_size = self._max_cache_size_bytes
+            
+            # Remove contexts until size is below target
+            removed_count = 0
+            freed_size = 0
+            
+            for key, last_access, file_size, age in contexts_to_clean:
+                # Remove this context
+                self.remove_context(key)
+                removed_count += 1
+                freed_size += file_size
+                
+                # Check if we're below target now
+                new_size = current_size - freed_size
+                if new_size <= target_size:
+                    break
+            
+            if removed_count > 0:
+                cleanup_type = "forced" if force_cleanup else "old data"
+                print(f"[comfyui-easytoolkit] Cleaned up {removed_count} context(s) ({cleanup_type}), freed {freed_size / 1024 / 1024:.2f} MB")
+                print(f"[comfyui-easytoolkit] New cache size: {(current_size - freed_size) / 1024 / 1024:.2f} MB")
+            
+        except Exception as e:
+            print(f"[comfyui-easytoolkit] Error during cleanup: {e}")
+    
     def _save_task(self):
         """Task to run in thread pool for async saves"""
         with self._save_lock:
@@ -310,6 +419,10 @@ class PersistentContextCache:
             self._needs_another_save = False
         
         success = self._do_save()
+        
+        # After successful save, check if cleanup is needed
+        if success:
+            self._cleanup_old_data()
         
         with self._save_lock:
             self._pending_save = False
@@ -328,7 +441,10 @@ class PersistentContextCache:
         
         if force_sync:
             # Synchronous save
-            return self._do_save()
+            success = self._do_save()
+            if success:
+                self._cleanup_old_data()
+            return success
         
         # Asynchronous save
         with self._save_lock:

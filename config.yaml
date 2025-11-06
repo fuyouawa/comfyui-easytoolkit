@@ -20,4 +20,19 @@ persistent_context:
   # Cache filename base (used for determining the parent directory)
   # Individual context files will be saved in a 'persistent_context' subfolder
   cache_filename: 'persistent_context_cache.pkl'
+  
+  # Maximum total cache size in MB (default: 100)
+  # When exceeded, old data will be cleaned up
+  max_cache_size_mb: 100
+  
+  # Old data threshold in hours (default: 24)
+  # Data not accessed for this duration is considered "old"
+  # Only old data will be cleaned when cache size exceeds limit
+  old_data_threshold_hours: 24
+  
+  # Absolute maximum cache size in MB (default: 200)
+  # When exceeded, cleanup is forced even if no data meets the old_data_threshold
+  # The least recently accessed data will be removed until size is below this limit
+  # Set to 0 to disable forced cleanup
+  absolute_max_cache_size_mb: 200
 

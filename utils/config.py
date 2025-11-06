@@ -29,7 +29,10 @@ class Config:
                 'lazy_initialization': True,
                 'auto_save': True,
                 'cache_directory': 'temp',
-                'cache_filename': 'persistent_context_cache.pkl'
+                'cache_filename': 'persistent_context_cache.pkl',
+                'max_cache_size_mb': 100,
+                'old_data_threshold_hours': 24,
+                'absolute_max_cache_size_mb': 200
             }
         }
         
