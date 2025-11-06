@@ -91,12 +91,12 @@ app.registerExtension({
              */
             nodeType.prototype.addCustomButtons = function() {
                 // Button: Save (to override)
-                this.addWidget("button", "Save", null, () => {
+                this.addWidget("button", "Save YAML", null, () => {
                     this.saveOverride();
                 });
                 
                 // Button: Restore (delete override)
-                this.addWidget("button", "Restore", null, () => {
+                this.addWidget("button", "Restore YAML", null, () => {
                     this.deleteOverride();
                 });
             };

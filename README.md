@@ -381,15 +381,15 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 **功能：**
 - **自动加载配置**：节点创建时自动从 `config.override.yaml` 或 `config.yaml` 加载当前配置
 - **实时编辑**：在文本框中编辑 YAML 配置，保留注释和格式
-- **Save 按钮**：保存配置到 `config.override.yaml`（覆盖配置文件）
-- **Restore 按钮**：删除覆盖配置文件，恢复到默认配置
+- **Save YAML按钮**：保存配置到 `config.override.yaml`（覆盖配置文件）
+- **Restore YAML按钮**：删除覆盖配置文件，恢复到默认配置
 
 **工作流：**
 1. 添加 EasyToolkitConfigManager 节点到工作流
 2. 节点自动加载当前配置到文本框
 3. 在文本框中编辑配置
-4. 点击 **Save** 保存修改
-5. 如需恢复默认配置，点击 **Restore**
+4. 点击 **Save YAML** 保存修改
+5. 如需恢复默认配置，点击 **Restore YAML**
 
 **配置继承机制：**
 
