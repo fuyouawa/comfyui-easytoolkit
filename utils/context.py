@@ -102,7 +102,7 @@ class PersistentContextCache:
         import urllib.parse
         # URL encode the key to make it filesystem-safe
         safe_name = urllib.parse.quote(key, safe='')
-        # Limit filename length to avoid filesystem issues (留一些空间给扩展名)
+        # Limit filename length to avoid filesystem issues
         if len(safe_name) > 200:
             # Use hash for very long keys
             import hashlib
@@ -566,7 +566,7 @@ if not config.get('lazy_initialization', True):
 
 
 @register_route("/persistent_context/remove_key")
-async def handle_clear(request):
+async def handle_remove_key(request):
     """Clear the persistent context for a given key"""
     _ensure_initialized()
     

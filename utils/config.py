@@ -33,6 +33,9 @@ class Config:
                 'max_cache_size_mb': 100,
                 'old_data_threshold_hours': 24,
                 'absolute_max_cache_size_mb': 200
+            },
+            'base64_uploader': {
+                'max_upload_file_size_mb': 100
             }
         }
         
@@ -103,6 +106,15 @@ class Config:
         cache_filename = config.get('cache_filename', 'persistent_context_cache.pkl')
         cache_dir = self.get_cache_directory_path()
         return os.path.join(cache_dir, cache_filename)
+    
+    def get_base64_uploader_config(self):
+        """Get base64 uploader configuration"""
+        return self._config.get('base64_uploader', {})
+    
+    def get_max_upload_file_size_mb(self):
+        """Get maximum upload file size in MB"""
+        config = self.get_base64_uploader_config()
+        return config.get('max_upload_file_size_mb', 100)
 
 
 # Global config instance

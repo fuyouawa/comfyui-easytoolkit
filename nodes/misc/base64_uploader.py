@@ -4,6 +4,7 @@ import asyncio
 from aiohttp import web
 from ... import register_node, register_route
 from ...utils.context import get_persistent_context, has_persistent_context
+from ...utils.config import get_config
 from .base64_context import Base64Context
 
 # Store temporary data for chunked uploads
@@ -91,6 +92,19 @@ async def handle_init_upload(request):
     if file_size is None:
         return web.json_response({"success": False, "error": "file_size is required."})
 
+    # Check file size limit
+    config = get_config()
+    max_size_mb = config.get_max_upload_file_size_mb()
+    
+    if max_size_mb > 0:  # 0 means no limit
+        max_size_bytes = max_size_mb * 1024 * 1024
+        if file_size > max_size_bytes:
+            file_size_mb = file_size / (1024 * 1024)
+            return web.json_response({
+                "success": False, 
+                "error": f"File size ({file_size_mb:.2f} MB) exceeds maximum allowed size ({max_size_mb} MB)."
+            })
+
     # Initialize chunked upload
     _chunk_uploads[uuid] = {
         "filename": filename,
@@ -171,3 +185,15 @@ async def handle_finalize_upload(request):
     del _chunk_uploads[uuid]
 
     return web.json_response({"success": True})
+
+
+@register_route("/base64_cache_loader/get_config")
+async def handle_get_config(request):
+    """Return upload configuration to frontend"""
+    config = get_config()
+    max_size_mb = config.get_max_upload_file_size_mb()
+    
+    return web.json_response({
+        "success": True,
+        "max_upload_file_size_mb": max_size_mb
+    })

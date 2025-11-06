@@ -27,6 +27,17 @@ app.registerExtension({
             this.uploadProgress = 0; // 0-100
             this.isUploading = false;
             this.uploadStatus = "Standby..."; // Status message
+            
+            // Fetch upload configuration
+            this.maxUploadSizeMB = 100; // Default value
+            try {
+                const configResponse = await apiPost("/base64_cache_loader/get_config", {});
+                if (configResponse.success) {
+                    this.maxUploadSizeMB = configResponse.max_upload_file_size_mb;
+                }
+            } catch (error) {
+                console.warn("Failed to fetch upload config, using default:", error);
+            }
 
             this.addWidget("button", "Upload File", null, async () => {
                 try {
@@ -39,6 +50,13 @@ app.registerExtension({
                         try {
                             const file = event.target.files[0];
                             if (!file) return;
+
+                            // Check file size limit
+                            const fileSizeMB = file.size / (1024 * 1024);
+                            if (this.maxUploadSizeMB > 0 && fileSizeMB > this.maxUploadSizeMB) {
+                                alert(`File size (${fileSizeMB.toFixed(2)} MB) exceeds maximum allowed size (${this.maxUploadSizeMB} MB).`);
+                                return;
+                            }
 
                             uuid_widget = this.widgets?.find(w => w.name === "uuid");
                             let filename_widget = this.widgets?.find(w => w.name === "filename");

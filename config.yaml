@@ -36,3 +36,10 @@ persistent_context:
   # Set to 0 to disable forced cleanup
   absolute_max_cache_size_mb: 200
 
+# Base64 Uploader Settings
+base64_uploader:
+  # Maximum upload file size in MB (default: 100)
+  # Files larger than this size will be rejected
+  # Set to 0 to disable file size limit
+  max_upload_file_size_mb: 100
+
