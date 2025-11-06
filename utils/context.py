@@ -1,6 +1,7 @@
 import time
 import os
 import pickle
+import gzip
 import threading
 import atexit
 from concurrent.futures import ThreadPoolExecutor
@@ -184,9 +185,13 @@ class PersistentContextCache:
                 file_path = os.path.join(self._cache_dir, filename)
                 
                 try:
-                    # Load the context from file (new format with metadata)
+                    # Load and decompress the context from file
                     with open(file_path, 'rb') as f:
-                        data = pickle.load(f)
+                        compressed_data = f.read()
+                    
+                    # Decompress and deserialize
+                    decompressed_data = gzip.decompress(compressed_data)
+                    data = pickle.loads(decompressed_data)
                     
                     # Extract key and context from saved data
                     if not isinstance(data, dict) or 'key' not in data or 'context' not in data:
@@ -275,9 +280,12 @@ class PersistentContextCache:
                         'context': context
                     }
                     
-                    # Serialize to bytes to check size
+                    # Serialize to bytes
                     serialized_data = pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
-                    data_size = len(serialized_data)
+                    
+                    # Compress the data
+                    compressed_data = gzip.compress(serialized_data, compresslevel=6)
+                    data_size = len(compressed_data)
                     
                     # Check if data size exceeds limit (if limit is set)
                     if self._max_context_size_bytes > 0 and data_size > self._max_context_size_bytes:
@@ -296,9 +304,9 @@ class PersistentContextCache:
                             pass
                         continue
                     
-                    # Write to temp file
+                    # Write compressed data to temp file
                     with open(temp_file, 'wb') as f:
-                        f.write(serialized_data)
+                        f.write(compressed_data)
                     
                     # Replace the old file with the new one atomically
                     if os.path.exists(file_path):
