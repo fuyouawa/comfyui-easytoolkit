@@ -32,7 +32,8 @@ class Config:
                 'cache_filename': 'persistent_context_cache.pkl',
                 'max_cache_size_mb': 100,
                 'old_data_threshold_hours': 24,
-                'absolute_max_cache_size_mb': 200
+                'absolute_max_cache_size_mb': 200,
+                'max_context_size_mb': 50
             },
             'base64_uploader': {
                 'max_upload_file_size_mb': 100

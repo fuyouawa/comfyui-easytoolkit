@@ -95,6 +95,7 @@ class PersistentContextCache:
         self._max_cache_size_bytes = config.get('max_cache_size_mb', 100) * 1024 * 1024
         self._old_data_threshold_seconds = config.get('old_data_threshold_hours', 24) * 3600
         self._absolute_max_cache_size_bytes = config.get('absolute_max_cache_size_mb', 200) * 1024 * 1024
+        self._max_context_size_bytes = config.get('max_context_size_mb', 50) * 1024 * 1024
     
     @staticmethod
     def _sanitize_filename(key: str) -> str:
@@ -237,6 +238,7 @@ class PersistentContextCache:
             saved_count = 0
             removed_count = 0
             skipped_count = 0
+            oversized_count = 0
             
             # Only save dirty contexts
             for key, context in list(self._data.items()):
@@ -273,8 +275,30 @@ class PersistentContextCache:
                         'context': context
                     }
                     
+                    # Serialize to bytes to check size
+                    serialized_data = pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
+                    data_size = len(serialized_data)
+                    
+                    # Check if data size exceeds limit (if limit is set)
+                    if self._max_context_size_bytes > 0 and data_size > self._max_context_size_bytes:
+                        oversized_count += 1
+                        size_mb = data_size / 1024 / 1024
+                        limit_mb = self._max_context_size_bytes / 1024 / 1024
+                        print(f"[comfyui-easytoolkit] Warning: Context '{key}' size ({size_mb:.2f} MB) exceeds limit ({limit_mb:.2f} MB), skipping save")
+                        # Mark as clean to avoid repeated attempts to save
+                        context.mark_clean()
+                        # Remove file if exists (since we won't save it)
+                        try:
+                            if os.path.exists(file_path):
+                                os.remove(file_path)
+                                print(f"[comfyui-easytoolkit] Removed existing oversized context file: {file_path}")
+                        except:
+                            pass
+                        continue
+                    
+                    # Write to temp file
                     with open(temp_file, 'wb') as f:
-                        pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+                        f.write(serialized_data)
                     
                     # Replace the old file with the new one atomically
                     if os.path.exists(file_path):
@@ -301,6 +325,8 @@ class PersistentContextCache:
                 print(f"[comfyui-easytoolkit] Saved {saved_count} context(s) to {self._cache_dir}")
             if removed_count > 0:
                 print(f"[comfyui-easytoolkit] Removed {removed_count} context(s) with empty values")
+            if oversized_count > 0:
+                print(f"[comfyui-easytoolkit] Skipped {oversized_count} oversized context(s)")
             
             return True
             

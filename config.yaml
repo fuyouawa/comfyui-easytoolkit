@@ -35,6 +35,11 @@ persistent_context:
   # The least recently accessed data will be removed until size is below this limit
   # Set to 0 to disable forced cleanup
   absolute_max_cache_size_mb: 200
+  
+  # Maximum individual context size in MB (default: 50)
+  # Contexts larger than this size will not be saved to disk
+  # Set to 0 to disable size limit (not recommended)
+  max_context_size_mb: 50
 
 # Base64 Uploader Settings
 base64_uploader:
