@@ -41,7 +41,7 @@ class VideoBase64Encoder:
     RETURN_TYPES = ("STRING", "STRING",)
     RETURN_NAMES = ("base64", "suffix",)
     OUTPUT_NODE = True
-    CATEGORY = "EasyToolKit/Video"
+    CATEGORY = "EasyToolkit/Encoding"
     FUNCTION = "run"
 
     def run(
