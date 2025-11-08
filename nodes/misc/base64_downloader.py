@@ -1,6 +1,6 @@
 from aiohttp import web
 from ... import register_node, register_route
-from ...utils.format import format_filename, all_resource_formats, file_format_to_suffix
+from ...utils.format import format_filename, all_resource_formats, mime_type_to_file_suffix
 from ...utils.context import get_persistent_context, has_persistent_context
 from .base64_context import Base64Context
 
@@ -42,7 +42,7 @@ class Base64Downloader:
 
     def run(self, base64, basename, format, uuid):
         # Create filename from basename and format
-        filename = f"{basename}.{file_format_to_suffix(format)}"
+        filename = f"{basename}.{mime_type_to_file_suffix(format)}"
         # Save to persistent context using Base64Context
         context = Base64Context(base64, filename)
         get_persistent_context(uuid).set_value(context)

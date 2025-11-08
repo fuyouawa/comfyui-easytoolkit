@@ -2,7 +2,7 @@ from aiohttp import web
 from ... import register_node, register_route
 from ...utils.image import image_to_base64
 from ...utils.context import get_persistent_context, has_persistent_context
-from ...utils.format import static_image_formats, file_format_to_suffix
+from ...utils.format import static_image_formats, mime_type_to_file_suffix
 from ..misc.base64_context import Base64Context
 
 @register_node
@@ -34,7 +34,7 @@ class ImagePreviewer:
         base64_data = image_to_base64(image, format=format)
         
         # Generate filename based on format
-        suffix = file_format_to_suffix(format)
+        suffix = mime_type_to_file_suffix(format)
         filename = f"TEMPORARY.{suffix}"
         
         # Store base64 data using Base64Context

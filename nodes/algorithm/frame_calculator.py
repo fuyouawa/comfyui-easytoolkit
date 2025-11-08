@@ -21,25 +21,19 @@ class FrameCalculator:
                     "default": 5.0,
                     "min": 0.0,
                     "max": 1000.0,
-                    "step": 1,
-                    "display": "number",
-                    "lazy": True
+                    "step": 1
                 }),
                 "frame_rate": ("FLOAT", {
                     "default": 16.0,
                     "min": 1.0,
                     "max": 120.0,
-                    "step": 1.0,
-                    "display": "number",
-                    "lazy": True
+                    "step": 1.0
                 }),
                 "extra_frames": ("INT", {
                     "default": 1,
                     "min": 0,
                     "max": 1000,
-                    "step": 1,
-                    "display": "number",
-                    "lazy": True
+                    "step": 1
                 }),
             },
         }

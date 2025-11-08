@@ -1,5 +1,5 @@
 from ... import register_node
-from ...utils.format import format_file_suffix, all_resource_formats
+from ...utils.format import file_suffix_to_mime_type, all_resource_formats
 
 @register_node
 class FileSuffixFormatter:
@@ -25,5 +25,5 @@ class FileSuffixFormatter:
     CATEGORY = "EasyToolkit/Algorithm"
 
     def run(self, suffix):
-        format = format_file_suffix(suffix)
+        format = file_suffix_to_mime_type(suffix)
         return {"result": (format,)}

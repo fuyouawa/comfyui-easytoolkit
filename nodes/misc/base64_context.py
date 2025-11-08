@@ -1,4 +1,4 @@
-from ...utils.format import format_file_suffix
+from ...utils.format import file_suffix_to_mime_type
 
 class Base64Context:
     """
@@ -34,4 +34,4 @@ class Base64Context:
     
     def get_format(self) -> str:
         """Get the formatted file suffix"""
-        return format_file_suffix(self.get_suffix())
+        return file_suffix_to_mime_type(self.get_suffix())
