@@ -8,7 +8,9 @@ except ImportError:
     print("[comfyui-easytoolkit] Warning: Could not import folder_paths from ComfyUI")
 
 class Config:
-    """Configuration loader for comfyui-easytoolkit"""
+    """
+    Singleton configuration loader for comfyui-easytoolkit.
+    """
     
     _instance = None
     _config = None
@@ -20,7 +22,9 @@ class Config:
         return cls._instance
     
     def _load_config(self):
-        """Load configuration from config.yaml and merge with config.override.yaml if it exists"""
+        """
+        Load configuration from YAML files and merge them hierarchically.
+        """
         base_dir = os.path.dirname(os.path.dirname(__file__))
         config_path = os.path.join(base_dir, 'config.yaml')
         override_path = os.path.join(base_dir, 'config.override.yaml')
@@ -71,8 +75,7 @@ class Config:
     
     def _deep_merge(self, base_dict, override_dict):
         """
-        Deep merge override_dict into base_dict
-        Override values take precedence
+        Recursively merge two dictionaries, with override values taking precedence.
         """
         for key, value in override_dict.items():
             if key in base_dict and isinstance(base_dict[key], dict) and isinstance(value, dict):
@@ -83,7 +86,9 @@ class Config:
                 base_dict[key] = value
     
     def get(self, key: str, default=None):
-        """Get a configuration value by key (supports dot notation)"""
+        """
+        Get a configuration value by key with support for dot notation.
+        """
         keys = key.split('.')
         value = self._config
         
@@ -151,6 +156,8 @@ class Config:
 _config = Config()
 
 def get_config():
-    """Get the global configuration instance"""
+    """
+    Get the global singleton configuration instance.
+    """
     return _config
 

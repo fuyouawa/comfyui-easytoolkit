@@ -4,8 +4,9 @@ from ...utils.image import encrypt_image
 @register_node
 class ImageEncryptor:
     """
-    Image processor node
-    Provides multiple image processing functions: color inversion, XOR encryption/decryption
+    Single image encryption and processing node.
+    
+    Supports color inversion and XOR encryption/decryption operations.
     """
 
     def __init__(self):
@@ -13,9 +14,6 @@ class ImageEncryptor:
 
     @classmethod
     def INPUT_TYPES(s):
-        """
-        Define input parameters
-        """
         return {
             "required": {
                 "image": ("IMAGE",),
@@ -35,7 +33,7 @@ class ImageEncryptor:
 
     def run(self, image, enable, operation):
         """
-        Main function for processing image
+        Process single image with selected encryption operation.
         """
         if not enable:
             return (image,)

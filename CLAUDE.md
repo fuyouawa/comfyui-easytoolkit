@@ -164,3 +164,20 @@ comfyui-easytoolkit/
 - Add to appropriate utility module in `utils/`
 - Ensure compatibility with ComfyUI's image tensor format
 - Use existing patterns for Base64 encoding/decoding and image processing
+
+## Code Documentation Guidelines
+
+### Commenting Rules
+
+When adding or modifying code comments, follow these guidelines:
+
+1. **Keep comments concise and focused** - Avoid verbose explanations of obvious code
+2. **Remove unnecessary comments** - Don't describe:
+   - `INPUT_TYPES()` return values (the return statement is self-explanatory)
+   - `__init__` functions (unless they have complex initialization logic)
+   - ComfyUI built-in fields (`RETURN_TYPES`, `RETURN_NAMES`, `FUNCTION`, etc.)
+   - `run()` function return values (the return statement is clear)
+
+3. **Focus on the "why", not the "what"** - Explain complex logic or non-obvious decisions
+4. **Use docstrings for public functions** - Keep them brief, 1-3 lines maximum
+5. **Preserve configuration documentation** - `config.yaml` comments are important for user understanding

@@ -6,14 +6,17 @@ from ...utils.format import static_image_formats
 
 @register_node
 class ImageBatchPreviewer:
+    """
+    Batch image previewer for ComfyUI workflows.
+    
+    Converts image batches to base64 format and stores in persistent context for web preview.
+    """
+
     def __init__(self):
         pass
 
     @classmethod
     def INPUT_TYPES(s):
-        """
-        Define input parameters
-        """
         return {
             "required": {
                 "image_batch": ("IMAGE",),
@@ -30,23 +33,24 @@ class ImageBatchPreviewer:
     OUTPUT_NODE = True
 
     def run(self, image_batch, format, fps, uuid):
-        # Convert image batch to base64 list
+        """
+        Process image batch and store in persistent context for preview.
+        """
         base64_list = image_batch_to_base64_list(image_batch, format=format)
-        
-        # Store base64 data list in persistent context
+
         get_persistent_context(uuid).set_value({
             "base64_list": base64_list,
             "format": format,
             "fps": fps,
             "frame_count": len(base64_list)
         })
-        
+
         return {"result": (image_batch,), "ui": {"uuid": [uuid], "frame_count": [len(base64_list)], "fps": [fps]}}
 
 
 @register_route("/image_batch_previewer/get_images")
 async def handle_get_images(request):
-    """Get base64 image list data from context by uuid"""
+    """API endpoint to retrieve batch image data from persistent context."""
     data = await request.json()
     uuid = data.get("uuid", None)
 

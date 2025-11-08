@@ -4,14 +4,17 @@ from ...utils.image import base64_to_tensor
 
 @register_node
 class ImageTensorBase64Decoder:
+    """
+    Tensor base64 image decoder node.
+
+    Decodes tensor base64 string to ComfyUI image tensor and mask.
+    """
+
     def __init__(self):
         pass
 
     @classmethod
     def INPUT_TYPES(s):
-        """
-        Define input parameters
-        """
         return {
             "required": {
                 "base64": ("STRING", {"multiline": False}),
@@ -26,13 +29,7 @@ class ImageTensorBase64Decoder:
 
     def run(self, base64):
         """
-        Decode base64 string to image tensor (raw tensor data)
-        
-        Args:
-            base64: Base64 encoded string of raw tensor data
-            
-        Returns:
-            Image tensor (1, H, W, C)
+        Decode base64 to image tensor.
         """
         image = base64_to_tensor(base64)
         return {"result": (image,)}

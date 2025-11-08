@@ -7,14 +7,17 @@ from ..misc.base64_context import Base64Context
 
 @register_node
 class ImagePreviewer:
+    """
+    Single image previewer for ComfyUI workflows.
+    
+    Converts images to base64 format and stores in persistent context for web preview.
+    """
+
     def __init__(self):
         pass
 
     @classmethod
     def INPUT_TYPES(s):
-        """
-        Define input parameters
-        """
         return {
             "required": {
                 "image": ("IMAGE",),
@@ -30,23 +33,23 @@ class ImagePreviewer:
     OUTPUT_NODE = True
 
     def run(self, image, format, uuid):
-        # Convert image to base64
+        """
+        Process single image and store in persistent context for preview.
+        """
         base64_data = image_to_base64(image, format=format)
-        
-        # Generate filename based on format
+
         suffix = mime_type_to_file_suffix(format)
         filename = f"TEMPORARY.{suffix}"
-        
-        # Store base64 data using Base64Context
+
         context = Base64Context(base64_data, filename)
         get_persistent_context(uuid).set_value(context)
-        
+
         return {"result": (image,), "ui": {"uuid": [uuid]}}
 
 
 @register_route("/image_previewer/get_image")
 async def handle_get_image(request):
-    """Get base64 image data from context by uuid"""
+    """API endpoint to retrieve single image data from persistent context."""
     data = await request.json()
     uuid = data.get("uuid", None)
 

@@ -7,17 +7,14 @@ import yaml
 @register_node
 class EasyToolkitConfigManager:
     """
-    Node for editing config.yaml as YAML text
+    A ComfyUI node for managing EasyToolkit configuration via YAML text.
     """
-    
+
     def __init__(self):
         pass
 
     @classmethod
     def INPUT_TYPES(cls):
-        """
-        Define input parameters for YAML editing
-        """
         return {
             "required": {
                 "config_yaml": ("STRING", {"multiline": True}),
@@ -37,7 +34,7 @@ class EasyToolkitConfigManager:
 @register_route("/easytoolkit_config/get_current_config", method="GET")
 async def handle_get_current_config(request):
     """
-    API endpoint to get current configuration as YAML text with comments preserved
+    API endpoint to retrieve current configuration as YAML text.
     """
     try:
         config_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -75,8 +72,7 @@ async def handle_get_current_config(request):
 @register_route("/easytoolkit_config/save_override", method="POST")
 async def handle_save_override(request):
     """
-    API endpoint to save configuration override as YAML text
-    Creates or updates config.override.yaml
+    API endpoint to save configuration override as YAML text.
     """
     try:
         data = await request.json()
@@ -115,7 +111,7 @@ async def handle_save_override(request):
 @register_route("/easytoolkit_config/delete_override", method="DELETE")
 async def handle_delete_override(request):
     """
-    API endpoint to delete override configuration
+    API endpoint to delete override configuration.
     """
     try:
         config_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))

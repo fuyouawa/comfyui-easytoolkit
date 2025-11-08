@@ -5,14 +5,17 @@ from ...utils.format import static_image_formats
 
 @register_node
 class ImageBatchBase64Encoder:
+    """
+    Base64 image batch encoder node.
+
+    Encodes batch of ComfyUI image tensors to base64 strings.
+    """
+
     def __init__(self):
         pass
 
     @classmethod
     def INPUT_TYPES(s):
-        """
-        Define input parameters
-        """
         return {
             "required": {
                 "image_batch": ("IMAGE",),
@@ -30,24 +33,12 @@ class ImageBatchBase64Encoder:
 
     def run(self, image_batch, format="image/png"):
         """
-        Encode a batch of images to base64 strings
-        
-        Args:
-            image_batch: Batch of images (N, H, W, C)
-            format: Image format
-            
-        Returns:
-            Tuple of (base64_list, count, suffix) where:
-            - base64_list: Newline-separated base64 strings
-            - count: Number of images in the batch
-            - suffix: File extension
+        Encode image batch to base64 strings.
         """
         base64_list = image_batch_to_base64_list(image_batch, format)
-        
-        # Join with newlines for easy splitting later
         base64_text = "\n".join(base64_list)
         count = len(base64_list)
         suffix = format.split("/")[-1]
-        
+
         return {"result": (base64_text, count, suffix,)}
 

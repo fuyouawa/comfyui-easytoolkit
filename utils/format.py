@@ -5,23 +5,13 @@ import time
 
 def format_filename(template: str) -> str:
     """
-    Format filename template
-
-    Args:
-        template: Filename template supporting the following variables:
-            %date:yyyy-MM-dd% - Date
-            %date:hh-mm-ss% - Time
-            %timestamp% - Timestamp
-            %random% - Random number
-            %width% - Image width
-            %height% - Image height
+    Format filename template with dynamic variables.
     """
 
     # Replace date and time variables
     now = datetime.datetime.now()
 
     def format_date(match):
-        """Convert user-friendly date format to Python strftime format"""
         user_format = match.group(1)
         # Format mapping: user-friendly format -> Python strftime format
         format_mapping = {
@@ -62,13 +52,7 @@ def format_filename(template: str) -> str:
 
 def file_suffix_to_mime_type(suffix: str) -> str:
     """
-    Convert file suffix to MIME type
-
-    Args:
-        suffix: File suffix (e.g., 'png', 'jpg', 'mp4')
-
-    Returns:
-        Corresponding MIME type
+    Convert file suffix to corresponding MIME type.
     """
     mapping = {
         # Image formats
@@ -129,13 +113,7 @@ def file_suffix_to_mime_type(suffix: str) -> str:
 
 def mime_type_to_file_suffix(format: str) -> str:
     """
-    Convert MIME type to file suffix
-
-    Args:
-        format: MIME type (e.g., 'image/png', 'video/mp4')
-
-    Returns:
-        Corresponding file suffix
+    Convert MIME type to file suffix.
     """
     mapping = {
         # Image formats

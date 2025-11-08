@@ -37,14 +37,17 @@ asyncio.create_task(start_cleanup_task())
 
 @register_node
 class Base64Uploader:
+    """
+    Base64 file uploader node.
+
+    Handles chunked file uploads and stores data in persistent context.
+    """
+
     def __init__(self):
         pass
 
     @classmethod
     def INPUT_TYPES(s):
-        """
-        Define input parameters
-        """
         return {
             "required": {
                 "filename": ("STRING", {
@@ -64,6 +67,9 @@ class Base64Uploader:
     OUTPUT_NODE = True
 
     def run(self, filename: str, uuid):
+        """
+        Load base64 data from persistent context.
+        """
         context = get_persistent_context(uuid).get_value()
         if not context or not isinstance(context, Base64Context):
             raise Exception("There is no base64 data at all.")
@@ -189,10 +195,10 @@ async def handle_finalize_upload(request):
 
 @register_route("/base64_cache_loader/get_config")
 async def handle_get_config(request):
-    """Return upload configuration to frontend"""
+    """Get upload configuration for frontend."""
     config = get_config()
     max_size_mb = config.get_max_upload_file_size_mb()
-    
+
     return web.json_response({
         "success": True,
         "max_upload_file_size_mb": max_size_mb

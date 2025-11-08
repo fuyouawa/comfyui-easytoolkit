@@ -12,6 +12,9 @@ def camel_to_spaced(s: str) -> str:
     return re.sub(r'(?<=[a-z0-9])([A-Z])', r' \1', s)
 
 def register_node(c):
+    """
+    Decorator to register a ComfyUI node class.
+    """
     NODE_CLASS_MAPPINGS[c.__name__] = c
     NODE_DISPLAY_NAME_MAPPINGS[c.__name__] = camel_to_spaced(c.__name__)
     return c
@@ -19,15 +22,6 @@ def register_node(c):
 def register_route(path, method="POST"):
     """
     Decorator to register API routes more conveniently.
-    
-    Usage:
-        @register_route("/my_endpoint", method="POST")
-        async def my_handler(request):
-            return web.json_response({"success": True})
-    
-    Args:
-        path: The API endpoint path
-        method: HTTP method (GET, POST, PUT, DELETE, etc.)
     """
     def decorator(func):
         routes = PromptServer.instance.routes

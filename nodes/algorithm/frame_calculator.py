@@ -46,6 +46,9 @@ class FrameCalculator:
     CATEGORY = "EasyToolkit/Algorithm"
 
     def run(self, duration, frame_rate, extra_frames):
+        """
+        Calculate total frames based on duration, frame rate, and extra frames.
+        """
         total_frames = int(duration * frame_rate + extra_frames)
 
         return (total_frames,)

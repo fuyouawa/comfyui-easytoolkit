@@ -4,17 +4,22 @@ from ...utils.image import base64_list_to_image_batch
 
 @register_node
 class ImageBatchBase64Decoder:
+    """
+    Base64 image batch decoder node.
+
+    Decodes base64 strings to batch of ComfyUI image tensors and masks.
+    """
+
     def __init__(self):
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
-        """
-        Define input parameters
-        """
+    def INPUT_TYPES(cls):
         return {
             "required": {
-                "base64_list": ("STRING", {"multiline": True}),
+                "base64_list": ("STRING",{
+                    "multiline": True
+                }),
             },
         }
 
@@ -24,24 +29,17 @@ class ImageBatchBase64Decoder:
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, base64_list):
+    def run(self, base64_list: str) -> dict:
         """
-        Decode base64 strings to a batch of images
-        
-        Args:
-            base64_list: Newline-separated base64 strings
-            
-        Returns:
-            Tuple of (images, masks, count) where:
-            - images: Batch of images (N, H, W, C)
-            - masks: Batch of masks (N, H, W)
-            - count: Number of images decoded
+        Decode base64 strings to image batch.
         """
-        # Split by newlines and filter empty lines
         base64_strings = [s.strip() for s in base64_list.strip().split("\n") if s.strip()]
-        
+
+        if not base64_strings:
+            raise ValueError("No valid base64 strings found in input")
+
         images, masks = base64_list_to_image_batch(base64_strings)
         count = len(base64_strings)
-        
+
         return {"result": (images, masks, count,)}
 

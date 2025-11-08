@@ -2,6 +2,12 @@ from ... import register_node
 
 @register_node
 class ImageBatchSelector:
+    """
+    Image batch selector for extracting specific images from batches.
+    
+    Allows selection of individual frames from image sequences.
+    """
+
     def __init__(self):
         pass
 
@@ -25,6 +31,9 @@ class ImageBatchSelector:
     CATEGORY = "EasyToolkit/Image"
 
     def run(self, image_batch, select):
+        """
+        Extract selected image from batch.
+        """
         n, h, w, c = image_batch.shape
         if select >= n:
             select = n - 1

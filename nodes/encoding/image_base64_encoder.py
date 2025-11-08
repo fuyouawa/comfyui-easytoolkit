@@ -5,29 +5,36 @@ from ...utils.format import static_image_formats
 
 @register_node
 class ImageBase64Encoder:
+    """
+    Base64 image encoder node.
+
+    Encodes ComfyUI image tensor to base64 string.
+    """
+
     def __init__(self):
         pass
 
     @classmethod
-    def INPUT_TYPES(s):
-        """
-        Define input parameters
-        """
+    def INPUT_TYPES(cls):
         return {
             "required": {
                 "image": ("IMAGE",),
                 "format": (static_image_formats, {
-                    "default": static_image_formats[0]
+                    "default": static_image_formats[0],
                 }),
             },
         }
 
-    RETURN_TYPES = ("STRING","STRING",)
-    RETURN_NAMES = ("base64","suffix",)
+    RETURN_TYPES = ("STRING", "STRING",)
+    RETURN_NAMES = ("base64", "suffix",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, image, format="image/png"):
+    def run(self, image, format: str = "image/png") -> dict:
+        """
+        Encode image to base64.
+        """
         b64 = image_to_base64(image, format)
-        return {"result": (b64,format.split("/")[-1],)}
+        suffix = format.split("/")[-1]
+        return {"result": (b64, suffix,)}

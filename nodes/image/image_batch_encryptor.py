@@ -6,8 +6,9 @@ from ...utils.image import encrypt_image
 @register_node
 class ImageBatchEncryptor:
     """
-    Image batch processor node
-    Provides multiple image batch processing functions: color inversion, XOR encryption/decryption
+    Batch image encryption and processing node.
+    
+    Supports color inversion and XOR encryption/decryption operations.
     """
 
     def __init__(self):
@@ -15,9 +16,6 @@ class ImageBatchEncryptor:
 
     @classmethod
     def INPUT_TYPES(s):
-        """
-        Define input parameters
-        """
         return {
             "required": {
                 "image_batch": ("IMAGE",),
@@ -37,29 +35,18 @@ class ImageBatchEncryptor:
 
     def run(self, image_batch, operation, enable):
         """
-        Main function for processing image batches
+        Process image batch with selected encryption operation.
         """
         if not enable:
             return (image_batch,)
 
-        # Get batch size
         batch_size = image_batch.shape[0]
-
-        # Create a list to store processed images
         processed_batch = []
 
-        # Iterate through each image in the batch
         for i in range(batch_size):
-            # Get single image
-            single_image = image_batch[i:i + 1]  # Maintain batch dimension
-
-            # Apply image processing
+            single_image = image_batch[i:i + 1]
             processed_image = encrypt_image(single_image, operation)
-
-            # Add to processed batch
             processed_batch.append(processed_image)
 
-        # Concatenate processed batch into a tensor
         result_batch = torch.cat(processed_batch, dim=0)
-
         return (result_batch,)

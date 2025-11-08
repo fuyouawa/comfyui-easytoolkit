@@ -5,6 +5,12 @@ from .base64_context import Base64Context
 
 @register_node
 class Base64ContextLoader:
+    """
+    Base64 context loader node.
+
+    Loads base64 data from persistent context storage.
+    """
+
     def __init__(self):
         pass
 
@@ -25,10 +31,13 @@ class Base64ContextLoader:
     OUTPUT_NODE = True
 
     def run(self, key, mode):
+        """
+        Load base64 data from context by key.
+        """
         base64_context = get_persistent_context(key).get_value()
         if not base64_context or not isinstance(base64_context, Base64Context):
             return {"result": (None, None, None,)}
-        
+
         base64 = base64_context.get_base64()
         basename = base64_context.get_basename()
         suffix = base64_context.get_suffix()
@@ -36,7 +45,7 @@ class Base64ContextLoader:
 
 @register_route("/base64_context_previewer/get_keys")
 async def handle_get_keys(request):
-    """Get available base64 context keys"""
+    """Get available base64 context keys."""
     base64_contexts = resolve_persistent_contexts_by_value_type(Base64Context)
     keys = [x.get_key() for x in base64_contexts]
     keys.insert(0, "NONE")
@@ -44,7 +53,7 @@ async def handle_get_keys(request):
 
 @register_route("/base64_context_previewer/get_data")
 async def handle_get_data(request):
-    """Get base64 data from context by key"""
+    """Get base64 data from context by key."""
     data = await request.json()
     key = data.get("key", None)
 

@@ -8,14 +8,17 @@ _download_counter = 0
 
 @register_node
 class Base64Downloader:
+    """
+    Base64 downloader node.
+
+    Saves base64 data to persistent context for download.
+    """
+
     def __init__(self):
         pass
 
     @classmethod
     def INPUT_TYPES(s):
-        """
-        Define input parameters
-        """
         return {
             "required": {
                 "base64": ("STRING", {
@@ -41,6 +44,9 @@ class Base64Downloader:
     OUTPUT_NODE = True
 
     def run(self, base64, basename, format, uuid):
+        """
+        Save base64 data to persistent context.
+        """
         # Create filename from basename and format
         filename = f"{basename}.{mime_type_to_file_suffix(format)}"
         # Save to persistent context using Base64Context
