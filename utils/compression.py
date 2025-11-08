@@ -110,3 +110,4 @@ def decompress_base64(compressed_data: str, compression: str) -> str:
     # Convert bytes back to string
     return decompressed.decode('utf-8')
 
+compressions = ["none", "gzip", "zlib", "bz2", "lzma"]

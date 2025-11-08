@@ -28,6 +28,8 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 - 图像的 Base64 编码/解码（支持单图像和图像批次）
 - 图像 Tensor 的 Base64 编码/解码（支持单图像和图像批次）
 - 支持视频的 Base64 编码（GIF、WebM、MP4等格式）
+- Base64 噪点图像编码/解码（将数据隐藏在像素值中）
+- Base64 前缀修改器（自动添加/移除数据 URL 前缀）
 
 🖼️ **图像处理**
 - 图像批次选择器
@@ -198,6 +200,53 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 
 **输出：**
 - `images`（图像批次）：解码后的图像批次
+
+#### Base64 Noise Encoder（Base64 噪点编码器）
+
+将 Base64 字符串编码为噪点图像，将数据隐藏在像素值中。
+
+**分类：** `EasyToolkit/Encoding`
+
+**输入：**
+- `base64`（字符串，多行）：要编码的 Base64 字符串
+- `compression`（选择）：压缩算法（none、gzip、zlib、bz2、lzma），默认 gzip
+- `width`（整数，可选）：图像宽度（0 = 自动计算）
+- `height`（整数，可选）：图像高度（0 = 自动计算）
+
+**输出：**
+- `noise_image`（图像）：编码后的噪点图像
+- `compression`（字符串）：使用的压缩算法
+
+#### Base64 Noise Decoder（Base64 噪点解码器）
+
+从噪点图像中解码 Base64 字符串。
+
+**分类：** `EasyToolkit/Encoding`
+
+**输入：**
+- `noise_image`（图像）：包含编码数据的噪点图像
+- `compression`（选择）：压缩算法（none、gzip、zlib、bz2、lzma），默认 gzip
+
+**输出：**
+- `base64`（字符串）：解码后的 Base64 字符串
+
+#### Base64 Prefix Modifier（Base64 前缀修改器）
+
+修改或添加数据 URL 前缀到 Base64 字符串。
+
+**分类：** `EasyToolkit/Encoding`
+
+**输入：**
+- `base64`（字符串）：Base64 字符串
+- `format`（选择）：资源格式（image/png、image/jpeg、video/mp4 等）
+
+**输出：**
+- `base64`（字符串）：带有正确前缀的 Base64 字符串
+
+**功能：**
+- 自动移除现有的数据 URL 前缀
+- 根据指定格式添加正确的 `data:format;base64,` 前缀
+- 支持所有常见资源格式
 
 #### Video Base64 Encoder（视频 Base64 编码器）
 

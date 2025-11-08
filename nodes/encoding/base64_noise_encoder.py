@@ -1,6 +1,6 @@
 from ... import register_node
 from ...utils.image import bytes_to_noise_image
-from ...utils.compression import compress_bytes
+from ...utils.compression import compress_bytes, compressions
 import base64
 
 
@@ -23,7 +23,7 @@ class Base64NoiseEncoder:
                 "base64": ("STRING", {
                     "multiline": True
                 }),
-                "compression": (["none", "gzip", "zlib", "bz2", "lzma"], {
+                "compression": (compressions, {
                     "default": "gzip"
                 }),
             },
@@ -45,13 +45,13 @@ class Base64NoiseEncoder:
             },
         }
 
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("noise_image",)
+    RETURN_TYPES = ("IMAGE", compressions,)
+    RETURN_NAMES = ("noise_image", "compression", )
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, base64: str, compression: str = "none", width: int = 0, height: int = 0) -> dict:
+    def run(self, base64: str, compression = "none", width: int = 0, height: int = 0) -> dict:
         """
         Encode base64 string to noise image with optional compression.
 
@@ -73,5 +73,5 @@ class Base64NoiseEncoder:
         h = None if height == 0 else height
 
         noise_image = bytes_to_noise_image(data_bytes, w, h)
-        return {"result": (noise_image,)}
+        return {"result": (noise_image,compression,)}
 
