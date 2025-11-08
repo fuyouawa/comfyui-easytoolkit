@@ -211,22 +211,20 @@ def base64_list_to_tensor_batch(base64_list):
         return torch.empty(0)
 
 
-def base64_to_noise_image(base64_data: str, width: int = None, height: int = None):
+def bytes_to_noise_image(data_bytes: bytes, width: int = None, height: int = None):
     """
-    Encode base64 string into a noise-like image.
-    
+    Encode bytes into a noise-like image.
+
     Args:
-        base64_data: Base64 string to encode
+        data_bytes: Bytes to encode
         width: Optional width of output image (auto-calculated if not provided)
         height: Optional height of output image (auto-calculated if not provided)
-    
+
     Returns:
         Image tensor with encoded data
     """
-    # Convert base64 string to bytes
-    data_bytes = base64_data.encode('utf-8')
     data_length = len(data_bytes)
-    
+
     # Calculate image dimensions if not provided
     if width is None or height is None:
         # Calculate square-ish dimensions
@@ -234,7 +232,7 @@ def base64_to_noise_image(base64_data: str, width: int = None, height: int = Non
         # Add header: 4 bytes for length
         total_bytes_needed = data_length + 4
         pixels_needed = (total_bytes_needed + 3) // 4  # Round up, 4 bytes per pixel
-        
+
         if width is None and height is None:
             # Calculate square dimensions
             side = int(np.ceil(np.sqrt(pixels_needed)))
@@ -243,62 +241,79 @@ def base64_to_noise_image(base64_data: str, width: int = None, height: int = Non
             width = (pixels_needed + height - 1) // height  # Round up
         else:  # height is None
             height = (pixels_needed + width - 1) // width  # Round up
-    
+
     total_pixels = width * height
     total_capacity = total_pixels * 4  # 4 bytes per pixel (RGBA)
-    
+
     # Check if data fits
     if data_length + 4 > total_capacity:
         raise ValueError(f"Data too large ({data_length} bytes) for image size {width}x{height} (capacity: {total_capacity - 4} bytes)")
-    
+
     # Create header with data length (4 bytes)
     header = data_length.to_bytes(4, byteorder='big')
-    
+
     # Combine header and data
     full_data = header + data_bytes
-    
+
     # Pad with random noise to fill the image
     remaining_bytes = total_capacity - len(full_data)
     noise = np.random.randint(0, 256, remaining_bytes, dtype=np.uint8)
     full_data_array = np.frombuffer(full_data, dtype=np.uint8)
     full_array = np.concatenate([full_data_array, noise])
-    
+
     # Reshape to image format (height, width, 4 channels)
     image_array = full_array.reshape(height, width, 4)
-    
+
     # Convert to float32 [0, 1] range for ComfyUI
     image_tensor = torch.from_numpy(image_array.astype(np.float32) / 255.0)
-    
+
     # Add batch dimension
     image_tensor = image_tensor.unsqueeze(0)
-    
+
     return image_tensor
 
 
-def noise_image_to_base64(image):
+def base64_to_noise_image(base64_data: str, width: int = None, height: int = None):
     """
-    Decode base64 string from a noise-like image.
-    
+    Encode base64 string into a noise-like image.
+
+    Args:
+        base64_data: Base64 string to encode
+        width: Optional width of output image (auto-calculated if not provided)
+        height: Optional height of output image (auto-calculated if not provided)
+
+    Returns:
+        Image tensor with encoded data
+    """
+    # Convert base64 string to bytes
+    data_bytes = base64_data.encode('utf-8')
+    return bytes_to_noise_image(data_bytes, width, height)
+
+
+def noise_image_to_bytes(image):
+    """
+    Decode bytes from a noise-like image.
+
     Args:
         image: Image tensor with encoded data
-    
+
     Returns:
-        Decoded base64 string
+        Decoded bytes
     """
     # Handle tensor input
     if isinstance(image, torch.Tensor):
         image = image.detach().cpu().numpy()
-    
+
     # Remove batch dimension if present
     if image.ndim == 4:
         image = image[0]
-    
+
     # Convert from float32 [0, 1] to uint8 [0, 255]
     if image.dtype == np.float32 or image.dtype == np.float64:
         image_uint8 = np.clip(image * 255, 0, 255).astype(np.uint8)
     else:
         image_uint8 = image.astype(np.uint8)
-    
+
     # Handle different channel configurations
     if image_uint8.ndim == 2:
         # Grayscale - can't decode, need at least RGB
@@ -311,21 +326,37 @@ def noise_image_to_base64(image):
         channels = 4
     else:
         raise ValueError(f"Unexpected number of channels: {image_uint8.shape[2]}")
-    
+
     # Flatten the image to get byte array
     byte_array = image_uint8.flatten()
-    
+
     # Read header (first 4 bytes = data length)
     data_length = int.from_bytes(byte_array[:4].tobytes(), byteorder='big')
-    
+
     # Validate data length
     if data_length < 0 or data_length > len(byte_array) - 4:
         raise ValueError(f"Invalid data length in image header: {data_length}")
-    
+
     # Extract data bytes
     data_bytes = byte_array[4:4 + data_length].tobytes()
-    
+
+    return data_bytes
+
+
+def noise_image_to_base64(image):
+    """
+    Decode base64 string from a noise-like image.
+
+    Args:
+        image: Image tensor with encoded data
+
+    Returns:
+        Decoded base64 string
+    """
+    # Extract bytes from image
+    data_bytes = noise_image_to_bytes(image)
+
     # Convert bytes to string
     base64_string = data_bytes.decode('utf-8')
-    
+
     return base64_string
