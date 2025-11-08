@@ -1,6 +1,6 @@
 import { app } from "../../../scripts/app.js";
-import { apiPost } from "./api_utils.js";
-import { checkAndRegenerateUUID } from "./node_utils.js";
+import { apiPost } from "../api_utils.js";
+import { checkAndRegenerateUUID } from "../node_utils.js";
 
 function downloadBase64(b64, basename, format) {
     try {

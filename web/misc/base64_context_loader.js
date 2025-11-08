@@ -1,13 +1,12 @@
 import { app } from "../../../scripts/app.js";
-import { apiPost } from "./api_utils.js";
+import { apiPost } from "../api_utils.js";
 import { 
     decodeBase64Text, 
     calculateAvailableSpace, 
-    calculateImagePreviewDimensions,
     drawImagePreview, 
     drawTextPreview,
     createPreviewDialog
-} from "./preview_utils.js";
+} from "../preview_utils.js";
 
 app.registerExtension({
     name: "EasyToolkit.Misc.Base64ContextLoader",

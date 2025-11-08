@@ -1,7 +1,7 @@
 import { app } from "../../../scripts/app.js";
-import { apiPost, apiSilent } from "./api_utils.js";
-import { calculateAvailableSpace, drawImagePreview } from "./preview_utils.js";
-import { checkAndRegenerateUUID } from "./node_utils.js";
+import { apiPost, apiSilent } from "../api_utils.js";
+import { calculateAvailableSpace, drawImagePreview } from "../preview_utils.js";
+import { checkAndRegenerateUUID } from "../node_utils.js";
 
 app.registerExtension({
     name: "EasyToolkit.Image.ImageBatchPreviewer",
