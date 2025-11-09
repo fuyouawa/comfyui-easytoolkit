@@ -1,6 +1,7 @@
 from ... import register_node
-from ...utils.image import image_batch_to_base64_list
-from ...utils.format import static_image_formats
+from ...utils.image import image_batch_to_bytes_list
+from ...utils.encoding import b64encode
+from ...utils.format import static_image_formats, mime_type_to_file_suffix
 
 
 @register_node
@@ -35,10 +36,11 @@ class ImageBatchBase64Encoder:
         """
         Encode image batch to base64 strings.
         """
-        base64_list = image_batch_to_base64_list(image_batch, format)
+        bytes_list = image_batch_to_bytes_list(image_batch, format)
+        base64_list = [b64encode(image_bytes) for image_bytes in bytes_list]
         base64_text = "\n".join(base64_list)
         count = len(base64_list)
-        suffix = format.split("/")[-1]
+        suffix = mime_type_to_file_suffix(format)
 
         return {"result": (base64_text, count, suffix,)}
 

@@ -1,5 +1,6 @@
 from ... import register_node
-from ...utils.image import base64_list_to_tensor_batch
+from ...utils.image import bytes_list_to_tensor_batch
+from ...utils.encoding import b64decode
 
 
 @register_node
@@ -32,7 +33,8 @@ class ImageBatchTensorBase64Decoder:
         Decode base64 strings to image tensor batch.
         """
         base64_array = [line.strip() for line in base64_list.split("\n") if line.strip()]
-        images = base64_list_to_tensor_batch(base64_array)
+        bytes_list = [b64decode(b64_str) for b64_str in base64_array]
+        images = bytes_list_to_tensor_batch(bytes_list)
         count = images.shape[0] if images.numel() > 0 else 0
 
         return {"result": (images, count,)}

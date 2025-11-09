@@ -1,11 +1,11 @@
 import json
-import base64
 import folder_paths
 
 from PIL.PngImagePlugin import PngInfo
 
 from ...utils.format import animated_image_formats
 from ...utils.video import image_batch_to_video_bytes, ffmpeg_path
+from ...utils.encoding import b64encode
 
 from ... import register_node
 
@@ -91,6 +91,6 @@ class VideoBase64Encoder:
             video_metadata=video_metadata,
         )
 
-        video_base64 = base64.b64encode(video_bytes).decode('utf-8')
+        video_base64 = b64encode(video_bytes)
 
         return {"result": (video_base64, ext,)}

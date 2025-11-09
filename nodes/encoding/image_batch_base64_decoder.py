@@ -1,5 +1,6 @@
 from ... import register_node
-from ...utils.image import base64_list_to_image_batch
+from ...utils.image import bytes_list_to_image_batch
+from ...utils.encoding import b64decode
 
 
 @register_node
@@ -38,7 +39,8 @@ class ImageBatchBase64Decoder:
         if not base64_strings:
             raise ValueError("No valid base64 strings found in input")
 
-        images, masks = base64_list_to_image_batch(base64_strings)
+        bytes_list = [b64decode(b64_str) for b64_str in base64_strings]
+        images, masks = bytes_list_to_image_batch(bytes_list)
         count = len(base64_strings)
 
         return {"result": (images, masks, count,)}

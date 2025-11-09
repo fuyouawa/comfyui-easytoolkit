@@ -1,5 +1,6 @@
 from ... import register_node
-from ...utils.image import image_to_base64
+from ...utils.image import image_to_bytes
+from ...utils.encoding import b64encode
 from ...utils.format import static_image_formats
 
 
@@ -35,6 +36,7 @@ class ImageBase64Encoder:
         """
         Encode image to base64.
         """
-        b64 = image_to_base64(image, format)
+        image_bytes = image_to_bytes(image, format)
+        b64 = b64encode(image_bytes)
         suffix = format.split("/")[-1]
         return {"result": (b64, suffix,)}

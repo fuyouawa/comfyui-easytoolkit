@@ -2,7 +2,6 @@ import torch
 import cv2
 import numpy as np
 from PIL import Image
-import base64
 import io
 
 
@@ -41,8 +40,8 @@ def encrypt_image(image, operation):
     return processed_image
 
 
-def _single_image_to_base64(image, format="image/png"):
-    """Convert single image (numpy array) to base64 string."""
+def _single_image_to_bytes(image, format="image/png"):
+    """Convert single image (numpy array) to bytes."""
     # Convert to uint8
     if image.dtype != np.uint8:
         image = np.clip(image * 255, 0, 255).astype(np.uint8)
@@ -50,15 +49,15 @@ def _single_image_to_base64(image, format="image/png"):
     # Convert to PIL image
     image_pil = Image.fromarray(image)
 
-    # Save to memory and convert to base64
+    # Save to memory as bytes
     buffer = io.BytesIO()
     image_pil.save(buffer, format=format.split("/")[-1])
     buffer.seek(0)
-    return base64.b64encode(buffer.read()).decode("utf-8")
+    return buffer.read()
 
 
-def image_to_base64(image, format="image/png") -> str:
-    """Convert image (tensor or numpy) to base64 string."""
+def image_to_bytes(image, format="image/png") -> bytes:
+    """Convert image (tensor or numpy) to bytes."""
     # Handle tensor input
     if isinstance(image, torch.Tensor):
         image = image.detach().cpu().numpy()
@@ -67,11 +66,11 @@ def image_to_base64(image, format="image/png") -> str:
     if image.ndim == 4:
         image = image[0]
 
-    return _single_image_to_base64(image, format)
+    return _single_image_to_bytes(image, format)
 
-def base64_to_image(base64_data):
-    """Convert base64 string to image tensor with alpha mask."""
-    nparr = np.frombuffer(base64.b64decode(base64_data), np.uint8)
+def bytes_to_image(image_bytes):
+    """Convert bytes to image tensor with alpha mask."""
+    nparr = np.frombuffer(image_bytes, np.uint8)
 
     result = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
     channels = cv2.split(result)
@@ -96,32 +95,32 @@ def _convert_color(image):
         return cv2.cvtColor(image, cv2.COLOR_BGRA2RGB)  # BGRA to RGB (drop alpha)
     return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # BGR to RGB
 
-def image_batch_to_base64_list(images, format="image/png"):
-    """Convert batch of images to list of base64 strings."""
+def image_batch_to_bytes_list(images, format="image/png"):
+    """Convert batch of images to list of bytes."""
     if isinstance(images, torch.Tensor):
         images = images.detach().cpu().numpy()
 
-    base64_list = []
+    bytes_list = []
     # Handle batch dimension
     if images.ndim == 4:
         for i in range(images.shape[0]):
             image = images[i]
-            base64_str = _single_image_to_base64(image, format)
-            base64_list.append(base64_str)
+            image_bytes = _single_image_to_bytes(image, format)
+            bytes_list.append(image_bytes)
     elif images.ndim == 3:
         # Single image
-        base64_str = _single_image_to_base64(images, format)
-        base64_list.append(base64_str)
+        image_bytes = _single_image_to_bytes(images, format)
+        bytes_list.append(image_bytes)
 
-    return base64_list
+    return bytes_list
 
-def base64_list_to_image_batch(base64_list):
-    """Convert list of base64 strings to batch of images with masks."""
+def bytes_list_to_image_batch(bytes_list):
+    """Convert list of bytes to batch of images with masks."""
     images = []
     masks = []
 
-    for base64_data in base64_list:
-        image, mask = base64_to_image(base64_data)
+    for image_bytes in bytes_list:
+        image, mask = bytes_to_image(image_bytes)
         images.append(image)
         masks.append(mask)
 
@@ -135,8 +134,8 @@ def base64_list_to_image_batch(base64_list):
         return torch.empty(0), torch.empty(0)
 
 
-def tensor_to_base64(tensor):
-    """Convert raw tensor to base64 string (serialized tensor data)."""
+def tensor_to_bytes(tensor):
+    """Convert raw tensor to bytes (serialized tensor data)."""
     # Handle tensor input
     if isinstance(tensor, torch.Tensor):
         tensor = tensor.detach().cpu()
@@ -152,14 +151,11 @@ def tensor_to_base64(tensor):
     torch.save(tensor, buffer)
     buffer.seek(0)
 
-    # Encode to base64
-    return base64.b64encode(buffer.read()).decode("utf-8")
+    return buffer.read()
 
 
-def base64_to_tensor(base64_data):
-    """Convert base64 string back to tensor (deserialize tensor data)."""
-    # Decode from base64
-    tensor_bytes = base64.b64decode(base64_data)
+def bytes_to_tensor(tensor_bytes):
+    """Convert bytes back to tensor (deserialize tensor data)."""
     buffer = io.BytesIO(tensor_bytes)
 
     # Load tensor
@@ -172,34 +168,34 @@ def base64_to_tensor(base64_data):
     return tensor
 
 
-def tensor_batch_to_base64_list(tensors):
-    """Convert batch of tensors to list of base64 strings."""
+def tensor_batch_to_bytes_list(tensors):
+    """Convert batch of tensors to list of bytes."""
     if isinstance(tensors, torch.Tensor):
         tensors = tensors.detach().cpu()
     else:
         tensors = torch.from_numpy(tensors)
 
-    base64_list = []
+    bytes_list = []
     # Handle batch dimension
     if tensors.ndim == 4:
         for i in range(tensors.shape[0]):
             tensor = tensors[i]
-            base64_str = tensor_to_base64(tensor)
-            base64_list.append(base64_str)
+            tensor_bytes = tensor_to_bytes(tensor)
+            bytes_list.append(tensor_bytes)
     elif tensors.ndim == 3:
         # Single tensor
-        base64_str = tensor_to_base64(tensors)
-        base64_list.append(base64_str)
+        tensor_bytes = tensor_to_bytes(tensors)
+        bytes_list.append(tensor_bytes)
 
-    return base64_list
+    return bytes_list
 
 
-def base64_list_to_tensor_batch(base64_list):
-    """Convert list of base64 strings to batch of tensors."""
+def bytes_list_to_tensor_batch(bytes_list):
+    """Convert list of bytes to batch of tensors."""
     tensors = []
 
-    for base64_data in base64_list:
-        tensor = base64_to_tensor(base64_data)
+    for tensor_bytes in bytes_list:
+        tensor = bytes_to_tensor(tensor_bytes)
         tensors.append(tensor)
 
     # Concatenate all tensors into a batch
@@ -272,24 +268,6 @@ def bytes_to_noise_image(data_bytes: bytes, width: int = None, height: int = Non
 
     return image_tensor
 
-
-def base64_to_noise_image(base64_data: str, width: int = None, height: int = None):
-    """
-    Encode base64 string into a noise-like image.
-
-    Args:
-        base64_data: Base64 string to encode
-        width: Optional width of output image (auto-calculated if not provided)
-        height: Optional height of output image (auto-calculated if not provided)
-
-    Returns:
-        Image tensor with encoded data
-    """
-    # Convert base64 string to bytes
-    data_bytes = base64_data.encode('utf-8')
-    return bytes_to_noise_image(data_bytes, width, height)
-
-
 def noise_image_to_bytes(image):
     """
     Decode bytes from a noise-like image.
@@ -341,22 +319,3 @@ def noise_image_to_bytes(image):
     data_bytes = byte_array[4:4 + data_length].tobytes()
 
     return data_bytes
-
-
-def noise_image_to_base64(image):
-    """
-    Decode base64 string from a noise-like image.
-
-    Args:
-        image: Image tensor with encoded data
-
-    Returns:
-        Decoded base64 string
-    """
-    # Extract bytes from image
-    data_bytes = noise_image_to_bytes(image)
-
-    # Convert bytes to string
-    base64_string = data_bytes.decode('utf-8')
-
-    return base64_string

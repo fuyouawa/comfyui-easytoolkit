@@ -1,7 +1,7 @@
 from ... import register_node
 from ...utils.image import bytes_to_noise_image
-from ...utils.compression import compress_bytes, compressions
-import base64
+from ...utils.encoding import b64decode
+import zlib
 
 
 @register_node
@@ -23,8 +23,12 @@ class Base64NoiseEncoder:
                 "base64": ("STRING", {
                     "multiline": True
                 }),
-                "compression": (compressions, {
-                    "default": "gzip"
+                "compresslevel": ("INT", {
+                    "default": "-1",
+                    "min": -1,
+                    "max": 9,
+                    "step": 1,
+                    "display": "number",
                 }),
             },
             "optional": {
@@ -45,33 +49,27 @@ class Base64NoiseEncoder:
             },
         }
 
-    RETURN_TYPES = ("IMAGE", compressions,)
+    RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("noise_image", "compression", )
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, base64: str, compression = "none", width: int = 0, height: int = 0) -> dict:
+    def run(self, base64: str, compresslevel = -1, width: int = 0, height: int = 0) -> dict:
         """
         Encode base64 string to noise image with optional compression.
-
-        Args:
-            base64: Base64 string to encode
-            compression: Compression algorithm (none, gzip, zlib, bz2, lzma)
-            width: Optional width (0 = auto)
-            height: Optional height (0 = auto)
         """
         # Convert base64 string to bytes
-        data_bytes = base64.encode('utf-8')
+        data_bytes = b64decode(base64)
 
         # Apply compression if requested
-        if compression != "none":
-            data_bytes = compress_bytes(data_bytes, compression)
+        if compresslevel != 0:
+            data_bytes = zlib.compress(data_bytes, level=compresslevel)
 
         # Convert 0 to None for auto-calculation
         w = None if width == 0 else width
         h = None if height == 0 else height
 
         noise_image = bytes_to_noise_image(data_bytes, w, h)
-        return {"result": (noise_image,compression,)}
+        return {"result": (noise_image,)}
 

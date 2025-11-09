@@ -1,5 +1,6 @@
 from ... import register_node
-from ...utils.image import base64_to_tensor
+from ...utils.image import bytes_to_tensor
+from ...utils.encoding import b64decode
 
 
 @register_node
@@ -31,6 +32,7 @@ class ImageTensorBase64Decoder:
         """
         Decode base64 to image tensor.
         """
-        image = base64_to_tensor(base64)
+        tensor_bytes = b64decode(base64)
+        image = bytes_to_tensor(tensor_bytes)
         return {"result": (image,)}
 

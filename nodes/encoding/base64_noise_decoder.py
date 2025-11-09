@@ -1,6 +1,7 @@
 from ... import register_node
 from ...utils.image import noise_image_to_bytes
-from ...utils.compression import decompress_bytes, compressions
+from ...utils.encoding import b64encode
+import zlib
 
 
 @register_node
@@ -20,9 +21,6 @@ class Base64NoiseDecoder:
         return {
             "required": {
                 "noise_image": ("IMAGE",),
-                "compression": (compressions, {
-                    "default": "gzip"
-                }),
             },
         }
 
@@ -32,23 +30,19 @@ class Base64NoiseDecoder:
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, noise_image, compression = "none") -> dict:
+    def run(self, noise_image) -> dict:
         """
         Decode base64 string from noise image with optional decompression.
-
-        Args:
-            noise_image: Image tensor with encoded data
-            compression: Compression algorithm used (none, gzip, zlib, bz2, lzma)
         """
         # Extract bytes from noise image
         data_bytes = noise_image_to_bytes(noise_image)
 
         # Apply decompression if requested
-        if compression != "none":
-            data_bytes = decompress_bytes(data_bytes, compression)
+        if data_bytes.startswith((b"\x78\x01", b"\x78\x9c", b"\x78\xda")):
+            data_bytes = zlib.decompress(data_bytes)
 
         # Convert bytes to base64 string
-        base64_string = data_bytes.decode('utf-8')
+        base64_string = b64encode(data_bytes)
 
         return {"result": (base64_string,)}
 

@@ -1,5 +1,6 @@
 from ... import register_node
-from ...utils.image import base64_to_image
+from ...utils.image import bytes_to_image
+from ...utils.encoding import b64decode
 
 
 @register_node
@@ -33,5 +34,6 @@ class ImageBase64Decoder:
         """
         Decode base64 to image and mask.
         """
-        image, mask = base64_to_image(base64)
+        image_bytes = b64decode(base64)
+        image, mask = bytes_to_image(image_bytes)
         return {"result": (image, mask,)}

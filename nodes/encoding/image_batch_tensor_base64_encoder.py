@@ -1,5 +1,6 @@
 from ... import register_node
-from ...utils.image import tensor_batch_to_base64_list
+from ...utils.image import tensor_batch_to_bytes_list
+from ...utils.encoding import b64encode
 
 
 @register_node
@@ -31,7 +32,8 @@ class ImageBatchTensorBase64Encoder:
         """
         Encode image tensor batch to base64.
         """
-        base64_list = tensor_batch_to_base64_list(images)
+        bytes_list = tensor_batch_to_bytes_list(images)
+        base64_list = [b64encode(tensor_bytes) for tensor_bytes in bytes_list]
         base64_text = "\n".join(base64_list)
         count = len(base64_list)
 
