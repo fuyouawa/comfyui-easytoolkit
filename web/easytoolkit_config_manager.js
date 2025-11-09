@@ -1,5 +1,5 @@
-import { app } from "../../../scripts/app.js";
-import { api } from "../../../scripts/api.js";
+import { app } from "../../scripts/app.js";
+import { api } from "../../scripts/api.js";
 
 /**
  * Extension for EasyToolkitConfigManager node
@@ -19,10 +19,7 @@ app.registerExtension({
                 if (onNodeCreated) {
                     onNodeCreated.apply(this, arguments);
                 }
-                
-                // Load current configuration when node is created
-                await this.loadCurrentConfig();
-                
+
                 // Add custom buttons
                 this.addCustomButtons();
             };
@@ -36,9 +33,6 @@ app.registerExtension({
                 if (origConfigure) {
                     origConfigure.apply(this, arguments);
                 }
-                
-                // Reload configuration when node is configured from workflow
-                await this.loadCurrentConfig();
             };
             
             /**
@@ -90,11 +84,16 @@ app.registerExtension({
              * Add custom buttons to the node
              */
             nodeType.prototype.addCustomButtons = function() {
+                // Button: Load (load current config)
+                this.addWidget("button", "Load YAML", null, () => {
+                    this.loadCurrentConfig();
+                });
+
                 // Button: Save (to override)
                 this.addWidget("button", "Save YAML", null, () => {
                     this.saveOverride();
                 });
-                
+
                 // Button: Restore (delete override)
                 this.addWidget("button", "Restore YAML", null, () => {
                     this.deleteOverride();
