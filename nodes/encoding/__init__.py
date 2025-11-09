@@ -9,3 +9,4 @@ from .image_batch_tensor_base64_decoder import *
 from .video_base64_encoder import *
 from .base64_noise_encoder import *
 from .base64_noise_decoder import *
+from .base64_decoder import *

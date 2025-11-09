@@ -4,7 +4,7 @@ import folder_paths
 from PIL.PngImagePlugin import PngInfo
 
 from ...utils.format import animated_image_formats
-from ...utils.video import image_batch_to_video_bytes, ffmpeg_path
+from ...utils.video import ffmpeg_image_batch_to_video_bytes, opencv_image_batch_to_video_bytes, ffmpeg_path
 from ...utils.encoding import b64encode
 
 from ... import register_node
@@ -34,6 +34,9 @@ class VideoBase64Encoder:
                 "loop_count": ("INT", {
                     "default": 0, "min": 0, "max": 100, "step": 1,
                 }),
+                "library": (["ffmpeg", "opencv"], {
+                    "default": "ffmpeg",
+                }),
                 "video_format": (animated_image_formats + ffmpeg_formats, {
                     "default": "image/gif",
                 }),
@@ -61,6 +64,7 @@ class VideoBase64Encoder:
         image_batch,
         frame_rate: int,
         loop_count: int,
+        library: str = "ffmpeg",
         video_format: str = "image/gif",
         pingpong: bool = False,
         save_metadata: bool = False,
@@ -82,14 +86,35 @@ class VideoBase64Encoder:
                     metadata.add_text(x, json.dumps(extra_pnginfo[x]))
                     video_metadata[x] = extra_pnginfo[x]
 
-        video_bytes, ext = image_batch_to_video_bytes(
-            image_batch=image_batch,
-            frame_rate=frame_rate,
-            video_format=video_format,
-            pingpong=pingpong,
-            loop_count=loop_count,
-            video_metadata=video_metadata,
-        )
+        if library == "ffmpeg":
+            video_bytes, ext = ffmpeg_image_batch_to_video_bytes(
+                image_batch=image_batch,
+                frame_rate=frame_rate,
+                video_format=video_format,
+                pingpong=pingpong,
+                loop_count=loop_count,
+                video_metadata=video_metadata,
+            )
+        elif library == "opencv":
+            mapping = {
+                "image/gif": "image/gif",
+                "image/webp": "image/webp",
+                "video/av1-webm": "video/webm",
+                "video/h264-mp4": "video/mp4",
+                "video/h265-mp4": "video/mp4",
+                "video/webm": "video/webm",
+                "video/mp4": "video/mp4",
+            }
+            video_bytes, ext = opencv_image_batch_to_video_bytes(
+                image_batch=image_batch,
+                frame_rate=frame_rate,
+                video_format=mapping[video_format],
+                pingpong=pingpong,
+                loop_count=loop_count,
+                video_metadata=video_metadata,
+            )
+        else:
+            raise ValueError(f"Unknown library: {library}")
 
         video_base64 = b64encode(video_bytes)
 
