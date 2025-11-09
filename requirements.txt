@@ -3,3 +3,4 @@ imageio-ffmpeg
 pyyaml
 Pillow
 opencv-python
+aiohttp

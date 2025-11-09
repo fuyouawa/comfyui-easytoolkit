@@ -33,6 +33,10 @@ app.registerExtension({
                 if (origConfigure) {
                     origConfigure.apply(this, arguments);
                 }
+
+                if (!this.getConfigYaml().trim()) {
+                    this.loadCurrentConfig();
+                }
             };
             
             /**
