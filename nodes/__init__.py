@@ -10,7 +10,6 @@ folder_paths.folder_names_and_paths["video_formats"] = (
 
 from .algorithm import *
 from .image import *
-from .misc import *
 from .video import *
 from .encoding import *
 from .manager import *

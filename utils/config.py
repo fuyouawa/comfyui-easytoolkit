@@ -31,19 +31,6 @@ class Config:
         
         # Default configuration
         self._config = {
-            'persistent_context': {
-                'lazy_initialization': True,
-                'auto_save': False,
-                'cache_directory': 'temp',
-                'max_cache_size_mb': 100,
-                'old_data_threshold_hours': 24,
-                'absolute_max_cache_size_mb': 200,
-                'max_context_size_mb': 50,
-                'max_key_length': 256
-            },
-            'base64_uploader': {
-                'max_upload_file_size_mb': 100
-            }
         }
         
         # Load base configuration
@@ -100,57 +87,11 @@ class Config:
         
         return value
     
-    def get_persistent_context_config(self):
-        """Get persistent context configuration"""
-        return self._config.get('persistent_context', {})
-    
-    def get_cache_directory_path(self):
-        """Get the full path to the persistent context cache directory"""
-        if folder_paths is None:
-            # Fallback to a local directory if folder_paths is not available
-            fallback_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache', 'persistent_context')
-            os.makedirs(fallback_dir, exist_ok=True)
-            return fallback_dir
-        
-        config = self.get_persistent_context_config()
-        cache_dir_type = config.get('cache_directory', 'input')
-        
-        # Get the base directory from ComfyUI's folder_paths
-        base_dir = None
-        if cache_dir_type == 'input':
-            base_dir = folder_paths.get_input_directory()
-        elif cache_dir_type == 'output':
-            base_dir = folder_paths.get_output_directory()
-        elif cache_dir_type == 'temp':
-            base_dir = folder_paths.get_temp_directory()
-        else:
-            # Default to temp if invalid value
-            base_dir = folder_paths.get_temp_directory()
-            print(f"[comfyui-easytoolkit] Warning: Invalid cache_directory '{cache_dir_type}', using 'temp'")
-        
-        # Create comfyui-easytoolkit/persistent_context subdirectory
-        cache_dir = os.path.join(base_dir, 'comfyui-easytoolkit', 'persistent_context')
-        
-        # Ensure the directory exists
-        os.makedirs(cache_dir, exist_ok=True)
-        
-        return cache_dir
-    
-    def get_base64_uploader_config(self):
-        """Get base64 uploader configuration"""
-        return self._config.get('base64_uploader', {})
-    
-    def get_max_upload_file_size_mb(self):
-        """Get maximum upload file size in MB"""
-        config = self.get_base64_uploader_config()
-        return config.get('max_upload_file_size_mb', 100)
-    
     def reload(self):
         """Reload configuration from disk"""
         print("[comfyui-easytoolkit] Reloading configuration...")
         self._load_config()
         print("[comfyui-easytoolkit] Configuration reloaded successfully")
-
 
 # Global config instance
 _config = Config()
