@@ -30,6 +30,11 @@ class Base64NoiseEncoder:
                     "step": 1,
                     "display": "number",
                 }),
+                "use_alpha": ("BOOLEAN", {
+                    "default": False,
+                    "label_on": "RGBA (4 channels)",
+                    "label_off": "RGB (3 channels)",
+                }),
             },
             "optional": {
                 "width": ("INT", {
@@ -55,7 +60,7 @@ class Base64NoiseEncoder:
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, base64: str, compresslevel = -1, width: int = 0, height: int = 0) -> dict:
+    def run(self, base64: str, compresslevel = -1, width: int = 0, height: int = 0, use_alpha: bool = True) -> dict:
         """
         Encode base64 string to noise image with optional compression.
         """
@@ -70,6 +75,6 @@ class Base64NoiseEncoder:
         w = None if width == 0 else width
         h = None if height == 0 else height
 
-        noise_image = bytes_to_noise_image(data_bytes, w, h)
+        noise_image = bytes_to_noise_image(data_bytes, w, h, use_alpha)
         return {"result": (noise_image,)}
 

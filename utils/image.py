@@ -207,7 +207,7 @@ def bytes_list_to_tensor_batch(bytes_list):
         return torch.empty(0)
 
 
-def bytes_to_noise_image(data_bytes: bytes, width: int = None, height: int = None):
+def bytes_to_noise_image(data_bytes: bytes, width: int = None, height: int = None, use_alpha: bool = True):
     """
     Encode bytes into a noise-like image.
 
@@ -215,19 +215,21 @@ def bytes_to_noise_image(data_bytes: bytes, width: int = None, height: int = Non
         data_bytes: Bytes to encode
         width: Optional width of output image (auto-calculated if not provided)
         height: Optional height of output image (auto-calculated if not provided)
+        use_alpha: Whether to use RGBA (4 channels) or RGB (3 channels) format
 
     Returns:
         Image tensor with encoded data
     """
     data_length = len(data_bytes)
+    channels = 4 if use_alpha else 3
 
     # Calculate image dimensions if not provided
     if width is None or height is None:
         # Calculate square-ish dimensions
-        # We need 4 bytes per pixel (RGBA) to store data
+        # We need 4 bytes per pixel (RGBA) or 3 bytes per pixel (RGB) to store data
         # Add header: 4 bytes for length
         total_bytes_needed = data_length + 4
-        pixels_needed = (total_bytes_needed + 3) // 4  # Round up, 4 bytes per pixel
+        pixels_needed = (total_bytes_needed + channels - 1) // channels  # Round up
 
         if width is None and height is None:
             # Calculate square dimensions
@@ -239,11 +241,11 @@ def bytes_to_noise_image(data_bytes: bytes, width: int = None, height: int = Non
             height = (pixels_needed + width - 1) // width  # Round up
 
     total_pixels = width * height
-    total_capacity = total_pixels * 4  # 4 bytes per pixel (RGBA)
+    total_capacity = total_pixels * channels
 
     # Check if data fits
     if data_length + 4 > total_capacity:
-        raise ValueError(f"Data too large ({data_length} bytes) for image size {width}x{height} (capacity: {total_capacity - 4} bytes)")
+        raise ValueError(f"Data too large ({data_length} bytes) for image size {width}x{height} with {channels} channels (capacity: {total_capacity - 4} bytes)")
 
     # Create header with data length (4 bytes)
     header = data_length.to_bytes(4, byteorder='big')
@@ -257,8 +259,13 @@ def bytes_to_noise_image(data_bytes: bytes, width: int = None, height: int = Non
     full_data_array = np.frombuffer(full_data, dtype=np.uint8)
     full_array = np.concatenate([full_data_array, noise])
 
-    # Reshape to image format (height, width, 4 channels)
-    image_array = full_array.reshape(height, width, 4)
+    # Reshape to image format
+    if use_alpha:
+        # RGBA format (height, width, 4 channels)
+        image_array = full_array.reshape(height, width, 4)
+    else:
+        # RGB format (height, width, 3 channels)
+        image_array = full_array.reshape(height, width, 3)
 
     # Convert to float32 [0, 1] range for ComfyUI
     image_tensor = torch.from_numpy(image_array.astype(np.float32) / 255.0)
@@ -297,11 +304,11 @@ def noise_image_to_bytes(image):
         # Grayscale - can't decode, need at least RGB
         raise ValueError("Cannot decode from grayscale image, need at least 3 channels")
     elif image_uint8.shape[2] == 3:
-        # RGB - can only use 3 bytes per pixel
-        raise ValueError("Cannot decode from RGB image without alpha channel, need 4 channels (RGBA)")
+        # RGB - use 3 bytes per pixel
+        pass
     elif image_uint8.shape[2] == 4:
-        # RGBA - perfect, use all 4 channels
-        channels = 4
+        # RGBA - use all 4 channels
+        pass
     else:
         raise ValueError(f"Unexpected number of channels: {image_uint8.shape[2]}")
 
