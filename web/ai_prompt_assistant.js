@@ -28,6 +28,9 @@ app.registerExtension({
                 
                 // Store widget references for easy access
                 this.cacheWidgetReferences();
+                
+                // Set up link monitoring for real-time value sync
+                this.setupLinkMonitoring();
             };
             
             /**
@@ -232,6 +235,119 @@ app.registerExtension({
             };
             
             /**
+             * Set up link monitoring for real-time value synchronization
+             */
+            nodeType.prototype.setupLinkMonitoring = function() {
+                // Store original onConnectionsChange if exists
+                const originalOnConnectionsChange = this.onConnectionsChange;
+                
+                // Override onConnectionsChange to detect link changes
+                this.onConnectionsChange = function(type, index, connected, link_info) {
+                    // Call original handler if exists
+                    if (originalOnConnectionsChange) {
+                        originalOnConnectionsChange.apply(this, arguments);
+                    }
+                    
+                    // Check if this is an input connection change (type === 1)
+                    if (type === 1) {
+                        // Update link sync immediately
+                        this.updateLinkedValue();
+                    }
+                };
+                
+                // Set up periodic check for linked values
+                this.setupPeriodicSync();
+                
+                // Initial check
+                this.updateLinkedValue();
+            };
+            
+            /**
+             * Set up periodic synchronization with linked nodes
+             */
+            nodeType.prototype.setupPeriodicSync = function() {
+                // Clear existing timer if any
+                if (this.syncTimer) {
+                    clearInterval(this.syncTimer);
+                }
+                
+                // Check linked values every 100ms for real-time updates
+                this.syncTimer = setInterval(() => {
+                    if (!this.isProcessing) {
+                        this.updateLinkedValue();
+                    }
+                }, 100);
+            };
+            
+            /**
+             * Update original_prompt value from linked node
+             */
+            nodeType.prototype.updateLinkedValue = function() {
+                const cache = this.widgetCache;
+                if (!cache.originalPrompt) return;
+                
+                // Find the input slot for original_prompt (usually slot 0)
+                const inputSlot = this.inputs?.findIndex(input => input.name === "original_prompt");
+                if (inputSlot === -1 || inputSlot === undefined) return;
+                
+                // Check if the input is connected
+                const input = this.inputs[inputSlot];
+                if (!input || !input.link) return;
+                
+                // Get the link information
+                const graph = app.graph;
+                if (!graph) return;
+                
+                const link = graph.links[input.link];
+                if (!link) return;
+                
+                // Get the source node
+                const sourceNode = graph.getNodeById(link.origin_id);
+                if (!sourceNode) return;
+                
+                // Check if source node is AIPromptAssistant
+                if (sourceNode.type !== "AIPromptAssistant") return;
+                
+                // Get the output slot index from the link
+                const outputSlot = link.origin_slot;
+                
+                // Find which output is connected
+                const sourceOutput = sourceNode.outputs?.[outputSlot];
+                if (!sourceOutput) return;
+                
+                // Find the source node's widgets
+                const sourceWidgets = sourceNode.widgets;
+                if (!sourceWidgets) return;
+                
+                let sourceValue = "";
+                
+                // Determine which output is connected and get the corresponding value
+                if (sourceOutput.name === "original_prompt") {
+                    // Connected to original_prompt output
+                    const sourceOriginalPrompt = sourceWidgets.find(w => w.name === "original_prompt");
+                    if (sourceOriginalPrompt) {
+                        sourceValue = sourceOriginalPrompt.value || "";
+                    }
+                } else if (sourceOutput.name === "processed_prompt") {
+                    // Connected to processed_prompt output
+                    const sourceProcessedPrompt = sourceWidgets.find(w => w.name === "processed_prompt");
+                    if (sourceProcessedPrompt) {
+                        sourceValue = sourceProcessedPrompt.value || "";
+                    }
+                }
+                
+                // Update the current node's original_prompt if value changed
+                if (sourceValue && cache.originalPrompt.value !== sourceValue) {
+                    cache.originalPrompt.value = sourceValue;
+                    
+                    // Force UI update
+                    if (this.onResize) {
+                        this.onResize(this.size);
+                    }
+                }
+            };
+            
+            /**
              * Process prompt using AI
              */
             nodeType.prototype.processWithAI = async function() {
@@ -337,6 +453,29 @@ app.registerExtension({
                     if (this.processButton) {
                         this.processButton.name = "🚀 AI Process";
                     }
+                }
+            };
+            
+            /**
+             * Clean up when node is removed
+             */
+            const origOnRemoved = nodeType.prototype.onRemoved;
+            nodeType.prototype.onRemoved = function() {
+                // Clean up sync timer
+                if (this.syncTimer) {
+                    clearInterval(this.syncTimer);
+                    this.syncTimer = null;
+                }
+                
+                // Clean up animation timer
+                if (this.animationTimer) {
+                    clearInterval(this.animationTimer);
+                    this.animationTimer = null;
+                }
+                
+                // Call original handler if exists
+                if (origOnRemoved) {
+                    origOnRemoved.apply(this, arguments);
                 }
             };
             
