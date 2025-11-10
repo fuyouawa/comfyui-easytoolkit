@@ -1,5 +1,6 @@
 import os
 import yaml
+import json
 
 try:
     import folder_paths
@@ -23,11 +24,11 @@ class Config:
     
     def _load_config(self):
         """
-        Load configuration from YAML files and merge them hierarchically.
+        Load configuration from YAML and JSON files and merge them hierarchically.
         """
         base_dir = os.path.dirname(os.path.dirname(__file__))
         config_path = os.path.join(base_dir, 'config.yaml')
-        override_path = os.path.join(base_dir, 'config.override.yaml')
+        override_path = os.path.join(base_dir, 'config.override.json')
         
         # Default configuration
         self._config = {
@@ -48,11 +49,11 @@ class Config:
             print(f"[comfyui-easytoolkit] Warning: Failed to load config file: {e}")
             print(f"[comfyui-easytoolkit] Using default configuration")
         
-        # Load and merge override configuration
+        # Load and merge override configuration (JSON format)
         try:
             if os.path.exists(override_path):
                 with open(override_path, 'r', encoding='utf-8') as f:
-                    override_config = yaml.safe_load(f)
+                    override_config = json.load(f)
                     if override_config:
                         # Deep merge override config (overrides take precedence)
                         self._deep_merge(self._config, override_config)
@@ -86,6 +87,12 @@ class Config:
                 return default
         
         return value
+    
+    def get_all(self):
+        """
+        Get the entire merged configuration dictionary.
+        """
+        return self._config.copy()
     
     def reload(self):
         """Reload configuration from disk"""

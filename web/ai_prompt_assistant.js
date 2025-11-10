@@ -1,5 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
+import { showError, showSuccess, showToastSuccess, showToastError } from "./box_utils.js";
 
 /**
  * Extension for AIPromptAssistant node
@@ -51,10 +52,14 @@ app.registerExtension({
                             console.log("[EasyToolkit] AI configuration loaded");
                         } else {
                             console.error("[EasyToolkit] Failed to load AI config:", data.error);
+                            showToastError("Load Failed", data.error || "Unknown error");
                         }
+                    } else {
+                        showToastError("Load Failed", `HTTP ${response.status}`);
                     }
                 } catch (error) {
                     console.error("[EasyToolkit] Failed to load AI configuration:", error);
+                    showToastError("Load Failed", error.message || "Failed to load AI configuration");
                 }
             };
             
@@ -354,7 +359,7 @@ app.registerExtension({
                 const cache = this.widgetCache;
                 
                 if (!cache.originalPrompt || !cache.originalPrompt.value) {
-                    app.ui.dialog.show("Error: Original prompt is empty");
+                    showError("Original prompt is empty");
                     return;
                 }
                 
@@ -425,8 +430,7 @@ app.registerExtension({
                         if (cache.processedPrompt) {
                             cache.processedPrompt.value = `❌ Error: ${errorMsg}`;
                         }
-                        app.ui.dialog.show("AI Processing Failed: " + errorMsg);
-                        console.error("[EasyToolkit] AI processing failed:", errorMsg);
+                        showError("AI Processing Failed", new Error(errorMsg));
                     }
                 } catch (error) {
                     // Stop animation on error
@@ -442,8 +446,7 @@ app.registerExtension({
                     if (cache.processedPrompt) {
                         cache.processedPrompt.value = `❌ Error: ${errorMsg}`;
                     }
-                    app.ui.dialog.show("Error: " + errorMsg);
-                    console.error("[EasyToolkit] AI processing error:", error);
+                    showError("AI processing error", error);
                 } finally {
                     // Reset processing state
                     this.isProcessing = false;
@@ -477,25 +480,6 @@ app.registerExtension({
                 if (origOnRemoved) {
                     origOnRemoved.apply(this, arguments);
                 }
-            };
-            
-            /**
-             * Serialize node data (save to workflow)
-             */
-            const origGetExtraMenuOptions = nodeType.prototype.getExtraMenuOptions;
-            nodeType.prototype.getExtraMenuOptions = function(_, options) {
-                if (origGetExtraMenuOptions) {
-                    origGetExtraMenuOptions.apply(this, arguments);
-                }
-                
-                // Add menu option to reload config
-                options.push({
-                    content: "Reload AI Config",
-                    callback: async () => {
-                        await this.setupAIConfig();
-                        app.ui.dialog.show("AI configuration reloaded");
-                    }
-                });
             };
         }
     }
