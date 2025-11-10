@@ -9,6 +9,19 @@ NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}
 
 def camel_to_spaced(s: str) -> str:
+    # Common prefixes to treat as separate words
+    common_prefixes = ['AI', 'ML', 'API', 'UI', 'UX', 'JSON', 'XML', 'HTML', 'CSS', 'HTTP', 'HTTPS']
+
+    # Check if the string starts with any common prefix
+    for prefix in common_prefixes:
+        if s.startswith(prefix) and len(s) > len(prefix):
+            # Split the prefix from the rest of the string
+            rest = s[len(prefix):]
+            # Convert the rest using the original camel case logic
+            spaced_rest = re.sub(r'(?<=[a-z0-9])([A-Z])', r' \1', rest)
+            return f"{prefix} {spaced_rest}"
+
+    # If no common prefix found, use the original logic
     return re.sub(r'(?<=[a-z0-9])([A-Z])', r' \1', s)
 
 def register_node(c):

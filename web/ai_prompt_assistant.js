@@ -136,6 +136,8 @@ app.registerExtension({
                 // Initialize processing state
                 this.isProcessing = false;
                 this.abortController = null;
+                this.animationTimer = null;
+                this.processingStartTime = null;
                 
                 const processButton = this.addWidget("button", "🚀 AI Process", null, async () => {
                     if (this.isProcessing) {
@@ -155,6 +157,54 @@ app.registerExtension({
             };
             
             /**
+             * Start loading animation and timer
+             */
+            nodeType.prototype.startLoadingAnimation = function() {
+                const cache = this.widgetCache;
+                if (!cache.processedPrompt) return;
+                
+                // Loading spinner frames
+                const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+                let frameIndex = 0;
+                
+                // Record start time
+                this.processingStartTime = Date.now();
+                
+                // Update animation every 100ms
+                this.animationTimer = setInterval(() => {
+                    const elapsed = Date.now() - this.processingStartTime;
+                    const seconds = Math.floor(elapsed / 1000);
+                    const minutes = Math.floor(seconds / 60);
+                    const remainingSeconds = seconds % 60;
+                    
+                    const timeStr = minutes > 0 
+                        ? `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+                        : `${remainingSeconds}s`;
+                    
+                    const spinner = spinnerFrames[frameIndex];
+                    cache.processedPrompt.value = `${spinner} Processing with AI... (${timeStr})`;
+                    
+                    frameIndex = (frameIndex + 1) % spinnerFrames.length;
+                    
+                    // Force UI update
+                    if (this.onResize) {
+                        this.onResize(this.size);
+                    }
+                }, 100);
+            };
+            
+            /**
+             * Stop loading animation and timer
+             */
+            nodeType.prototype.stopLoadingAnimation = function() {
+                if (this.animationTimer) {
+                    clearInterval(this.animationTimer);
+                    this.animationTimer = null;
+                }
+                this.processingStartTime = null;
+            };
+            
+            /**
              * Stop AI processing
              */
             nodeType.prototype.stopProcessing = function() {
@@ -163,6 +213,9 @@ app.registerExtension({
                     this.abortController = null;
                 }
                 this.isProcessing = false;
+                
+                // Stop animation
+                this.stopLoadingAnimation();
                 
                 // Reset button text
                 if (this.processButton) {
@@ -213,10 +266,8 @@ app.registerExtension({
                     this.processButton.name = "⏹ Stop";
                 }
                 
-                // Show processing indicator
-                if (cache.processedPrompt) {
-                    cache.processedPrompt.value = "⏳ Processing with AI...";
-                }
+                // Start loading animation with timer
+                this.startLoadingAnimation();
                 
                 try {
                     const response = await api.fetchApi("/easytoolkit_ai/process_prompt", {
@@ -234,12 +285,20 @@ app.registerExtension({
                     
                     const data = await response.json();
                     
+                    // Stop animation before updating final result
+                    this.stopLoadingAnimation();
+                    
                     if (data.success) {
+                        // Calculate total processing time
+                        const processingTime = this.processingStartTime 
+                            ? ((Date.now() - this.processingStartTime) / 1000).toFixed(1)
+                            : '?';
+                        
                         // Update processed prompt widget
                         if (cache.processedPrompt) {
                             cache.processedPrompt.value = data.processed_prompt;
                         }
-                        console.log("[EasyToolkit] AI processing completed");
+                        console.log(`[EasyToolkit] AI processing completed in ${processingTime}s`);
                         
                         // Trigger node update
                         if (this.onResize) {
@@ -254,6 +313,9 @@ app.registerExtension({
                         console.error("[EasyToolkit] AI processing failed:", errorMsg);
                     }
                 } catch (error) {
+                    // Stop animation on error
+                    this.stopLoadingAnimation();
+                    
                     // Check if it was aborted
                     if (error.name === 'AbortError') {
                         console.log("[EasyToolkit] AI processing was aborted");
