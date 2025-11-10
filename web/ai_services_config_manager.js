@@ -110,6 +110,11 @@ app.registerExtension({
                 // Find insertion point (after service_count, before buttons)
                 const serviceCountIndex = this.widgets.findIndex(w => w.name === "service_count");
                 let insertIndex = serviceCountIndex + 1;
+
+                const separateWidget = this.addWidget("text", '', null, null);
+                separateWidget.value = '';
+                separateWidget.disabled = true;
+                this.dynamicWidgets.push(separateWidget);
                 
                 // Create widgets for each service
                 for (let i = 0; i < count; i++) {
@@ -157,6 +162,11 @@ app.registerExtension({
                     timeoutWidget.label = `Service ${i + 1} - Timeout`;
                     timeoutWidget.options = { min: 1, max: 3600, step: 1 };
                     this.dynamicWidgets.push(timeoutWidget);
+
+                    const separateWidget = this.addWidget("text", '', null, null);
+                    separateWidget.value = '';
+                    separateWidget.disabled = true;
+                    this.dynamicWidgets.push(separateWidget);
                 }
                 
                 // Reorder widgets: service_count -> dynamic widgets -> buttons

@@ -107,6 +107,11 @@ app.registerExtension({
                 // Find insertion point (after agent_count, before buttons)
                 const agentCountIndex = this.widgets.findIndex(w => w.name === "agent_count");
                 let insertIndex = agentCountIndex + 1;
+
+                const separateWidget = this.addWidget("text", '', null, null);
+                separateWidget.value = '';
+                separateWidget.disabled = true;
+                this.dynamicWidgets.push(separateWidget);
                 
                 // Create widgets for each agent
                 for (let i = 0; i < count; i++) {
@@ -132,6 +137,11 @@ app.registerExtension({
                     });
                     summaryWidget.label = `Agent ${i + 1} - Summary`;
                     this.dynamicWidgets.push(summaryWidget);
+
+                    const separateWidget = this.addWidget("text", '', null, null);
+                    separateWidget.value = '';
+                    separateWidget.disabled = true;
+                    this.dynamicWidgets.push(separateWidget);
                 }
                 
                 // Reorder widgets: agent_count -> dynamic widgets -> buttons
