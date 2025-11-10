@@ -3,6 +3,10 @@ import os
 from typing import Optional, Dict, Any
 from .config import get_config
 
+class ClientDisconnectedError(Exception):
+    """Raised when client disconnects before AI request completes"""
+    pass
+
 class AIService:
     """
     AI service integration for prompt processing.
@@ -90,13 +94,14 @@ class AIService:
         
         raise ValueError("Failed to extract response text from API response")
     
-    async def process_prompt(self, user_prompt: str, agent_name: Optional[str] = None) -> str:
+    async def process_prompt(self, user_prompt: str, agent_name: Optional[str] = None, request=None) -> str:
         """
         Process a prompt using the AI service.
         
         Args:
             user_prompt: The user's input prompt
             agent_name: The agent preset to use (optional)
+            request: The web request object for cancellation support (optional)
         
         Returns:
             Processed prompt from AI
@@ -136,25 +141,106 @@ class AIService:
         
         # Make request using aiohttp
         import aiohttp
+        import asyncio
+        
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    endpoint,
-                    headers=headers,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=timeout)
-                ) as response:
-                    if response.status != 200:
-                        error_text = await response.text()
-                        raise Exception(f"API request failed with status {response.status}: {error_text}")
+                # Create the API request task
+                api_task = asyncio.create_task(
+                    self._make_api_request(session, endpoint, headers, payload, timeout)
+                )
+                
+                # If request object provided, monitor for disconnection
+                if request:
+                    disconnect_task = asyncio.create_task(
+                        self._wait_for_client_disconnect(request)
+                    )
                     
-                    response_data = await response.json()
-                    return self._extract_response_text(response_data)
+                    # Wait for either the API call to complete or client to disconnect
+                    done, pending = await asyncio.wait(
+                        [api_task, disconnect_task],
+                        return_when=asyncio.FIRST_COMPLETED
+                    )
+                    
+                    # Cancel pending tasks
+                    for task in pending:
+                        task.cancel()
+                        try:
+                            await task
+                        except asyncio.CancelledError:
+                            pass
+                    
+                    # Check which task completed
+                    if disconnect_task in done:
+                        api_task.cancel()
+                        raise ClientDisconnectedError("Client disconnected - request cancelled")
+                    
+                    # Return the API result
+                    return await api_task
+                else:
+                    # No request monitoring, just wait for API call
+                    return await api_task
         
+        except ClientDisconnectedError:
+            # Re-raise client disconnection without wrapping
+            raise
+        except asyncio.CancelledError:
+            raise ClientDisconnectedError("Request was cancelled")
         except Exception as e:
             raise Exception(f"Failed to process prompt with {self.service_name}: {str(e)}")
+    
+    async def _wait_for_client_disconnect(self, request) -> None:
+        """
+        Wait for client to disconnect by checking transport status periodically.
+        This allows us to cancel the AI API request when the user clicks stop.
+        """
+        import asyncio
+        
+        while True:
+            # Check if transport is closing or closed
+            if request.transport is None:
+                break
+            
+            # Check if transport is closing
+            if hasattr(request.transport, 'is_closing') and request.transport.is_closing():
+                break
+            
+            # For aiohttp, we can check the protocol
+            try:
+                if hasattr(request, 'protocol') and request.protocol is None:
+                    break
+                if hasattr(request, 'protocol') and hasattr(request.protocol, 'transport'):
+                    if request.protocol.transport is None or request.protocol.transport.is_closing():
+                        break
+            except (AttributeError, RuntimeError):
+                break
+            
+            # Sleep briefly before checking again
+            await asyncio.sleep(0.1)
+    
+    async def _make_api_request(self, session, endpoint: str, headers: dict, payload: dict, timeout: int) -> str:
+        """
+        Make the actual API request to the AI service.
+        Separated for easier cancellation handling.
+        """
+        import aiohttp
+        
+        async with session.post(
+            endpoint,
+            headers=headers,
+            json=payload,
+            timeout=aiohttp.ClientTimeout(total=timeout)
+        ) as response:
+            if response.status != 200:
+                error_text = await response.text()
+                raise Exception(f"API request failed with status {response.status}: {error_text}")
+            
+            response_data = await response.json()
+            return self._extract_response_text(response_data)
 
 def get_ai_service(service_name: Optional[str] = None) -> AIService:
     """Factory function to create an AI service instance"""
     return AIService(service_name)
+
+__all__ = ['AIService', 'ClientDisconnectedError', 'get_ai_service']
 

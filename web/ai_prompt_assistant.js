@@ -133,12 +133,49 @@ app.registerExtension({
              * Add the AI process button
              */
             nodeType.prototype.addProcessButton = function() {
+                // Initialize processing state
+                this.isProcessing = false;
+                this.abortController = null;
+                
                 const processButton = this.addWidget("button", "🚀 AI Process", null, async () => {
-                    await this.processWithAI();
+                    if (this.isProcessing) {
+                        // Stop processing
+                        this.stopProcessing();
+                    } else {
+                        // Start processing
+                        await this.processWithAI();
+                    }
                 });
+                
+                // Store button reference
+                this.processButton = processButton;
                 
                 // Style the button (optional)
                 processButton.serialize = false; // Don't save button state
+            };
+            
+            /**
+             * Stop AI processing
+             */
+            nodeType.prototype.stopProcessing = function() {
+                if (this.abortController) {
+                    this.abortController.abort();
+                    this.abortController = null;
+                }
+                this.isProcessing = false;
+                
+                // Reset button text
+                if (this.processButton) {
+                    this.processButton.name = "🚀 AI Process";
+                }
+                
+                // Update processed prompt
+                const cache = this.widgetCache;
+                if (cache.processedPrompt) {
+                    cache.processedPrompt.value = "⏹ Processing stopped by user";
+                }
+                
+                console.log("[EasyToolkit] AI processing stopped by user");
             };
             
             /**
@@ -167,6 +204,15 @@ app.registerExtension({
                     ? this.agentLabelToName[aiAgentLabel]
                     : aiAgentLabel.toLowerCase().replace(/\s+/g, '_'); // fallback
                 
+                // Set processing state
+                this.isProcessing = true;
+                this.abortController = new AbortController();
+                
+                // Change button text
+                if (this.processButton) {
+                    this.processButton.name = "⏹ Stop";
+                }
+                
                 // Show processing indicator
                 if (cache.processedPrompt) {
                     cache.processedPrompt.value = "⏳ Processing with AI...";
@@ -182,7 +228,8 @@ app.registerExtension({
                             original_prompt: originalPrompt,
                             ai_service: aiService,
                             ai_agent: aiAgent
-                        })
+                        }),
+                        signal: this.abortController.signal
                     });
                     
                     const data = await response.json();
@@ -207,12 +254,27 @@ app.registerExtension({
                         console.error("[EasyToolkit] AI processing failed:", errorMsg);
                     }
                 } catch (error) {
+                    // Check if it was aborted
+                    if (error.name === 'AbortError') {
+                        console.log("[EasyToolkit] AI processing was aborted");
+                        return; // Don't show error dialog for user-initiated abort
+                    }
+                    
                     const errorMsg = error.message || "Network error";
                     if (cache.processedPrompt) {
                         cache.processedPrompt.value = `❌ Error: ${errorMsg}`;
                     }
                     app.ui.dialog.show("Error: " + errorMsg);
                     console.error("[EasyToolkit] AI processing error:", error);
+                } finally {
+                    // Reset processing state
+                    this.isProcessing = false;
+                    this.abortController = null;
+                    
+                    // Reset button text
+                    if (this.processButton) {
+                        this.processButton.name = "🚀 AI Process";
+                    }
                 }
             };
             

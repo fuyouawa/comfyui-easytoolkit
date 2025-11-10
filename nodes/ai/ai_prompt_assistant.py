@@ -1,6 +1,6 @@
 from ... import register_node, register_route
 from ...utils.config import get_config
-from ...utils.ai_service import get_ai_service
+from ...utils.ai_service import get_ai_service, ClientDisconnectedError
 from aiohttp import web
 import traceback
 
@@ -52,6 +52,7 @@ async def process_prompt_api(request):
     """
     API endpoint for processing prompts with AI.
     Called by the frontend when the AI process button is clicked.
+    Supports cancellation when client disconnects.
     """
     try:
         data = await request.json()
@@ -74,13 +75,22 @@ async def process_prompt_api(request):
             config = get_config()
             ai_agent = config.get('default_ai_agent', 'video_prompt_expansion')
         
-        # Process the prompt using AI service
+        # Process the prompt using AI service (with request for cancellation support)
         service = get_ai_service(ai_service)
-        processed_text = await service.process_prompt(original_prompt, ai_agent)
+        processed_text = await service.process_prompt(original_prompt, ai_agent, request=request)
         
         return web.json_response({
             "success": True,
             "processed_prompt": processed_text
+        })
+    
+    except ClientDisconnectedError as e:
+        # Client disconnected - this is expected behavior when user cancels
+        print(f"AI request cancelled: {str(e)}")
+        return web.json_response({
+            "success": False,
+            "error": "Request cancelled",
+            "cancelled": True
         })
         
     except Exception as e:
@@ -105,9 +115,14 @@ async def get_ai_config(request):
         services = config.get('ai_services', {})
         service_list = []
         for service_name, service_config in services.items():
+            label = service_config.get('label', '')
+            if not label:
+                # Convert snake_case to Title Case
+                label = ' '.join(word.capitalize() for word in service_name.split('_'))
+            
             service_list.append({
                 "name": service_name,
-                "label": service_name.title(),
+                "label": label,
                 "model": service_config.get('model', '')
             })
         
