@@ -22,6 +22,7 @@ class AIPromptAssistant:
                 }),
                 "ai_service": ("COMBO", {"default": "deepseek"}),
                 "ai_agent": ("COMBO", {"default": "video_prompt_expansion"}),
+                "execute_ai_request": ("BOOLEAN", {"default": False}),
             },
             "optional": {
                 "processed_prompt": ("STRING", {
@@ -38,13 +39,45 @@ class AIPromptAssistant:
     CATEGORY = "EasyToolkit/AI"
     OUTPUT_NODE = True
     
-    def run(self, original_prompt, ai_service, ai_agent, processed_prompt=""):
+    def run(self, original_prompt, ai_service, ai_agent, execute_ai_request, processed_prompt=""):
         """
         Process the prompt through AI service.
-        Note: The actual AI processing is triggered from the frontend.
-        This function mainly passes through the values.
+        If execute_ai_request is True, automatically process the prompt using AI.
+        Otherwise, pass through the values.
         """
+        if execute_ai_request and original_prompt and original_prompt.strip():
+            # Execute AI request synchronously
+            try:
+                processed_prompt = self._process_prompt_sync(original_prompt, ai_service, ai_agent)
+            except Exception as e:
+                print(f"AI request failed: {str(e)}")
+                # If AI request fails, return original prompt and empty processed prompt
+                return (original_prompt, "")
+
         return (original_prompt, processed_prompt)
+
+    def _process_prompt_sync(self, original_prompt, ai_service, ai_agent):
+        """
+        Synchronously process prompt using AI service.
+        This runs the same logic as the API endpoint but in a synchronous manner.
+        """
+        import asyncio
+
+        # Create a new event loop for this synchronous call
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            # Run the async process_prompt function
+            service = get_ai_service(ai_service)
+            processed_text = loop.run_until_complete(
+                service.process_prompt(original_prompt, ai_agent, request=None)
+            )
+
+            return processed_text
+
+        finally:
+            loop.close()
 
 
 @register_route("/easytoolkit_ai/process_prompt", method="POST")
