@@ -12,6 +12,6 @@ from .algorithm import *
 from .image import *
 from .video import *
 from .encoding import *
-from .manager import *
+from .config import *
 from .ai import *
 from .debug import *

@@ -40,11 +40,6 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 - 图像批次选择器
 - 图像加密/解密（支持单图像和图像批次）（支持反色、XOR加密）
 
-⚙️ **管理工具**
-- 可视化配置节点（EasyToolkitConfig）
-- 支持配置覆盖机制
-- 实时配置加载和保存
-
 ## 安装
 
 1. 打开终端并进入 ComfyUI 的 `custom_nodes` 目录：
@@ -343,39 +338,6 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 
 **输出：**
 - `images`（图像批次）：处理后的图像批次
-
-### 管理工具节点
-
-#### EasyToolkitConfig（可视化配置编辑器）
-
-可视化地编辑和管理 EasyToolkit 的 YAML 配置文件，无需手动编辑配置文件。
-
-**分类：** `EasyToolkit/Manager`
-
-**输入：**
-- `config_yaml`（字符串，多行文本框）：YAML 格式的配置内容
-
-**功能：**
-- **自动加载配置**：节点创建时自动从 `config.override.yaml` 或 `config.yaml` 加载当前配置
-- **实时编辑**：在文本框中编辑 YAML 配置，保留注释和格式
-- **Save YAML按钮**：保存配置到 `config.override.yaml`（覆盖配置文件）
-- **Restore YAML按钮**：删除覆盖配置文件，恢复到默认配置
-
-**工作流：**
-1. 添加 EasyToolkitConfigManager 节点到工作流
-2. 节点自动加载当前配置到文本框
-3. 在文本框中编辑配置
-4. 点击 **Save YAML** 保存并应用修改
-5. 如需恢复默认配置，点击 **Restore YAML**
-
-**配置继承机制：**
-
-配置系统采用类似继承的覆盖机制：
-- `config.yaml`：基础配置文件（默认设置）
-- `config.override.yaml`：覆盖配置文件（用户自定义设置）
-- 最终配置 = 基础配置 + 覆盖配置
-
-这样你可以在不修改原始配置文件的情况下自定义设置，便于版本控制和更新。使用 EasyToolkitConfigManager 节点可以轻松管理这些配置。
 
 ## 许可证
 

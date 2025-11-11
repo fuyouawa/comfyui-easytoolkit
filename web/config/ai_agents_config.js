@@ -3,14 +3,14 @@ import { api } from "../../../scripts/api.js";
 import { showError, showSuccess, showToastSuccess, showToastError } from "../box_utils.js";
 
 /**
- * Extension for AIAgentsConfigManager node
+ * Extension for AIAgentsConfig node
  * Dynamically generates widgets for managing AI agents configuration
  */
 app.registerExtension({
-    name: "EasyToolkit.AIAgentsConfigManager",
+    name: "EasyToolkit.AIAgentsConfig",
 
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "AIAgentsConfigManager") {
+        if (nodeData.name === "AIAgentsConfig") {
 
             // Store the original onNodeCreated
             const onNodeCreated = nodeType.prototype.onNodeCreated;
@@ -196,7 +196,7 @@ app.registerExtension({
                     const summaryWidget = this.addWidget("button", `agent_${i}_summary`, "Edit Summary", () => {
                         this.showSummaryDialog(i);
                     });
-                    summaryWidget.label = `Agent ${i + 1} - Summary`;
+                    summaryWidget.label = `Open Agent ${i + 1} - Summary Editor`;
                     this.dynamicWidgets.push(summaryWidget);
 
                     const separateWidget = this.addWidget("text", '', null, null);

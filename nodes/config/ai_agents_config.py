@@ -6,9 +6,9 @@ import yaml
 import json
 
 @register_node
-class AIServicesConfigManager:
+class AIAgentsConfig:
     """
-    A ComfyUI node for managing AI Services configuration with dynamic controls.
+    A ComfyUI node for managing AI Agents configuration with dynamic controls.
     """
 
     def __init__(self):
@@ -18,8 +18,8 @@ class AIServicesConfigManager:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "service_count": ("INT", {"default": 2, "min": 0, "max": 20, "step": 1}),
-                "default_service": ("COMBO", {"default": ""}),
+                "agent_count": ("INT", {"default": 2, "min": 0, "max": 20, "step": 1}),
+                "default_agent": ("COMBO", {"default": ""}),
                 "config_data": ("STRING", {"default": "{}"}),
             },
         }
@@ -30,36 +30,33 @@ class AIServicesConfigManager:
     CATEGORY = "EasyToolkit/Manager"
     OUTPUT_NODE = False
 
-    def run(self, service_count):
+    def run(self, agent_count, default_agent, config_data):
         pass
 
 
-@register_route("/easytoolkit_config/get_ai_services", method="GET")
-async def handle_get_ai_services(request):
+@register_route("/easytoolkit_config/get_ai_agents", method="GET")
+async def handle_get_ai_agents(request):
     """
-    API endpoint to retrieve AI services configuration.
+    API endpoint to retrieve AI agents configuration.
     """
     try:
         config = get_config()
-        ai_services = config.get('ai_services', {})
-        default_service = config.get('default_ai_service', '')
+        ai_agents = config.get('ai_agents', {})
+        default_agent = config.get('default_ai_agent', '')
 
         # Convert to list format for easier handling
-        services_list = []
-        for service_id, service_config in ai_services.items():
-            services_list.append({
-                'id': service_id,
-                'label': service_config.get('label', ''),
-                'base_url': service_config.get('base_url', ''),
-                'api_key': service_config.get('api_key', ''),
-                'model': service_config.get('model', ''),
-                'timeout': service_config.get('timeout', 300)
+        agents_list = []
+        for agent_id, agent_config in ai_agents.items():
+            agents_list.append({
+                'id': agent_id,
+                'label': agent_config.get('label', ''),
+                'summary': agent_config.get('summary', '')
             })
 
         return web.json_response({
             "success": True,
-            "services": services_list,
-            "default_service": default_service
+            "agents": agents_list,
+            "default_agent": default_agent
         })
     except Exception as e:
         return web.json_response({
@@ -68,15 +65,15 @@ async def handle_get_ai_services(request):
         }, status=500)
 
 
-@register_route("/easytoolkit_config/save_ai_services", method="POST")
-async def handle_save_ai_services(request):
+@register_route("/easytoolkit_config/save_ai_agents", method="POST")
+async def handle_save_ai_agents(request):
     """
-    API endpoint to save AI services configuration to override file (JSON format).
+    API endpoint to save AI agents configuration to override file (JSON format).
     """
     try:
         data = await request.json()
-        services_list = data.get("services", [])
-        default_service = data.get("default_service", "")
+        agents_list = data.get("agents", [])
+        default_agent = data.get("default_agent", "")
 
         # Load current config
         config_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -92,27 +89,24 @@ async def handle_save_ai_services(request):
                 print(f"Warning: Could not load override config: {e}")
 
         # Convert list back to dict format
-        ai_services = {}
-        for service in services_list:
-            service_id = service.get('id', '').strip()
-            if service_id:  # Only add services with valid IDs
-                ai_services[service_id] = {
-                    'label': service.get('label', ''),
-                    'base_url': service.get('base_url', ''),
-                    'api_key': service.get('api_key', ''),
-                    'model': service.get('model', ''),
-                    'timeout': int(service.get('timeout', 300))
+        ai_agents = {}
+        for agent in agents_list:
+            agent_id = agent.get('id', '').strip()
+            if agent_id:  # Only add agents with valid IDs
+                ai_agents[agent_id] = {
+                    'label': agent.get('label', ''),
+                    'summary': agent.get('summary', '')
                 }
 
-        # Update ai_services section
-        existing_config['ai_services'] = ai_services
+        # Update ai_agents section
+        existing_config['ai_agents'] = ai_agents
 
-        # Update default_ai_service if provided
-        if default_service:
-            existing_config['default_ai_service'] = default_service
-        elif 'default_ai_service' in existing_config:
-            # Remove default_ai_service if it's empty
-            del existing_config['default_ai_service']
+        # Update default_ai_agent if provided
+        if default_agent:
+            existing_config['default_ai_agent'] = default_agent
+        elif 'default_ai_agent' in existing_config:
+            # Remove default_ai_agent if it's empty
+            del existing_config['default_ai_agent']
 
         # Write to override file as JSON
         with open(override_path, 'w', encoding='utf-8') as f:
@@ -124,7 +118,7 @@ async def handle_save_ai_services(request):
 
         return web.json_response({
             "success": True,
-            "message": f"AI services configuration saved to {override_path}",
+            "message": f"AI agents configuration saved to {override_path}",
             "path": override_path
         })
 
@@ -137,10 +131,10 @@ async def handle_save_ai_services(request):
         }, status=500)
 
 
-@register_route("/easytoolkit_config/reset_ai_services", method="POST")
-async def handle_reset_ai_services(request):
+@register_route("/easytoolkit_config/reset_ai_agents", method="POST")
+async def handle_reset_ai_agents(request):
     """
-    API endpoint to reset AI services configuration by removing ai_services from override file.
+    API endpoint to reset AI agents configuration by removing ai_agents from override file.
     """
     try:
         # Load current config
@@ -156,14 +150,14 @@ async def handle_reset_ai_services(request):
             except Exception as e:
                 print(f"Warning: Could not load override config: {e}")
 
-        # Remove ai_services and default_ai_service sections
+        # Remove ai_agents and default_ai_agent sections
         config_changed = False
-        if 'ai_services' in existing_config:
-            del existing_config['ai_services']
+        if 'ai_agents' in existing_config:
+            del existing_config['ai_agents']
             config_changed = True
 
-        if 'default_ai_service' in existing_config:
-            del existing_config['default_ai_service']
+        if 'default_ai_agent' in existing_config:
+            del existing_config['default_ai_agent']
             config_changed = True
 
         if config_changed:
@@ -177,13 +171,13 @@ async def handle_reset_ai_services(request):
 
             return web.json_response({
                 "success": True,
-                "message": "AI services configuration reset successfully",
+                "message": "AI agents configuration reset successfully",
                 "path": override_path
             })
         else:
             return web.json_response({
                 "success": True,
-                "message": "No AI services configuration found to reset",
+                "message": "No AI agents configuration found to reset",
                 "path": override_path
             })
 

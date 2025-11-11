@@ -3,14 +3,14 @@ import { api } from "../../../scripts/api.js";
 import { showError, showSuccess, showToastSuccess, showToastError } from "../box_utils.js";
 
 /**
- * Extension for AIServicesConfigManager node
+ * Extension for AIServicesConfig node
  * Dynamically generates widgets for managing AI services configuration
  */
 app.registerExtension({
-    name: "EasyToolkit.AIServicesConfigManager",
+    name: "EasyToolkit.AIServicesConfig",
     
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "AIServicesConfigManager") {
+        if (nodeData.name === "AIServicesConfig") {
 
             // Store the original onNodeCreated
             const onNodeCreated = nodeType.prototype.onNodeCreated;
