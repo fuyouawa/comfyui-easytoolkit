@@ -198,11 +198,51 @@ export function endDialogBox(dialogContext, buttonType, onButtonClick, options =
 }
 
 /**
- * Show a simple message dialog
- * @param {string} message - The message to display
+ * Create a message element with consistent styling
+ * @param {string} message - The message text
+ * @param {string} [color="#fff"] - Text color
+ * @returns {HTMLElement} - Styled message element
  */
-export function showMessage(message) {
-    app.ui.dialog.show(message);
+function createMessageElement(message, color = "#fff") {
+    const messageElement = document.createElement('div');
+    messageElement.textContent = message;
+    messageElement.style.color = color;
+    messageElement.style.fontSize = '14px';
+    messageElement.style.lineHeight = '1.5';
+    messageElement.style.whiteSpace = 'pre-wrap';
+    messageElement.style.wordBreak = 'break-word';
+    return messageElement;
+}
+
+/**
+ * Show a message dialog with customizable appearance
+ * @param {string} message - The message to display
+ * @param {Object} [options] - Message options
+ * @param {string} [options.title="Message"] - Dialog title
+ * @param {string} [options.color="#fff"] - Text color
+ * @param {number} [options.minWidth=300] - Minimum dialog width
+ * @param {number} [options.maxWidth=500] - Maximum dialog width
+ * @param {number} [options.maxHeight=80] - Maximum dialog height as viewport percentage
+ */
+export function showMessage(message, options = {}) {
+    const {
+        title = "Message",
+        color = "#fff",
+        minWidth = 300,
+        maxWidth = 500,
+        maxHeight = 80
+    } = options;
+
+    const dialogContext = beginDialogBox(title, {
+        minWidth,
+        maxWidth,
+        maxHeight
+    });
+
+    const messageElement = createMessageElement(message, color);
+    dialogContext.content.appendChild(messageElement);
+
+    endDialogBox(dialogContext, DialogButtonType.OK_ONLY);
 }
 
 /**
@@ -212,8 +252,14 @@ export function showMessage(message) {
  */
 export function showError(message, error = null) {
     const errorMsg = error ? `${message}: ${error.message}` : message;
-    app.ui.dialog.show(`❌ Error: ${errorMsg}`);
-    
+
+    showMessage(errorMsg, {
+        title: "❌ Error",
+        color: "#ff6b6b",
+        minWidth: 400,
+        maxWidth: 600
+    });
+
     if (error) {
         console.error("[Error]", message, error);
     } else {
@@ -226,7 +272,12 @@ export function showError(message, error = null) {
  * @param {string} message - The success message
  */
 export function showSuccess(message) {
-    app.ui.dialog.show(`✅ ${message}`);
+    showMessage(message, {
+        title: "✅ Success",
+        color: "#4caf50",
+        minWidth: 300,
+        maxWidth: 500
+    });
 }
 
 /**
@@ -234,7 +285,12 @@ export function showSuccess(message) {
  * @param {string} message - The warning message
  */
 export function showWarning(message) {
-    app.ui.dialog.show(`⚠️ Warning: ${message}`);
+    showMessage(message, {
+        title: "⚠️ Warning",
+        color: "#ff9800",
+        minWidth: 400,
+        maxWidth: 600
+    });
 }
 
 /**
@@ -242,28 +298,39 @@ export function showWarning(message) {
  * @param {string} message - The info message
  */
 export function showInfo(message) {
-    app.ui.dialog.show(`ℹ️ ${message}`);
+    showMessage(message, {
+        title: "ℹ️ Information",
+        color: "#2196f3",
+        minWidth: 300,
+        maxWidth: 500
+    });
 }
 
 /**
- * Show a confirmation dialog
+ * Show a confirmation dialog with custom yes/no text
  * @param {string} message - The confirmation message
- * @returns {boolean} - True if user confirmed, false if cancelled
- */
-export function showConfirm(message) {
-    return confirm(message);
-}
-
-/**
- * Show a confirmation dialog with custom yes/no text (using native confirm)
- * @param {string} message - The confirmation message
- * @param {string} [yesText] - Text for yes button (not used in native confirm, but kept for API consistency)
- * @param {string} [noText] - Text for no button (not used in native confirm, but kept for API consistency)
- * @returns {boolean} - True if user confirmed, false if cancelled
+ * @param {string} [yesText="OK"] - Text for yes button
+ * @param {string} [noText="Cancel"] - Text for no button
+ * @returns {Promise<boolean>} - Promise that resolves to true if user confirmed, false if cancelled
  */
 export function showConfirmDialog(message, yesText = "OK", noText = "Cancel") {
-    // Native confirm doesn't support custom button text, but we keep the API for future enhancement
-    return confirm(message);
+    return new Promise((resolve) => {
+        const dialogContext = beginDialogBox("Confirmation", {
+            minWidth: 400,
+            maxWidth: 600
+        });
+
+        const messageElement = createMessageElement(message, "#fff");
+        messageElement.style.marginBottom = '15px';
+        dialogContext.content.appendChild(messageElement);
+
+        endDialogBox(dialogContext, DialogButtonType.OK_CANCEL, (result) => {
+            resolve(result === DialogResult.OK);
+        }, {
+            okText: yesText,
+            cancelText: noText
+        });
+    });
 }
 
 /**
@@ -354,7 +421,6 @@ export default {
     showSuccess,
     showWarning,
     showInfo,
-    showConfirm,
     showConfirmDialog,
     showToast,
     showToastInfo,
