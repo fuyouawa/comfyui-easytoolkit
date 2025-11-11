@@ -1,6 +1,6 @@
 import { app } from "../../../scripts/app.js";
 import { api } from "../../../scripts/api.js";
-import { showError, showSuccess, showToastSuccess, showToastError } from "../box_utils.js";
+import { showError, showSuccess, showToastSuccess, showToastError, beginDialogBox, endDialogBox, DialogButtonType, DialogResult } from "../box_utils.js";
 
 /**
  * Extension for AIAgentsConfig node
@@ -327,41 +327,13 @@ app.registerExtension({
                 const agent = this.agentsData[agentIndex];
                 const agentLabel = agent.label || `Agent ${agentIndex + 1}`;
 
-                // Create overlay
-                const overlay = document.createElement('div');
-                overlay.style.position = 'fixed';
-                overlay.style.top = '0';
-                overlay.style.left = '0';
-                overlay.style.width = '100%';
-                overlay.style.height = '100%';
-                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-                overlay.style.display = 'flex';
-                overlay.style.justifyContent = 'center';
-                overlay.style.alignItems = 'center';
-                overlay.style.zIndex = '10000';
+                // Begin dialog box
+                const dialogContext = beginDialogBox(`Edit Summary - ${agentLabel}`, {
+                    minWidth: 600,
+                    maxWidth: 800
+                });
 
-                // Create dialog
-                const dialog = document.createElement('div');
-                dialog.style.backgroundColor = '#1e1e1e';
-                dialog.style.border = '1px solid #555';
-                dialog.style.borderRadius = '8px';
-                dialog.style.padding = '20px';
-                dialog.style.minWidth = '600px';
-                dialog.style.maxWidth = '800px';
-                dialog.style.maxHeight = '80vh';
-                dialog.style.display = 'flex';
-                dialog.style.flexDirection = 'column';
-                dialog.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
-
-                // Title
-                const title = document.createElement('h3');
-                title.textContent = `Edit Summary - ${agentLabel}`;
-                title.style.margin = '0 0 15px 0';
-                title.style.color = '#fff';
-                title.style.fontSize = '18px';
-                dialog.appendChild(title);
-
-                // Textarea
+                // Create textarea for summary editing
                 const textarea = document.createElement('textarea');
                 textarea.value = agent.summary || '';
                 textarea.style.width = '100%';
@@ -374,83 +346,18 @@ app.registerExtension({
                 textarea.style.fontSize = '14px';
                 textarea.style.fontFamily = 'monospace';
                 textarea.style.resize = 'vertical';
-                textarea.style.marginBottom = '15px';
                 textarea.style.boxSizing = 'border-box';
-                dialog.appendChild(textarea);
 
-                // Buttons container
-                const buttonContainer = document.createElement('div');
-                buttonContainer.style.display = 'flex';
-                buttonContainer.style.justifyContent = 'flex-end';
-                buttonContainer.style.gap = '10px';
+                // Add textarea to dialog content
+                dialogContext.content.appendChild(textarea);
 
-                // Cancel button
-                const cancelButton = document.createElement('button');
-                cancelButton.textContent = 'Cancel';
-                cancelButton.style.padding = '8px 20px';
-                cancelButton.style.backgroundColor = '#555';
-                cancelButton.style.color = '#fff';
-                cancelButton.style.border = 'none';
-                cancelButton.style.borderRadius = '4px';
-                cancelButton.style.cursor = 'pointer';
-                cancelButton.style.fontSize = '14px';
-                cancelButton.onmouseover = () => {
-                    cancelButton.style.backgroundColor = '#666';
-                };
-                cancelButton.onmouseout = () => {
-                    cancelButton.style.backgroundColor = '#555';
-                };
-                cancelButton.onclick = () => {
-                    document.body.removeChild(overlay);
-                };
-
-                // Ok button
-                const okButton = document.createElement('button');
-                okButton.textContent = 'Ok';
-                okButton.style.padding = '8px 20px';
-                okButton.style.backgroundColor = '#007acc';
-                okButton.style.color = '#fff';
-                okButton.style.border = 'none';
-                okButton.style.borderRadius = '4px';
-                okButton.style.cursor = 'pointer';
-                okButton.style.fontSize = '14px';
-                okButton.onmouseover = () => {
-                    okButton.style.backgroundColor = '#0098ff';
-                };
-                okButton.onmouseout = () => {
-                    okButton.style.backgroundColor = '#007acc';
-                };
-                okButton.onclick = () => {
-                    this.agentsData[agentIndex].summary = textarea.value;
-                    this.saveCachedConfig(); // Update cache on change
-                    document.body.removeChild(overlay);
-                };
-
-                buttonContainer.appendChild(cancelButton);
-                buttonContainer.appendChild(okButton);
-                dialog.appendChild(buttonContainer);
-
-                // Add dialog to overlay
-                overlay.appendChild(dialog);
-
-                // Close on overlay click
-                overlay.onclick = (e) => {
-                    if (e.target === overlay) {
-                        document.body.removeChild(overlay);
+                // End dialog box with OK/Cancel buttons
+                endDialogBox(dialogContext, DialogButtonType.OK_CANCEL, (result) => {
+                    if (result === DialogResult.OK) {
+                        this.agentsData[agentIndex].summary = textarea.value;
+                        this.saveCachedConfig(); // Update cache on change
                     }
-                };
-
-                // Close on Escape key
-                const escapeHandler = (e) => {
-                    if (e.key === 'Escape') {
-                        document.body.removeChild(overlay);
-                        document.removeEventListener('keydown', escapeHandler);
-                    }
-                };
-                document.addEventListener('keydown', escapeHandler);
-
-                // Add to body
-                document.body.appendChild(overlay);
+                });
 
                 // Focus textarea
                 setTimeout(() => textarea.focus(), 0);
