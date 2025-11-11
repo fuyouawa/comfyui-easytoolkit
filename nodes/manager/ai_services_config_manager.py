@@ -19,6 +19,7 @@ class AIServicesConfigManager:
         return {
             "required": {
                 "service_count": ("INT", {"default": 2, "min": 0, "max": 20, "step": 1}),
+                "default_service": ("COMBO", {"default": ""}),
                 "config_data": ("STRING", {"default": "{}"}),
             },
         }
@@ -41,7 +42,8 @@ async def handle_get_ai_services(request):
     try:
         config = get_config()
         ai_services = config.get('ai_services', {})
-        
+        default_service = config.get('default_ai_service', '')
+
         # Convert to list format for easier handling
         services_list = []
         for service_id, service_config in ai_services.items():
@@ -53,10 +55,11 @@ async def handle_get_ai_services(request):
                 'model': service_config.get('model', ''),
                 'timeout': service_config.get('timeout', 300)
             })
-        
+
         return web.json_response({
             "success": True,
-            "services": services_list
+            "services": services_list,
+            "default_service": default_service
         })
     except Exception as e:
         return web.json_response({
@@ -73,11 +76,12 @@ async def handle_save_ai_services(request):
     try:
         data = await request.json()
         services_list = data.get("services", [])
-        
+        default_service = data.get("default_service", "")
+
         # Load current config
         config_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         override_path = os.path.join(config_dir, 'config.override.json')
-        
+
         # Load existing configuration from override file if exists
         existing_config = {}
         if os.path.exists(override_path):
@@ -86,7 +90,7 @@ async def handle_save_ai_services(request):
                     existing_config = json.load(f) or {}
             except Exception as e:
                 print(f"Warning: Could not load override config: {e}")
-        
+
         # Convert list back to dict format
         ai_services = {}
         for service in services_list:
@@ -99,24 +103,90 @@ async def handle_save_ai_services(request):
                     'model': service.get('model', ''),
                     'timeout': int(service.get('timeout', 300))
                 }
-        
-        # Update only ai_services section
+
+        # Update ai_services section
         existing_config['ai_services'] = ai_services
-        
+
+        # Update default_ai_service if provided
+        if default_service:
+            existing_config['default_ai_service'] = default_service
+        elif 'default_ai_service' in existing_config:
+            # Remove default_ai_service if it's empty
+            del existing_config['default_ai_service']
+
         # Write to override file as JSON
         with open(override_path, 'w', encoding='utf-8') as f:
             json.dump(existing_config, f, ensure_ascii=False, indent=2)
-        
+
         # Reload configuration
         config = get_config()
         config.reload()
-        
+
         return web.json_response({
             "success": True,
             "message": f"AI services configuration saved to {override_path}",
             "path": override_path
         })
-        
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return web.json_response({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+
+
+@register_route("/easytoolkit_config/reset_ai_services", method="POST")
+async def handle_reset_ai_services(request):
+    """
+    API endpoint to reset AI services configuration by removing ai_services from override file.
+    """
+    try:
+        # Load current config
+        config_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        override_path = os.path.join(config_dir, 'config.override.json')
+
+        # Load existing configuration from override file if exists
+        existing_config = {}
+        if os.path.exists(override_path):
+            try:
+                with open(override_path, 'r', encoding='utf-8') as f:
+                    existing_config = json.load(f) or {}
+            except Exception as e:
+                print(f"Warning: Could not load override config: {e}")
+
+        # Remove ai_services and default_ai_service sections
+        config_changed = False
+        if 'ai_services' in existing_config:
+            del existing_config['ai_services']
+            config_changed = True
+
+        if 'default_ai_service' in existing_config:
+            del existing_config['default_ai_service']
+            config_changed = True
+
+        if config_changed:
+            # Write updated config back to override file
+            with open(override_path, 'w', encoding='utf-8') as f:
+                json.dump(existing_config, f, ensure_ascii=False, indent=2)
+
+            # Reload configuration
+            config = get_config()
+            config.reload()
+
+            return web.json_response({
+                "success": True,
+                "message": "AI services configuration reset successfully",
+                "path": override_path
+            })
+        else:
+            return web.json_response({
+                "success": True,
+                "message": "No AI services configuration found to reset",
+                "path": override_path
+            })
+
     except Exception as e:
         import traceback
         traceback.print_exc()

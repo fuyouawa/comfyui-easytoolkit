@@ -1,6 +1,6 @@
-import { app } from "../../scripts/app.js";
-import { api } from "../../scripts/api.js";
-import { showError, showSuccess, showToastSuccess, showToastError } from "./box_utils.js";
+import { app } from "../../../scripts/app.js";
+import { api } from "../../../scripts/api.js";
+import { showError, showSuccess, showToastSuccess, showToastError } from "../box_utils.js";
 
 /**
  * Extension for AIServicesConfigManager node
@@ -23,6 +23,7 @@ app.registerExtension({
 
                 // Initialize services data storage
                 this.servicesData = [];
+                this.defaultService = '';
 
                 // Track dynamic widgets
                 this.dynamicWidgets = [];
@@ -56,7 +57,8 @@ app.registerExtension({
                                 const cachedConfig = JSON.parse(configDataWidget.value);
                                 if (cachedConfig.servicesData && Array.isArray(cachedConfig.servicesData)) {
                                     this.servicesData = cachedConfig.servicesData;
-                                    console.log("[EasyToolkit] Loaded cached AI services configuration:", this.servicesData.length, "services");
+                                    this.defaultService = cachedConfig.defaultService || '';
+                                    console.log("[EasyToolkit] Loaded cached AI services configuration:", this.servicesData.length, "services", "default:", this.defaultService);
 
                                     // Update service count widget
                                     if (serviceCountWidget) {
@@ -100,6 +102,7 @@ app.registerExtension({
                         const data = await response.json();
                         if (data.success) {
                             this.servicesData = data.services || [];
+                            this.defaultService = data.default_service || '';
 
                             // Update service count
                             const serviceCountWidget = this.widgets.find(w => w.name === "service_count");
@@ -113,7 +116,7 @@ app.registerExtension({
                             // Update cached configuration
                             this.saveCachedConfig();
 
-                            console.log("[EasyToolkit] AI Services loaded:", this.servicesData.length, "services");
+                            console.log("[EasyToolkit] AI Services loaded:", this.servicesData.length, "services", "default:", this.defaultService);
                             showToastSuccess("Load Successful", `Loaded ${this.servicesData.length} AI service(s)`);
                         } else {
                             showToastError("Load Failed", data.error || "Unknown error");
@@ -151,9 +154,25 @@ app.registerExtension({
                     this.servicesData = this.servicesData.slice(0, count);
                 }
 
+                // Update default service options
+                this.updateDefaultServiceOptions();
+
                 // Find insertion point (after service_count, before buttons)
                 const serviceCountIndex = this.widgets.findIndex(w => w.name === "service_count");
                 let insertIndex = serviceCountIndex + 1;
+
+                // Find default service selection widget
+                const defaultServiceWidget = this.widgets.find(w => w.name === "default_service");
+                if (defaultServiceWidget) {
+                    defaultServiceWidget.value = this.defaultService;
+                    defaultServiceWidget.callback = (value) => {
+                        this.defaultService = value;
+                        this.saveCachedConfig(); // Update cache on change
+                    };
+                    defaultServiceWidget.options = {
+                        values: ["", ...this.servicesData.map(s => s.id).filter(id => id)]
+                    };
+                }
 
                 // Create widgets for each service
                 for (let i = 0; i < count; i++) {
@@ -163,6 +182,7 @@ app.registerExtension({
                     const idWidget = this.addWidget("text", `service_${i}_id`, service.id, (value) => {
                         this.servicesData[i].id = value;
                         this.saveCachedConfig(); // Update cache on change
+                        this.updateDefaultServiceOptions(); // Update default service options
                     });
                     idWidget.label = `Service ${i + 1} - ID`;
                     this.dynamicWidgets.push(idWidget);
@@ -222,6 +242,24 @@ app.registerExtension({
                 const newSize = this.computeSize();
                 this.setSize([currentWidth, newSize[1]]);
             };
+
+            /**
+             * Update default service widget options based on available service IDs
+             */
+            nodeType.prototype.updateDefaultServiceOptions = function () {
+                const defaultServiceWidget = this.widgets.find(w => w.name === "default_service");
+                if (defaultServiceWidget) {
+                    const availableIds = ["", ...this.servicesData.map(s => s.id).filter(id => id)];
+                    defaultServiceWidget.options.values = availableIds;
+
+                    // If current default service is not in available IDs, reset it
+                    if (this.defaultService && !availableIds.includes(this.defaultService)) {
+                        this.defaultService = '';
+                        defaultServiceWidget.value = '';
+                        this.saveCachedConfig();
+                    }
+                }
+            };
             
             /**
              * Remove all dynamic widgets
@@ -274,6 +312,47 @@ app.registerExtension({
                 const saveButton = this.addWidget("button", "Save AI Services", null, () => {
                     this.saveAIServices();
                 });
+
+                // Button: Reset
+                const resetButton = this.addWidget("button", "Reset AI Services", null, () => {
+                    this.resetAIServices();
+                });
+            };
+
+            /**
+             * Reset AI services configuration
+             */
+            nodeType.prototype.resetAIServices = async function () {
+                try {
+                    const response = await api.fetchApi("/easytoolkit_config/reset_ai_services", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({})
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showSuccess(
+                            "AI Services configuration reset successfully!\n" +
+                            "Override configuration has been removed and default settings restored."
+                        );
+                        console.log("[EasyToolkit] AI Services reset");
+
+                        // Clear cached configuration
+                        this.servicesData = [];
+                        this.saveCachedConfig();
+
+                        // Reload services to get default configuration
+                        this.loadAIServices();
+                    } else {
+                        showError("Failed to reset", new Error(data.error));
+                    }
+                } catch (error) {
+                    showError("Error resetting", error);
+                }
             };
 
             /**
@@ -302,7 +381,10 @@ app.registerExtension({
                         headers: {
                             "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({ services: validServices })
+                        body: JSON.stringify({
+                            services: validServices,
+                            default_service: this.defaultService
+                        })
                     });
 
                     const data = await response.json();
@@ -331,6 +413,7 @@ app.registerExtension({
                 if (configDataWidget) {
                     const cachedConfig = {
                         servicesData: this.servicesData,
+                        defaultService: this.defaultService,
                         timestamp: new Date().toISOString()
                     };
                     configDataWidget.value = JSON.stringify(cachedConfig);

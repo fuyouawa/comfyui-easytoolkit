@@ -1,6 +1,6 @@
-import { app } from "../../scripts/app.js";
-import { api } from "../../scripts/api.js";
-import { showError, showSuccess, showToastSuccess, showToastError } from "./box_utils.js";
+import { app } from "../../../scripts/app.js";
+import { api } from "../../../scripts/api.js";
+import { showError, showSuccess, showToastSuccess, showToastError } from "../box_utils.js";
 
 /**
  * Extension for AIPromptAssistant node

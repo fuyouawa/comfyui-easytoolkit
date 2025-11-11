@@ -14,3 +14,4 @@ from .video import *
 from .encoding import *
 from .manager import *
 from .ai import *
+from .debug import *

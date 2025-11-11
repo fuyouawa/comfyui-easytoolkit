@@ -9,4 +9,4 @@ types
 models
 jsconfig.json
 custom_dimensions.json
-config.override.yaml
+config.override.json

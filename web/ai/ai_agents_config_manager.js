@@ -1,6 +1,6 @@
-import { app } from "../../scripts/app.js";
-import { api } from "../../scripts/api.js";
-import { showError, showSuccess, showToastSuccess, showToastError } from "./box_utils.js";
+import { app } from "../../../scripts/app.js";
+import { api } from "../../../scripts/api.js";
+import { showError, showSuccess, showToastSuccess, showToastError } from "../box_utils.js";
 
 /**
  * Extension for AIAgentsConfigManager node
@@ -23,6 +23,7 @@ app.registerExtension({
 
                 // Initialize agents data storage
                 this.agentsData = [];
+                this.defaultAgent = '';
 
                 // Track dynamic widgets
                 this.dynamicWidgets = [];
@@ -56,7 +57,8 @@ app.registerExtension({
                                 const cachedConfig = JSON.parse(configDataWidget.value);
                                 if (cachedConfig.agentsData && Array.isArray(cachedConfig.agentsData)) {
                                     this.agentsData = cachedConfig.agentsData;
-                                    console.log("[EasyToolkit] Loaded cached AI agents configuration:", this.agentsData.length, "agents");
+                                    this.defaultAgent = cachedConfig.defaultAgent || '';
+                                    console.log("[EasyToolkit] Loaded cached AI agents configuration:", this.agentsData.length, "agents", "default:", this.defaultAgent);
 
                                     // Update agent count widget
                                     if (agentCountWidget) {
@@ -100,6 +102,7 @@ app.registerExtension({
                         const data = await response.json();
                         if (data.success) {
                             this.agentsData = data.agents || [];
+                            this.defaultAgent = data.default_agent || '';
 
                             // Update agent count
                             const agentCountWidget = this.widgets.find(w => w.name === "agent_count");
@@ -113,7 +116,7 @@ app.registerExtension({
                             // Update cached configuration
                             this.saveCachedConfig();
 
-                            console.log("[EasyToolkit] AI Agents loaded:", this.agentsData.length, "agents");
+                            console.log("[EasyToolkit] AI Agents loaded:", this.agentsData.length, "agents", "default:", this.defaultAgent);
                             showToastSuccess("Load Successful", `Loaded ${this.agentsData.length} AI agent(s)`);
                         } else {
                             showToastError("Load Failed", data.error || "Unknown error");
@@ -148,9 +151,25 @@ app.registerExtension({
                     this.agentsData = this.agentsData.slice(0, count);
                 }
 
+                // Update default agent options
+                this.updateDefaultAgentOptions();
+
                 // Find insertion point (after agent_count, before buttons)
                 const agentCountIndex = this.widgets.findIndex(w => w.name === "agent_count");
                 let insertIndex = agentCountIndex + 1;
+
+                // Find default agent selection widget
+                const defaultAgentWidget = this.widgets.find(w => w.name === "default_agent");
+                if (defaultAgentWidget) {
+                    defaultAgentWidget.value = this.defaultAgent;
+                    defaultAgentWidget.callback = (value) => {
+                        this.defaultAgent = value;
+                        this.saveCachedConfig(); // Update cache on change
+                    };
+                    defaultAgentWidget.options = {
+                        values: ["", ...this.agentsData.map(a => a.id).filter(id => id)]
+                    };
+                }
 
                 // Create widgets for each agent
                 for (let i = 0; i < count; i++) {
@@ -160,6 +179,7 @@ app.registerExtension({
                     const idWidget = this.addWidget("text", `agent_${i}_id`, agent.id, (value) => {
                         this.agentsData[i].id = value;
                         this.saveCachedConfig(); // Update cache on change
+                        this.updateDefaultAgentOptions(); // Update default agent options
                     });
                     idWidget.label = `Agent ${i + 1} - ID`;
                     this.dynamicWidgets.push(idWidget);
@@ -192,6 +212,24 @@ app.registerExtension({
                 const currentWidth = this.size[0];
                 const newSize = this.computeSize();
                 this.setSize([currentWidth, newSize[1]]);
+            };
+
+            /**
+             * Update default agent widget options based on available agent IDs
+             */
+            nodeType.prototype.updateDefaultAgentOptions = function () {
+                const defaultAgentWidget = this.widgets.find(w => w.name === "default_agent");
+                if (defaultAgentWidget) {
+                    const availableIds = ["", ...this.agentsData.map(a => a.id).filter(id => id)];
+                    defaultAgentWidget.options.values = availableIds;
+
+                    // If current default agent is not in available IDs, reset it
+                    if (this.defaultAgent && !availableIds.includes(this.defaultAgent)) {
+                        this.defaultAgent = '';
+                        defaultAgentWidget.value = '';
+                        this.saveCachedConfig();
+                    }
+                }
             };
 
             /**
@@ -244,6 +282,11 @@ app.registerExtension({
                 // Button: Save
                 const saveButton = this.addWidget("button", "Save AI Agents", null, () => {
                     this.saveAIAgents();
+                });
+
+                // Button: Reset
+                const resetButton = this.addWidget("button", "Reset AI Agents", null, () => {
+                    this.resetAIAgents();
                 });
             };
 
@@ -409,7 +452,10 @@ app.registerExtension({
                         headers: {
                             "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({ agents: validAgents })
+                        body: JSON.stringify({
+                            agents: validAgents,
+                            default_agent: this.defaultAgent
+                        })
                     });
 
                     const data = await response.json();
@@ -431,6 +477,43 @@ app.registerExtension({
             };
 
             /**
+             * Reset AI agents configuration
+             */
+            nodeType.prototype.resetAIAgents = async function () {
+                try {
+                    const response = await api.fetchApi("/easytoolkit_config/reset_ai_agents", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({})
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showSuccess(
+                            "AI Agents configuration reset successfully!\n" +
+                            "Override configuration has been removed and default settings restored."
+                        );
+                        console.log("[EasyToolkit] AI Agents reset");
+
+                        // Clear cached configuration
+                        this.agentsData = [];
+                        this.defaultAgent = '';
+                        this.saveCachedConfig();
+
+                        // Reload agents to get default configuration
+                        this.loadAIAgents();
+                    } else {
+                        showError("Failed to reset", new Error(data.error));
+                    }
+                } catch (error) {
+                    showError("Error resetting", error);
+                }
+            };
+
+            /**
              * Save configuration to hidden field for persistence
              */
             nodeType.prototype.saveCachedConfig = function () {
@@ -438,6 +521,7 @@ app.registerExtension({
                 if (configDataWidget) {
                     const cachedConfig = {
                         agentsData: this.agentsData,
+                        defaultAgent: this.defaultAgent,
                         timestamp: new Date().toISOString()
                     };
                     configDataWidget.value = JSON.stringify(cachedConfig);
