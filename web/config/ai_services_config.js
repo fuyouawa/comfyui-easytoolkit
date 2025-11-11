@@ -65,11 +65,8 @@ app.registerExtension({
                                         serviceCountWidget.value = this.servicesData.length;
                                     }
 
-                                    // Rebuild widgets with cached data
+                                    // Rebuild widgets with cached data (includes action buttons)
                                     this.updateServiceWidgets(this.servicesData.length);
-
-                                    // Add action buttons
-                                    this.addActionButtons();
                                     return;
                                 }
                             } catch (error) {
@@ -79,9 +76,6 @@ app.registerExtension({
 
                         // If no cached config or parsing failed, load from server
                         this.loadAIServices();
-
-                        // Add action buttons
-                        this.addActionButtons();
                     }, 0);
                 };
 
@@ -110,7 +104,7 @@ app.registerExtension({
                                 serviceCountWidget.value = this.servicesData.length;
                             }
 
-                            // Rebuild widgets
+                            // Rebuild widgets (includes action buttons)
                             this.updateServiceWidgets(this.servicesData.length);
 
                             // Update cached configuration
@@ -134,8 +128,9 @@ app.registerExtension({
              * Update service widgets based on count
              */
             nodeType.prototype.updateServiceWidgets = function (count) {
-                // Remove all dynamic widgets
+                // Remove all dynamic widgets and action buttons
                 this.removeDynamicWidgets();
+                this.removeActionButtons();
 
                 // Ensure servicesData has enough entries
                 while (this.servicesData.length < count) {
@@ -234,6 +229,9 @@ app.registerExtension({
                     this.dynamicWidgets.push(separateWidget);
                 }
 
+                // Add action buttons
+                this.addActionButtons();
+
                 // Reorder widgets: service_count -> dynamic widgets -> buttons
                 this.reorderWidgets();
 
@@ -317,6 +315,38 @@ app.registerExtension({
                 const resetButton = this.addWidget("button", "Reset AI Services", null, () => {
                     this.resetAIServices();
                 });
+            };
+
+            /**
+             * Remove action buttons
+             */
+            nodeType.prototype.removeActionButtons = function () {
+                // Remove Load button
+                const loadButton = this.widgets.find(w => w.name === "Load AI Services");
+                if (loadButton) {
+                    const index = this.widgets.indexOf(loadButton);
+                    if (index > -1) {
+                        this.widgets.splice(index, 1);
+                    }
+                }
+
+                // Remove Save button
+                const saveButton = this.widgets.find(w => w.name === "Save AI Services");
+                if (saveButton) {
+                    const index = this.widgets.indexOf(saveButton);
+                    if (index > -1) {
+                        this.widgets.splice(index, 1);
+                    }
+                }
+
+                // Remove Reset button
+                const resetButton = this.widgets.find(w => w.name === "Reset AI Services");
+                if (resetButton) {
+                    const index = this.widgets.indexOf(resetButton);
+                    if (index > -1) {
+                        this.widgets.splice(index, 1);
+                    }
+                }
             };
 
             /**
