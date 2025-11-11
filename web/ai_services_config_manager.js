@@ -210,7 +210,7 @@ app.registerExtension({
 
                     const separateWidget = this.addWidget("text", '', null, null);
                     separateWidget.value = '';
-                    separateWidget.disabled = true;
+                    separateWidget.hidden = true;
                     this.dynamicWidgets.push(separateWidget);
                 }
 
