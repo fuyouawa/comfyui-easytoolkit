@@ -19,6 +19,7 @@ class AIAgentsConfigManager:
         return {
             "required": {
                 "agent_count": ("INT", {"default": 2, "min": 0, "max": 20, "step": 1}),
+                "config_data": ("STRING", {"default": "{}"}),
             },
         }
 

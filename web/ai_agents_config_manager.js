@@ -8,14 +8,14 @@ import { showError, showSuccess, showToastSuccess, showToastError } from "./box_
  */
 app.registerExtension({
     name: "EasyToolkit.AIAgentsConfigManager",
-    
+
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name === "AIAgentsConfigManager") {
-            
+
             // Store the original onNodeCreated
             const onNodeCreated = nodeType.prototype.onNodeCreated;
-            
-            nodeType.prototype.onNodeCreated = async function() {
+
+            nodeType.prototype.onNodeCreated = async function () {
                 // Call the original onNodeCreated if it exists
                 if (onNodeCreated) {
                     onNodeCreated.apply(this, arguments);
@@ -23,10 +23,10 @@ app.registerExtension({
 
                 // Initialize agents data storage
                 this.agentsData = [];
-                
+
                 // Track dynamic widgets
                 this.dynamicWidgets = [];
-                
+
                 // Find the agent_count widget and add change listener
                 const agentCountWidget = this.widgets.find(w => w.name === "agent_count");
                 if (agentCountWidget) {
@@ -38,37 +38,81 @@ app.registerExtension({
                         this.updateAgentWidgets(value);
                     };
                 }
-                
-                // Load current configuration
-                await this.loadAIAgents();
-                
-                // Add action buttons
-                this.addActionButtons();
+
+                // Try to load cached configuration from field first
+                const configDataWidget = this.widgets.find(w => w.name === "config_data");
+                configDataWidget.hidden = true;
+
+                // Add configure callback to handle config_data changes
+                const originalConfigure = configDataWidget.configure;
+                configDataWidget.configure = () => {
+                    if (originalConfigure) {
+                        originalConfigure.call(configDataWidget);
+                    }
+
+                    setTimeout(() => {
+                        if (configDataWidget.value && configDataWidget.value !== "{}") {
+                            try {
+                                const cachedConfig = JSON.parse(configDataWidget.value);
+                                if (cachedConfig.agentsData && Array.isArray(cachedConfig.agentsData)) {
+                                    this.agentsData = cachedConfig.agentsData;
+                                    console.log("[EasyToolkit] Loaded cached AI agents configuration:", this.agentsData.length, "agents");
+
+                                    // Update agent count widget
+                                    if (agentCountWidget) {
+                                        agentCountWidget.value = this.agentsData.length;
+                                    }
+
+                                    // Rebuild widgets with cached data
+                                    this.updateAgentWidgets(this.agentsData.length);
+
+                                    // Add action buttons
+                                    this.addActionButtons();
+                                    return;
+                                }
+                            } catch (error) {
+                                console.warn("[EasyToolkit] Failed to parse cached configuration:", error);
+                            }
+                        }
+
+                        // If no cached config or parsing failed, load from server
+                        this.loadAIAgents();
+
+                        // Add action buttons
+                        this.addActionButtons();
+                    }, 0);
+                };
+
+                // Trigger configure callback to process initial value
+                configDataWidget.configure();
             };
-            
+
             /**
              * Load AI agents from server
              */
-            nodeType.prototype.loadAIAgents = async function() {
+            nodeType.prototype.loadAIAgents = async function () {
                 try {
                     const response = await api.fetchApi("/easytoolkit_config/get_ai_agents", {
                         method: "GET"
                     });
-                    
+
                     if (response.ok) {
                         const data = await response.json();
                         if (data.success) {
                             this.agentsData = data.agents || [];
-                            
+
                             // Update agent count
                             const agentCountWidget = this.widgets.find(w => w.name === "agent_count");
                             if (agentCountWidget) {
                                 agentCountWidget.value = this.agentsData.length;
                             }
-                            
+
                             // Rebuild widgets
                             this.updateAgentWidgets(this.agentsData.length);
-                            
+
+                            // Update cached configuration
+                            this.saveCachedConfig();
+
                             console.log("[EasyToolkit] AI Agents loaded:", this.agentsData.length, "agents");
                             showToastSuccess("Load Successful", `Loaded ${this.agentsData.length} AI agent(s)`);
                         } else {
@@ -82,14 +126,14 @@ app.registerExtension({
                     showToastError("Load Failed", error.message || "Failed to load AI agents");
                 }
             };
-            
+
             /**
              * Update agent widgets based on count
              */
-            nodeType.prototype.updateAgentWidgets = function(count) {
+            nodeType.prototype.updateAgentWidgets = function (count) {
                 // Remove all dynamic widgets
                 this.removeDynamicWidgets();
-                
+
                 // Ensure agentsData has enough entries
                 while (this.agentsData.length < count) {
                     this.agentsData.push({
@@ -98,39 +142,36 @@ app.registerExtension({
                         summary: ''
                     });
                 }
-                
+
                 // Trim excess agents
                 if (this.agentsData.length > count) {
                     this.agentsData = this.agentsData.slice(0, count);
                 }
-                
+
                 // Find insertion point (after agent_count, before buttons)
                 const agentCountIndex = this.widgets.findIndex(w => w.name === "agent_count");
                 let insertIndex = agentCountIndex + 1;
 
-                const separateWidget = this.addWidget("text", '', null, null);
-                separateWidget.value = '';
-                separateWidget.disabled = true;
-                this.dynamicWidgets.push(separateWidget);
-                
                 // Create widgets for each agent
                 for (let i = 0; i < count; i++) {
                     const agent = this.agentsData[i];
-                    
+
                     // Agent ID
                     const idWidget = this.addWidget("text", `agent_${i}_id`, agent.id, (value) => {
                         this.agentsData[i].id = value;
+                        this.saveCachedConfig(); // Update cache on change
                     });
                     idWidget.label = `Agent ${i + 1} - ID`;
                     this.dynamicWidgets.push(idWidget);
-                    
+
                     // Agent Label
                     const labelWidget = this.addWidget("text", `agent_${i}_label`, agent.label, (value) => {
                         this.agentsData[i].label = value;
+                        this.saveCachedConfig(); // Update cache on change
                     });
                     labelWidget.label = `Agent ${i + 1} - Label`;
                     this.dynamicWidgets.push(labelWidget);
-                    
+
                     // Summary (button to open dialog)
                     const summaryWidget = this.addWidget("button", `agent_${i}_summary`, "Edit Summary", () => {
                         this.showSummaryDialog(i);
@@ -143,20 +184,20 @@ app.registerExtension({
                     separateWidget.disabled = true;
                     this.dynamicWidgets.push(separateWidget);
                 }
-                
+
                 // Reorder widgets: agent_count -> dynamic widgets -> buttons
                 this.reorderWidgets();
-                
+
                 // Update node size (preserve width, only update height)
                 const currentWidth = this.size[0];
                 const newSize = this.computeSize();
                 this.setSize([currentWidth, newSize[1]]);
             };
-            
+
             /**
              * Remove all dynamic widgets
              */
-            nodeType.prototype.removeDynamicWidgets = function() {
+            nodeType.prototype.removeDynamicWidgets = function () {
                 for (const widget of this.dynamicWidgets) {
                     const index = this.widgets.indexOf(widget);
                     if (index > -1) {
@@ -165,15 +206,15 @@ app.registerExtension({
                 }
                 this.dynamicWidgets = [];
             };
-            
+
             /**
              * Reorder widgets to maintain proper order
              */
-            nodeType.prototype.reorderWidgets = function() {
+            nodeType.prototype.reorderWidgets = function () {
                 // Get button widgets
                 const loadButton = this.widgets.find(w => w.name === "load_button");
                 const saveButton = this.widgets.find(w => w.name === "save_button");
-                
+
                 if (loadButton) {
                     const index = this.widgets.indexOf(loadButton);
                     if (index > -1) {
@@ -181,7 +222,7 @@ app.registerExtension({
                         this.widgets.push(loadButton);
                     }
                 }
-                
+
                 if (saveButton) {
                     const index = this.widgets.indexOf(saveButton);
                     if (index > -1) {
@@ -190,29 +231,29 @@ app.registerExtension({
                     }
                 }
             };
-            
+
             /**
              * Add action buttons
              */
-            nodeType.prototype.addActionButtons = function() {
+            nodeType.prototype.addActionButtons = function () {
                 // Button: Load
                 const loadButton = this.addWidget("button", "Load AI Agents", null, () => {
                     this.loadAIAgents();
                 });
-                
+
                 // Button: Save
                 const saveButton = this.addWidget("button", "Save AI Agents", null, () => {
                     this.saveAIAgents();
                 });
             };
-            
+
             /**
              * Show dialog for editing agent summary
              */
-            nodeType.prototype.showSummaryDialog = function(agentIndex) {
+            nodeType.prototype.showSummaryDialog = function (agentIndex) {
                 const agent = this.agentsData[agentIndex];
                 const agentLabel = agent.label || `Agent ${agentIndex + 1}`;
-                
+
                 // Create overlay
                 const overlay = document.createElement('div');
                 overlay.style.position = 'fixed';
@@ -225,7 +266,7 @@ app.registerExtension({
                 overlay.style.justifyContent = 'center';
                 overlay.style.alignItems = 'center';
                 overlay.style.zIndex = '10000';
-                
+
                 // Create dialog
                 const dialog = document.createElement('div');
                 dialog.style.backgroundColor = '#1e1e1e';
@@ -238,7 +279,7 @@ app.registerExtension({
                 dialog.style.display = 'flex';
                 dialog.style.flexDirection = 'column';
                 dialog.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
-                
+
                 // Title
                 const title = document.createElement('h3');
                 title.textContent = `Edit Summary - ${agentLabel}`;
@@ -246,7 +287,7 @@ app.registerExtension({
                 title.style.color = '#fff';
                 title.style.fontSize = '18px';
                 dialog.appendChild(title);
-                
+
                 // Textarea
                 const textarea = document.createElement('textarea');
                 textarea.value = agent.summary || '';
@@ -263,13 +304,13 @@ app.registerExtension({
                 textarea.style.marginBottom = '15px';
                 textarea.style.boxSizing = 'border-box';
                 dialog.appendChild(textarea);
-                
+
                 // Buttons container
                 const buttonContainer = document.createElement('div');
                 buttonContainer.style.display = 'flex';
                 buttonContainer.style.justifyContent = 'flex-end';
                 buttonContainer.style.gap = '10px';
-                
+
                 // Cancel button
                 const cancelButton = document.createElement('button');
                 cancelButton.textContent = 'Cancel';
@@ -289,7 +330,7 @@ app.registerExtension({
                 cancelButton.onclick = () => {
                     document.body.removeChild(overlay);
                 };
-                
+
                 // Ok button
                 const okButton = document.createElement('button');
                 okButton.textContent = 'Ok';
@@ -308,23 +349,24 @@ app.registerExtension({
                 };
                 okButton.onclick = () => {
                     this.agentsData[agentIndex].summary = textarea.value;
+                    this.saveCachedConfig(); // Update cache on change
                     document.body.removeChild(overlay);
                 };
-                
+
                 buttonContainer.appendChild(cancelButton);
                 buttonContainer.appendChild(okButton);
                 dialog.appendChild(buttonContainer);
-                
+
                 // Add dialog to overlay
                 overlay.appendChild(dialog);
-                
+
                 // Close on overlay click
                 overlay.onclick = (e) => {
                     if (e.target === overlay) {
                         document.body.removeChild(overlay);
                     }
                 };
-                
+
                 // Close on Escape key
                 const escapeHandler = (e) => {
                     if (e.key === 'Escape') {
@@ -333,27 +375,27 @@ app.registerExtension({
                     }
                 };
                 document.addEventListener('keydown', escapeHandler);
-                
+
                 // Add to body
                 document.body.appendChild(overlay);
-                
+
                 // Focus textarea
                 setTimeout(() => textarea.focus(), 0);
             };
-            
+
             /**
              * Save AI agents to server
              */
-            nodeType.prototype.saveAIAgents = async function() {
+            nodeType.prototype.saveAIAgents = async function () {
                 try {
                     // Validate agents
                     const validAgents = this.agentsData.filter(a => a.id && a.id.trim());
-                    
+
                     if (validAgents.length === 0) {
                         showError("At least one agent with valid ID is required");
                         return;
                     }
-                    
+
                     // Check for duplicate IDs
                     const ids = validAgents.map(a => a.id);
                     const uniqueIds = new Set(ids);
@@ -361,7 +403,7 @@ app.registerExtension({
                         showError("Duplicate agent IDs found");
                         return;
                     }
-                    
+
                     const response = await api.fetchApi("/easytoolkit_config/save_ai_agents", {
                         method: "POST",
                         headers: {
@@ -369,19 +411,37 @@ app.registerExtension({
                         },
                         body: JSON.stringify({ agents: validAgents })
                     });
-                    
+
                     const data = await response.json();
-                    
+
                     if (data.success) {
                         showSuccess(
                             `AI Agents configuration saved successfully!\nSaved ${validAgents.length} agent(s).`
                         );
                         console.log("[EasyToolkit] AI Agents saved");
+
+                        // Update cached configuration
+                        this.saveCachedConfig();
                     } else {
                         showError("Failed to save", new Error(data.error));
                     }
                 } catch (error) {
                     showError("Error saving", error);
+                }
+            };
+
+            /**
+             * Save configuration to hidden field for persistence
+             */
+            nodeType.prototype.saveCachedConfig = function () {
+                const configDataWidget = this.widgets.find(w => w.name === "config_data");
+                if (configDataWidget) {
+                    const cachedConfig = {
+                        agentsData: this.agentsData,
+                        timestamp: new Date().toISOString()
+                    };
+                    configDataWidget.value = JSON.stringify(cachedConfig);
+                    console.log("[EasyToolkit] Cached configuration updated");
                 }
             };
         }
