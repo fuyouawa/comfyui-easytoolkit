@@ -38,16 +38,17 @@ class ToastBox:
     def run(self, type, message, duration=3000):
         """
         Display a toast notification and pass through any input data.
-
-        Args:
-            type: Notification type (info, success, warn, error)
-            message: Message to display
-            duration: Duration in milliseconds
-
-        Returns:
-            Empty tuple since this node doesn't output data
         """
         # This node doesn't modify data, it just triggers a frontend notification
         # The actual toast display is handled by the frontend JavaScript
         # The node execution itself triggers the frontend extension
-        return {"result": (message,), "ui": {"toasts": [{"type": type, "message": message, "duration": duration}]}}
+        return {
+            "result": (message,),
+            "ui": {
+                "toasts": [{
+                    "type": type, 
+                    "message": message, 
+                    "duration": duration
+                }]
+            }
+        }
