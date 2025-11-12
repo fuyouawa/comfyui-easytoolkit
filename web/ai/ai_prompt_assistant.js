@@ -72,6 +72,9 @@ app.registerExtension({
              */
             nodeType.prototype.refreshAIConfig = async function() {
                 try {
+                    // Store current selections before refreshing config
+                    this.storeCurrentSelections();
+
                     const response = await api.fetchApi("/easytoolkit_ai/refresh_config", {
                         method: "POST"
                     });
@@ -98,11 +101,29 @@ app.registerExtension({
             };
             
             /**
+             * Store current selections before refreshing configuration
+             */
+            nodeType.prototype.storeCurrentSelections = function() {
+                const serviceWidget = this.widgets.find(w => w.name === "ai_service");
+                const agentWidget = this.widgets.find(w => w.name === "ai_agent");
+
+                // Store current service name
+                if (serviceWidget && serviceWidget.value && this.serviceLabelToName) {
+                    this.previousServiceName = this.serviceLabelToName[serviceWidget.value];
+                }
+
+                // Store current agent name
+                if (agentWidget && agentWidget.value && this.agentLabelToName) {
+                    this.previousAgentName = this.agentLabelToName[agentWidget.value];
+                }
+            };
+
+            /**
              * Update AI service dropdown options
              */
             nodeType.prototype.updateServiceDropdown = function() {
                 if (!this.aiConfig || !this.aiConfig.services) return;
-                
+
                 const serviceWidget = this.widgets.find(w => w.name === "ai_service");
                 if (serviceWidget) {
                     // Create mappings between label and name
@@ -112,18 +133,27 @@ app.registerExtension({
                         this.serviceLabelToName[s.label] = s.name;
                         this.serviceNameToLabel[s.name] = s.label;
                     });
-                    
+
                     // Update options with labels
                     serviceWidget.options.values = this.aiConfig.services.map(s => s.label);
-                    
-                    // Set default value (convert name to label for display)
-                    const defaultName = this.aiConfig.default_service || "deepseek";
-                    const defaultLabel = this.serviceNameToLabel[defaultName] || defaultName;
-                    if (!serviceWidget.value || serviceWidget.value === "deepseek" || serviceWidget.value === "Deepseek") {
+
+                    // Try to restore previous selection if available
+                    if (this.previousServiceName) {
+                        const newLabel = this.serviceNameToLabel[this.previousServiceName];
+                        if (newLabel) {
+                            serviceWidget.value = newLabel;
+                            this.previousServiceName = null; // Clear after use
+                        } else {
+                            // Fallback to default if the stored name no longer exists
+                            const defaultName = this.aiConfig.default_service;
+                            const defaultLabel = this.serviceNameToLabel[defaultName] || defaultName;
+                            serviceWidget.value = defaultLabel;
+                        }
+                    } else if (!serviceWidget.value) {
+                        // Set default value (convert name to label for display)
+                        const defaultName = this.aiConfig.default_service;
+                        const defaultLabel = this.serviceNameToLabel[defaultName] || defaultName;
                         serviceWidget.value = defaultLabel;
-                    } else if (this.serviceNameToLabel[serviceWidget.value]) {
-                        // Convert existing name to label
-                        serviceWidget.value = this.serviceNameToLabel[serviceWidget.value];
                     }
                 }
             };
@@ -133,7 +163,7 @@ app.registerExtension({
              */
             nodeType.prototype.updateAgentDropdown = function() {
                 if (!this.aiConfig || !this.aiConfig.agents) return;
-                
+
                 const agentWidget = this.widgets.find(w => w.name === "ai_agent");
                 if (agentWidget) {
                     // Create mappings between label and name
@@ -143,18 +173,27 @@ app.registerExtension({
                         this.agentLabelToName[a.label] = a.name;
                         this.agentNameToLabel[a.name] = a.label;
                     });
-                    
+
                     // Update options with labels
                     agentWidget.options.values = this.aiConfig.agents.map(a => a.label);
-                    
-                    // Set default value (convert name to label for display)
-                    const defaultName = this.aiConfig.default_agent || "video_prompt_expansion";
-                    const defaultLabel = this.agentNameToLabel[defaultName] || defaultName;
-                    if (!agentWidget.value || agentWidget.value === "video_prompt_expansion" || agentWidget.value === "Video Prompt Expansion") {
+
+                    // Try to restore previous selection if available
+                    if (this.previousAgentName) {
+                        const newLabel = this.agentNameToLabel[this.previousAgentName];
+                        if (newLabel) {
+                            agentWidget.value = newLabel;
+                            this.previousAgentName = null; // Clear after use
+                        } else {
+                            // Fallback to default if the stored name no longer exists
+                            const defaultName = this.aiConfig.default_agent;
+                            const defaultLabel = this.agentNameToLabel[defaultName] || defaultName;
+                            agentWidget.value = defaultLabel;
+                        }
+                    } else if (!agentWidget.value) {
+                        // Set default value (convert name to label for display)
+                        const defaultName = this.aiConfig.default_agent;
+                        const defaultLabel = this.agentNameToLabel[defaultName] || defaultName;
                         agentWidget.value = defaultLabel;
-                    } else if (this.agentNameToLabel[agentWidget.value]) {
-                        // Convert existing name to label
-                        agentWidget.value = this.agentNameToLabel[agentWidget.value];
                     }
                 }
             };
@@ -418,8 +457,8 @@ app.registerExtension({
                 const originalPrompt = cache.originalPrompt.value;
                 
                 // Get label values from widgets
-                const aiServiceLabel = cache.aiService ? cache.aiService.value : "Deepseek";
-                const aiAgentLabel = cache.aiAgent ? cache.aiAgent.value : "Video Prompt Expansion";
+                const aiServiceLabel = cache.aiService.value;
+                const aiAgentLabel = cache.aiAgent.value;
                 
                 // Convert labels to names for backend
                 const aiService = this.serviceLabelToName && this.serviceLabelToName[aiServiceLabel] 
