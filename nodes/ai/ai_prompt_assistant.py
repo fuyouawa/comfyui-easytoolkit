@@ -149,7 +149,7 @@ async def get_ai_config(request):
     """
     try:
         config = get_config()
-        
+
         # Get AI services
         services = config.get('ai_services', {})
         service_list = []
@@ -158,13 +158,13 @@ async def get_ai_config(request):
             if not label:
                 # Convert snake_case to Title Case
                 label = ' '.join(word.capitalize() for word in service_name.split('_'))
-            
+
             service_list.append({
                 "name": service_name,
                 "label": label,
                 "model": service_config.get('model', '')
             })
-        
+
         # Get AI agents
         agents = config.get('ai_agents', {})
         agent_list = []
@@ -173,16 +173,16 @@ async def get_ai_config(request):
             if not label:
                 # Convert snake_case to Title Case
                 label = ' '.join(word.capitalize() for word in agent_name.split('_'))
-            
+
             agent_list.append({
                 "name": agent_name,
                 "label": label
             })
-        
+
         # Get defaults
         default_service = config.get('default_ai_service', 'deepseek')
         default_agent = config.get('default_ai_agent', 'video_prompt_expansion')
-        
+
         return web.json_response({
             "success": True,
             "services": service_list,
@@ -190,7 +190,69 @@ async def get_ai_config(request):
             "default_service": default_service,
             "default_agent": default_agent
         })
-        
+
+    except Exception as e:
+        error_msg = str(e)
+        traceback.print_exc()
+        return web.json_response({
+            "success": False,
+            "error": error_msg
+        })
+
+
+@register_route("/easytoolkit_ai/refresh_config", method="POST")
+async def refresh_ai_config(request):
+    """
+    API endpoint to refresh AI configuration from disk.
+    Forces reload of configuration files and returns updated config.
+    """
+    try:
+        # Reload configuration (request parameter is required by route decorator)
+        config = get_config()
+        config.reload()
+
+        # Get updated AI services
+        services = config.get('ai_services', {})
+        service_list = []
+        for service_name, service_config in services.items():
+            label = service_config.get('label', '')
+            if not label:
+                # Convert snake_case to Title Case
+                label = ' '.join(word.capitalize() for word in service_name.split('_'))
+
+            service_list.append({
+                "name": service_name,
+                "label": label,
+                "model": service_config.get('model', '')
+            })
+
+        # Get updated AI agents
+        agents = config.get('ai_agents', {})
+        agent_list = []
+        for agent_name, agent_config in agents.items():
+            label = agent_config.get('label', '')
+            if not label:
+                # Convert snake_case to Title Case
+                label = ' '.join(word.capitalize() for word in agent_name.split('_'))
+
+            agent_list.append({
+                "name": agent_name,
+                "label": label
+            })
+
+        # Get updated defaults
+        default_service = config.get('default_ai_service', 'deepseek')
+        default_agent = config.get('default_ai_agent', 'video_prompt_expansion')
+
+        return web.json_response({
+            "success": True,
+            "services": service_list,
+            "agents": agent_list,
+            "default_service": default_service,
+            "default_agent": default_agent,
+            "message": "Configuration refreshed successfully"
+        })
+
     except Exception as e:
         error_msg = str(e)
         traceback.print_exc()

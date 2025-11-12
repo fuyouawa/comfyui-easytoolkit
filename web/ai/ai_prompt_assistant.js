@@ -23,13 +23,16 @@ app.registerExtension({
 
                 // Load configuration and set up widgets
                 await this.setupAIConfig();
-                
+
                 // Add AI process button
                 this.addProcessButton();
-                
+
+                // Add refresh configuration button
+                this.addRefreshButton();
+
                 // Store widget references for easy access
                 this.cacheWidgetReferences();
-                
+
                 // Set up link monitoring for real-time value sync
                 this.setupLinkMonitoring();
             };
@@ -42,7 +45,7 @@ app.registerExtension({
                     const response = await api.fetchApi("/easytoolkit_ai/get_config", {
                         method: "GET"
                     });
-                    
+
                     if (response.ok) {
                         const data = await response.json();
                         if (data.success) {
@@ -60,6 +63,37 @@ app.registerExtension({
                 } catch (error) {
                     console.error("[EasyToolkit] Failed to load AI configuration:", error);
                     showToastError("Load Failed", error.message || "Failed to load AI configuration");
+                }
+            };
+
+            /**
+             * Refresh AI configuration from server and update dropdowns
+             * This forces a reload of configuration files and updates the dropdowns
+             */
+            nodeType.prototype.refreshAIConfig = async function() {
+                try {
+                    const response = await api.fetchApi("/easytoolkit_ai/refresh_config", {
+                        method: "POST"
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            this.aiConfig = data;
+                            this.updateServiceDropdown();
+                            this.updateAgentDropdown();
+                            console.log("[EasyToolkit] AI configuration refreshed");
+                            showToastSuccess("Configuration Refreshed", data.message || "Configuration updated successfully");
+                        } else {
+                            console.error("[EasyToolkit] Failed to refresh AI config:", data.error);
+                            showToastError("Refresh Failed", data.error || "Unknown error");
+                        }
+                    } else {
+                        showToastError("Refresh Failed", `HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error("[EasyToolkit] Failed to refresh AI configuration:", error);
+                    showToastError("Refresh Failed", error.message || "Failed to refresh AI configuration");
                 }
             };
             
@@ -133,7 +167,8 @@ app.registerExtension({
                     originalPrompt: this.widgets.find(w => w.name === "original_prompt"),
                     aiService: this.widgets.find(w => w.name === "ai_service"),
                     aiAgent: this.widgets.find(w => w.name === "ai_agent"),
-                    processedPrompt: this.widgets.find(w => w.name === "processed_prompt")
+                    processedPrompt: this.widgets.find(w => w.name === "processed_prompt"),
+                    refreshButton: this.widgets.find(w => w.name === "refresh_config")
                 };
             };
             
@@ -146,7 +181,7 @@ app.registerExtension({
                 this.abortController = null;
                 this.animationTimer = null;
                 this.processingStartTime = null;
-                
+
                 const processButton = this.addWidget("button", "ai_process", null, async () => {
                     if (this.isProcessing) {
                         // Stop processing
@@ -157,12 +192,28 @@ app.registerExtension({
                     }
                 });
                 processButton.label = "🚀 AI Process";
-                
+
                 // Store button reference
                 this.processButton = processButton;
-                
+
                 // Style the button (optional)
                 processButton.serialize = false; // Don't save button state
+            };
+
+            /**
+             * Add the refresh configuration button
+             */
+            nodeType.prototype.addRefreshButton = function() {
+                const refreshButton = this.addWidget("button", "refresh_config", null, async () => {
+                    await this.refreshAIConfig();
+                });
+                refreshButton.label = "🔄 Refresh Config";
+
+                // Store button reference
+                this.refreshButton = refreshButton;
+
+                // Style the button (optional)
+                refreshButton.serialize = false; // Don't save button state
             };
             
             /**
