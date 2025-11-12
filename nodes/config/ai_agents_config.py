@@ -1,9 +1,6 @@
 from aiohttp import web
 from ... import register_node, register_route
 from ...utils.config import get_config
-import os
-import yaml
-import json
 
 @register_node
 class AIAgentsConfig:
@@ -75,19 +72,6 @@ async def handle_save_ai_agents(request):
         agents_list = data.get("agents", [])
         default_agent = data.get("default_agent", "")
 
-        # Load current config
-        config_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        override_path = os.path.join(config_dir, 'config.override.json')
-
-        # Load existing configuration from override file if exists
-        existing_config = {}
-        if os.path.exists(override_path):
-            try:
-                with open(override_path, 'r', encoding='utf-8') as f:
-                    existing_config = json.load(f) or {}
-            except Exception as e:
-                print(f"Warning: Could not load override config: {e}")
-
         # Convert list back to dict format
         ai_agents = {}
         for agent in agents_list:
@@ -98,28 +82,66 @@ async def handle_save_ai_agents(request):
                     'summary': agent.get('summary', '')
                 }
 
-        # Update ai_agents section
-        existing_config['ai_agents'] = ai_agents
+        # Use config utility to set ai_agents
+        config = get_config()
+        config.set("ai_agents", ai_agents)
 
         # Update default_ai_agent if provided
         if default_agent:
-            existing_config['default_ai_agent'] = default_agent
-        elif 'default_ai_agent' in existing_config:
+            config.set("default_ai_agent", default_agent)
+        else:
             # Remove default_ai_agent if it's empty
-            del existing_config['default_ai_agent']
-
-        # Write to override file as JSON
-        with open(override_path, 'w', encoding='utf-8') as f:
-            json.dump(existing_config, f, ensure_ascii=False, indent=2)
-
-        # Reload configuration
-        config = get_config()
-        config.reload()
+            config.delete("default_ai_agent")
 
         return web.json_response({
             "success": True,
-            "message": f"AI agents configuration saved to {override_path}",
-            "path": override_path
+            "message": "AI agents configuration saved successfully",
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return web.json_response({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+
+
+@register_route("/easytoolkit_config/delete_ai_agent", method="POST")
+async def handle_delete_ai_agent(request):
+    """
+    API endpoint to delete a specific AI agent from configuration.
+    """
+    try:
+        data = await request.json()
+        agent_id = data.get("agent_id", "")
+
+        if not agent_id:
+            return web.json_response({
+                "success": False,
+                "error": "Agent ID is required"
+            }, status=400)
+
+        # Check if agent exists
+        config = get_config()
+        ai_agents = config.get("ai_agents", {})
+        if agent_id not in ai_agents:
+            return web.json_response({
+                "success": False,
+                "error": f"Agent '{agent_id}' not found"
+            }, status=404)
+
+        # Remove the agent using config.delete with dot notation
+        config.delete(f"ai_agents.{agent_id}")
+
+        # Update default agent if it was the deleted one
+        default_agent = config.get("default_ai_agent", "")
+        if default_agent == agent_id:
+            config.set("default_ai_agent", "")
+
+        return web.json_response({
+            "success": True,
+            "message": f"Agent '{agent_id}' deleted successfully",
         })
 
     except Exception as e:
@@ -137,48 +159,28 @@ async def handle_reset_ai_agents(request):
     API endpoint to reset AI agents configuration by removing ai_agents from override file.
     """
     try:
-        # Load current config
-        config_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        override_path = os.path.join(config_dir, 'config.override.json')
+        config = get_config()
 
-        # Load existing configuration from override file if exists
-        existing_config = {}
-        if os.path.exists(override_path):
-            try:
-                with open(override_path, 'r', encoding='utf-8') as f:
-                    existing_config = json.load(f) or {}
-            except Exception as e:
-                print(f"Warning: Could not load override config: {e}")
-
-        # Remove ai_agents and default_ai_agent sections
+        # Remove ai_agents and default_ai_agent sections using config utility
         config_changed = False
-        if 'ai_agents' in existing_config:
-            del existing_config['ai_agents']
+
+        if config.get("ai_agents") is not None:
+            config.delete("ai_agents")
             config_changed = True
 
-        if 'default_ai_agent' in existing_config:
-            del existing_config['default_ai_agent']
+        if config.get("default_ai_agent") is not None:
+            config.delete("default_ai_agent")
             config_changed = True
 
         if config_changed:
-            # Write updated config back to override file
-            with open(override_path, 'w', encoding='utf-8') as f:
-                json.dump(existing_config, f, ensure_ascii=False, indent=2)
-
-            # Reload configuration
-            config = get_config()
-            config.reload()
-
             return web.json_response({
                 "success": True,
                 "message": "AI agents configuration reset successfully",
-                "path": override_path
             })
         else:
             return web.json_response({
                 "success": True,
                 "message": "No AI agents configuration found to reset",
-                "path": override_path
             })
 
     except Exception as e:

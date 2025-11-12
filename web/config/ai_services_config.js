@@ -1,6 +1,7 @@
 import { app } from "../../../scripts/app.js";
 import { api } from "../../../scripts/api.js";
-import { showError, showSuccess, showToastSuccess, showToastError } from "../box_utils.js";
+import { showError, showSuccess, showToastSuccess, showToastError, beginDialogBox, endDialogBox, DialogButtonType, DialogResult, showConfirmDialog } from "../box_utils.js";
+import { createFormContainer, createFormField, createTextarea } from "../ui_utils.js";
 
 /**
  * Extension for AIServicesConfig node
@@ -223,6 +224,13 @@ app.registerExtension({
                     timeoutWidget.options = { min: 1, max: 3600, step: 1 };
                     this.dynamicWidgets.push(timeoutWidget);
 
+                    // Delete button (only show for services with valid IDs)
+                    const deleteWidget = this.addWidget("button", `service_${i}_delete`, null, () => {
+                        this.deleteService(i);
+                    });
+                    deleteWidget.label = `❌ Delete Service ${i + 1} ❌`;
+                    this.dynamicWidgets.push(deleteWidget);
+
                     const separateWidget = this.addWidget("text", '', null, null);
                     separateWidget.value = '';
                     separateWidget.hidden = true;
@@ -231,9 +239,6 @@ app.registerExtension({
 
                 // Add action buttons
                 this.addActionButtons();
-
-                // Reorder widgets: service_count -> dynamic widgets -> buttons
-                this.reorderWidgets();
 
                 // Update node size (preserve width, only update height)
                 const currentWidth = this.size[0];
@@ -272,57 +277,51 @@ app.registerExtension({
                 this.dynamicWidgets = [];
             };
 
-            /**
-             * Reorder widgets to maintain proper order
-             */
-            nodeType.prototype.reorderWidgets = function () {
-                // Get button widgets
-                const loadButton = this.widgets.find(w => w.name === "load_button");
-                const saveButton = this.widgets.find(w => w.name === "save_button");
-
-                if (loadButton) {
-                    const index = this.widgets.indexOf(loadButton);
-                    if (index > -1) {
-                        this.widgets.splice(index, 1);
-                        this.widgets.push(loadButton);
-                    }
-                }
-
-                if (saveButton) {
-                    const index = this.widgets.indexOf(saveButton);
-                    if (index > -1) {
-                        this.widgets.splice(index, 1);
-                        this.widgets.push(saveButton);
-                    }
-                }
-            };
 
             /**
              * Add action buttons
              */
             nodeType.prototype.addActionButtons = function () {
+                // Button: Add
+                const addButton = this.addWidget("button", "add_ai_service", null, () => {
+                    this.showAddServiceDialog();
+                });
+                addButton.label = "➕ Add New AI Service ➕";
+
                 // Button: Load
-                const loadButton = this.addWidget("button", "Load AI Services", null, () => {
+                const loadButton = this.addWidget("button", "load_ai_services", null, () => {
                     this.loadAIServices();
                 });
+                loadButton.label = "📥 Load AI Services 📥";
 
                 // Button: Save
-                const saveButton = this.addWidget("button", "Save AI Services", null, () => {
+                const saveButton = this.addWidget("button", "save_ai_services", null, () => {
                     this.saveAIServices();
                 });
+                saveButton.label = "💾 Save AI Services 💾";
 
                 // Button: Reset
-                const resetButton = this.addWidget("button", "Reset AI Services", null, () => {
+                const resetButton = this.addWidget("button", "reset_ai_services", null, () => {
                     this.resetAIServices();
                 });
+                resetButton.label = "🔄 Reset AI Services 🔄";
             };
 
             /**
              * Remove action buttons
              */
             nodeType.prototype.removeActionButtons = function () {
+                // Remove Add button
+                const addButton = this.widgets.find(w => w.name === "add_ai_service");
+                if (addButton) {
+                    const index = this.widgets.indexOf(addButton);
+                    if (index > -1) {
+                        this.widgets.splice(index, 1);
+                    }
+                }
+
                 // Remove Load button
-                const loadButton = this.widgets.find(w => w.name === "Load AI Services");
+                const loadButton = this.widgets.find(w => w.name === "load_ai_services");
                 if (loadButton) {
                     const index = this.widgets.indexOf(loadButton);
                     if (index > -1) {
@@ -331,7 +330,7 @@ app.registerExtension({
                 }
 
                 // Remove Save button
-                const saveButton = this.widgets.find(w => w.name === "Save AI Services");
+                const saveButton = this.widgets.find(w => w.name === "save_ai_services");
                 if (saveButton) {
                     const index = this.widgets.indexOf(saveButton);
                     if (index > -1) {
@@ -340,7 +339,7 @@ app.registerExtension({
                 }
 
                 // Remove Reset button
-                const resetButton = this.widgets.find(w => w.name === "Reset AI Services");
+                const resetButton = this.widgets.find(w => w.name === "reset_ai_services");
                 if (resetButton) {
                     const index = this.widgets.indexOf(resetButton);
                     if (index > -1) {
@@ -432,6 +431,177 @@ app.registerExtension({
                     }
                 } catch (error) {
                     showError("Error saving", error);
+                }
+            };
+
+            /**
+             * Show dialog for adding a new AI service
+             */
+            nodeType.prototype.showAddServiceDialog = function () {
+                // Begin dialog box
+                const dialogContext = beginDialogBox("Add New AI Service", {
+                    minWidth: 500,
+                    maxWidth: 700
+                });
+
+                // Create form container
+                const formContainer = createFormContainer();
+
+                // Create form fields using utility functions
+                const idField = createFormField(
+                    'Service ID *',
+                    'input',
+                    {
+                        placeholder: 'Enter unique service ID'
+                    }
+                );
+
+                const labelField = createFormField(
+                    'Service Label',
+                    'input',
+                    {
+                        placeholder: 'Enter service display label'
+                    }
+                );
+
+                const urlField = createFormField(
+                    'Base URL',
+                    'input',
+                    {
+                        placeholder: 'Enter service base URL'
+                    }
+                );
+
+                const modelField = createFormField(
+                    'Model',
+                    'input',
+                    {
+                        placeholder: 'Enter default model name'
+                    }
+                );
+
+                // Add all form elements to container
+                formContainer.appendChild(idField.container);
+                formContainer.appendChild(labelField.container);
+                formContainer.appendChild(urlField.container);
+                formContainer.appendChild(modelField.container);
+
+                // Add form to dialog content
+                dialogContext.content.appendChild(formContainer);
+
+                // End dialog box with OK/Cancel buttons
+                endDialogBox(dialogContext, DialogButtonType.OK_CANCEL, (result) => {
+                    if (result === DialogResult.OK) {
+                        const newService = {
+                            id: idField.field.value.trim(),
+                            label: labelField.field.value.trim(),
+                            base_url: urlField.field.value.trim(),
+                            api_key: '',
+                            model: modelField.field.value.trim(),
+                            timeout: 300
+                        };
+
+                        // Validate input
+                        if (!newService.id) {
+                            showToastError("Validation Error", "Service ID is required");
+                            return;
+                        }
+
+                        // Check for duplicate ID
+                        const existingIds = this.servicesData.map(s => s.id);
+                        if (existingIds.includes(newService.id)) {
+                            showToastError("Validation Error", `Service ID "${newService.id}" already exists`);
+                            return;
+                        }
+
+                        this.addNewService(newService);
+                    }
+                });
+
+                // Focus ID input
+                setTimeout(() => idField.field.focus(), 0);
+            };
+
+            /**
+             * Add a new AI service to the configuration
+             */
+            nodeType.prototype.addNewService = function (service) {
+                // Add the new service to servicesData
+                this.servicesData.push(service);
+
+                // Update service count widget
+                const serviceCountWidget = this.widgets.find(w => w.name === "service_count");
+                if (serviceCountWidget) {
+                    serviceCountWidget.value = this.servicesData.length;
+                }
+
+                // Rebuild widgets with updated data
+                this.updateServiceWidgets(this.servicesData.length);
+
+                // Update cached configuration
+                this.saveCachedConfig();
+
+                // Show success message
+                showToastSuccess("Service Added", `Service "${service.id}" has been added successfully`);
+                console.log("[EasyToolkit] New AI Service added:", service.id);
+            };
+
+            /**
+             * Delete a specific AI service
+             */
+            nodeType.prototype.deleteService = async function (serviceIndex) {
+                const service = this.servicesData[serviceIndex];
+
+                if (!service.id || !service.id.trim()) {
+                    showToastError("Cannot Delete", "Service ID is empty. Please provide a valid service ID.");
+                    return;
+                }
+
+                // Confirm deletion
+                const confirmMessage = `Are you sure you want to delete service "${service.id}"?\n\nThis action cannot be undone.`;
+
+                const confirmed = await showConfirmDialog(confirmMessage);
+                if (!confirmed) {
+                    return;
+                }
+
+                try {
+                    const response = await api.fetchApi("/easytoolkit_config/delete_ai_service", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            service_id: service.id
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showToastSuccess("Service Deleted", `Service "${service.id}" has been deleted successfully.`);
+                        console.log("[EasyToolkit] AI Service deleted:", service.id);
+
+                        // Remove service from local data
+                        this.servicesData.splice(serviceIndex, 1);
+
+                        // Update service count widget
+                        const serviceCountWidget = this.widgets.find(w => w.name === "service_count");
+                        if (serviceCountWidget) {
+                            serviceCountWidget.value = this.servicesData.length;
+                        }
+
+                        // Rebuild widgets with updated data
+                        this.updateServiceWidgets(this.servicesData.length);
+
+                        // Update cached configuration
+                        this.saveCachedConfig();
+                    } else {
+                        showToastError("Delete Failed", data.error || "Failed to delete service");
+                    }
+                } catch (error) {
+                    console.error("[EasyToolkit] Failed to delete AI service:", error);
+                    showToastError("Delete Failed", error.message || "Failed to delete service");
                 }
             };
 

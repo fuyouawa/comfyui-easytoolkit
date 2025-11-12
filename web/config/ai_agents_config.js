@@ -1,6 +1,7 @@
 import { app } from "../../../scripts/app.js";
 import { api } from "../../../scripts/api.js";
-import { showError, showSuccess, showToastSuccess, showToastError, beginDialogBox, endDialogBox, DialogButtonType, DialogResult } from "../box_utils.js";
+import { showError, showSuccess, showToastSuccess, showToastError, beginDialogBox, endDialogBox, DialogButtonType, DialogResult, showConfirmDialog } from "../box_utils.js";
+import { createFormContainer, createFormField, createTextarea } from "../ui_utils.js";
 
 /**
  * Extension for AIAgentsConfig node
@@ -188,11 +189,18 @@ app.registerExtension({
                     this.dynamicWidgets.push(labelWidget);
 
                     // Summary (button to open dialog)
-                    const summaryWidget = this.addWidget("button", `agent_${i}_summary`, "Edit Summary", () => {
+                    const summaryWidget = this.addWidget("button", `agent_${i}_summary`, null, () => {
                         this.showSummaryDialog(i);
                     });
-                    summaryWidget.label = `Open Agent ${i + 1} - Summary Editor`;
+                    summaryWidget.label = `📝 Open Agent ${i + 1} - Summary Editor 📝`;
                     this.dynamicWidgets.push(summaryWidget);
+
+                    // Delete button (only show for agents with valid IDs)
+                    const deleteWidget = this.addWidget("button", `agent_${i}_delete`, null, () => {
+                        this.deleteAgent(i);
+                    });
+                    deleteWidget.label = `❌ Delete Agent ${i + 1} ❌`;
+                    this.dynamicWidgets.push(deleteWidget);
 
                     const separateWidget = this.addWidget("text", '', null, null);
                     separateWidget.value = '';
@@ -202,9 +210,6 @@ app.registerExtension({
 
                 // Add action buttons
                 this.addActionButtons();
-
-                // Reorder widgets: agent_count -> dynamic widgets -> buttons
-                this.reorderWidgets();
 
                 // Update node size (preserve width, only update height)
                 const currentWidth = this.size[0];
@@ -244,56 +249,126 @@ app.registerExtension({
             };
 
             /**
-             * Reorder widgets to maintain proper order
-             */
-            nodeType.prototype.reorderWidgets = function () {
-                // Get button widgets
-                const loadButton = this.widgets.find(w => w.name === "load_button");
-                const saveButton = this.widgets.find(w => w.name === "save_button");
-
-                if (loadButton) {
-                    const index = this.widgets.indexOf(loadButton);
-                    if (index > -1) {
-                        this.widgets.splice(index, 1);
-                        this.widgets.push(loadButton);
-                    }
-                }
-
-                if (saveButton) {
-                    const index = this.widgets.indexOf(saveButton);
-                    if (index > -1) {
-                        this.widgets.splice(index, 1);
-                        this.widgets.push(saveButton);
-                    }
-                }
-            };
-
-            /**
              * Add action buttons
              */
             nodeType.prototype.addActionButtons = function () {
+                // Button: Add
+                const addButton = this.addWidget("button", "add_ai_agent", null, () => {
+                    this.showAddAgentDialog();
+                });
+                addButton.label = "➕ Add New AI Agent ➕";
+
                 // Button: Load
-                const loadButton = this.addWidget("button", "Load AI Agents", null, () => {
+                const loadButton = this.addWidget("button", "load_ai_agents", null, () => {
                     this.loadAIAgents();
                 });
+                loadButton.label = "📥 Load AI Agents 📥";
 
                 // Button: Save
-                const saveButton = this.addWidget("button", "Save AI Agents", null, () => {
+                const saveButton = this.addWidget("button", "save_ai_agents", null, () => {
                     this.saveAIAgents();
                 });
+                saveButton.label = "💾 Save AI Agents 💾";
 
                 // Button: Reset
-                const resetButton = this.addWidget("button", "Reset AI Agents", null, () => {
+                const resetButton = this.addWidget("button", "reset_ai_agents", null, () => {
                     this.resetAIAgents();
                 });
+                resetButton.label = "🔄 Reset AI Agents 🔄";
+            };
+
+            /**
+             * Show dialog for adding a new AI agent
+             */
+            nodeType.prototype.showAddAgentDialog = function () {
+                // Begin dialog box
+                const dialogContext = beginDialogBox("Add New AI Agent", {
+                    minWidth: 500,
+                    maxWidth: 700
+                });
+
+                // Create form container
+                const formContainer = createFormContainer();
+
+                // Create form fields using utility functions
+                const idField = createFormField(
+                    'Agent ID *',
+                    'input',
+                    {
+                        placeholder: 'Enter unique agent ID'
+                    }
+                );
+
+                const labelField = createFormField(
+                    'Agent Label',
+                    'input',
+                    {
+                        placeholder: 'Enter agent display label'
+                    }
+                );
+
+                const summaryField = createFormField(
+                    'Agent Summary',
+                    'textarea',
+                    {
+                        placeholder: 'Enter agent description/summary',
+                        height: '150px'
+                    }
+                );
+
+                // Add all form elements to container
+                formContainer.appendChild(idField.container);
+                formContainer.appendChild(labelField.container);
+                formContainer.appendChild(summaryField.container);
+
+                // Add form to dialog content
+                dialogContext.content.appendChild(formContainer);
+
+                // End dialog box with OK/Cancel buttons
+                endDialogBox(dialogContext, DialogButtonType.OK_CANCEL, (result) => {
+                    if (result === DialogResult.OK) {
+                        const newAgent = {
+                            id: idField.field.value.trim(),
+                            label: labelField.field.value.trim(),
+                            summary: summaryField.field.value.trim()
+                        };
+
+                        // Validate input
+                        if (!newAgent.id) {
+                            showToastError("Validation Error", "Agent ID is required");
+                            return;
+                        }
+
+                        // Check for duplicate ID
+                        const existingIds = this.agentsData.map(a => a.id);
+                        if (existingIds.includes(newAgent.id)) {
+                            showToastError("Validation Error", `Agent ID "${newAgent.id}" already exists`);
+                            return;
+                        }
+
+                        this.addNewAgent(newAgent);
+                    }
+                });
+
+                // Focus ID input
+                setTimeout(() => idField.field.focus(), 0);
             };
 
             /**
              * Remove action buttons
              */
             nodeType.prototype.removeActionButtons = function () {
+                // Remove Add button
+                const addButton = this.widgets.find(w => w.name === "add_ai_agent");
+                if (addButton) {
+                    const index = this.widgets.indexOf(addButton);
+                    if (index > -1) {
+                        this.widgets.splice(index, 1);
+                    }
+                }
+
                 // Remove Load button
-                const loadButton = this.widgets.find(w => w.name === "Load AI Agents");
+                const loadButton = this.widgets.find(w => w.name === "load_ai_agents");
                 if (loadButton) {
                     const index = this.widgets.indexOf(loadButton);
                     if (index > -1) {
@@ -302,7 +377,7 @@ app.registerExtension({
                 }
 
                 // Remove Save button
-                const saveButton = this.widgets.find(w => w.name === "Save AI Agents");
+                const saveButton = this.widgets.find(w => w.name === "save_ai_agents");
                 if (saveButton) {
                     const index = this.widgets.indexOf(saveButton);
                     if (index > -1) {
@@ -311,13 +386,37 @@ app.registerExtension({
                 }
 
                 // Remove Reset button
-                const resetButton = this.widgets.find(w => w.name === "Reset AI Agents");
+                const resetButton = this.widgets.find(w => w.name === "reset_ai_agents");
                 if (resetButton) {
                     const index = this.widgets.indexOf(resetButton);
                     if (index > -1) {
                         this.widgets.splice(index, 1);
                     }
                 }
+            };
+
+            /**
+             * Add a new AI agent to the configuration
+             */
+            nodeType.prototype.addNewAgent = function (agent) {
+                // Add the new agent to agentsData
+                this.agentsData.push(agent);
+
+                // Update agent count widget
+                const agentCountWidget = this.widgets.find(w => w.name === "agent_count");
+                if (agentCountWidget) {
+                    agentCountWidget.value = this.agentsData.length;
+                }
+
+                // Rebuild widgets with updated data
+                this.updateAgentWidgets(this.agentsData.length);
+
+                // Update cached configuration
+                this.saveCachedConfig();
+
+                // Show success message
+                showToastSuccess("Agent Added", `Agent "${agent.id}" has been added successfully`);
+                console.log("[EasyToolkit] New AI Agent added:", agent.id);
             };
 
             /**
@@ -333,20 +432,12 @@ app.registerExtension({
                     maxWidth: 800
                 });
 
-                // Create textarea for summary editing
-                const textarea = document.createElement('textarea');
-                textarea.value = agent.summary || '';
-                textarea.style.width = '100%';
-                textarea.style.height = '400px';
-                textarea.style.padding = '10px';
-                textarea.style.backgroundColor = '#2d2d2d';
-                textarea.style.color = '#fff';
-                textarea.style.border = '1px solid #555';
-                textarea.style.borderRadius = '4px';
-                textarea.style.fontSize = '14px';
-                textarea.style.fontFamily = 'monospace';
-                textarea.style.resize = 'vertical';
-                textarea.style.boxSizing = 'border-box';
+                // Create textarea for summary editing using utility function
+                const textarea = createTextarea({
+                    value: agent.summary || '',
+                    height: '400px',
+                    padding: '10px'
+                });
 
                 // Add textarea to dialog content
                 dialogContext.content.appendChild(textarea);
@@ -361,6 +452,65 @@ app.registerExtension({
 
                 // Focus textarea
                 setTimeout(() => textarea.focus(), 0);
+            };
+
+            /**
+             * Delete a specific AI agent
+             */
+            nodeType.prototype.deleteAgent = async function (agentIndex) {
+                const agent = this.agentsData[agentIndex];
+
+                if (!agent.id || !agent.id.trim()) {
+                    showToastError("Cannot Delete", "Agent ID is empty. Please provide a valid agent ID.");
+                    return;
+                }
+
+                // Confirm deletion
+                const confirmMessage = `Are you sure you want to delete agent "${agent.id}"?\n\nThis action cannot be undone.`;
+
+                const confirmed = await showConfirmDialog(confirmMessage);
+                if (!confirmed) {
+                    return;
+                }
+
+                try {
+                    const response = await api.fetchApi("/easytoolkit_config/delete_ai_agent", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            agent_id: agent.id
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showToastSuccess("Agent Deleted", `Agent "${agent.id}" has been deleted successfully.`);
+                        console.log("[EasyToolkit] AI Agent deleted:", agent.id);
+
+                        // Remove agent from local data
+                        this.agentsData.splice(agentIndex, 1);
+
+                        // Update agent count widget
+                        const agentCountWidget = this.widgets.find(w => w.name === "agent_count");
+                        if (agentCountWidget) {
+                            agentCountWidget.value = this.agentsData.length;
+                        }
+
+                        // Rebuild widgets with updated data
+                        this.updateAgentWidgets(this.agentsData.length);
+
+                        // Update cached configuration
+                        this.saveCachedConfig();
+                    } else {
+                        showToastError("Delete Failed", data.error || "Failed to delete agent");
+                    }
+                } catch (error) {
+                    console.error("[EasyToolkit] Failed to delete AI agent:", error);
+                    showToastError("Delete Failed", error.message || "Failed to delete agent");
+                }
             };
 
             /**

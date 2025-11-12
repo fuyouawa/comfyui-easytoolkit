@@ -1,9 +1,6 @@
 from aiohttp import web
 from ... import register_node, register_route
 from ...utils.config import get_config
-import os
-import yaml
-import json
 
 @register_node
 class AIServicesConfig:
@@ -71,25 +68,12 @@ async def handle_get_ai_services(request):
 @register_route("/easytoolkit_config/save_ai_services", method="POST")
 async def handle_save_ai_services(request):
     """
-    API endpoint to save AI services configuration to override file (JSON format).
+    API endpoint to save AI services configuration.
     """
     try:
         data = await request.json()
         services_list = data.get("services", [])
         default_service = data.get("default_service", "")
-
-        # Load current config
-        config_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        override_path = os.path.join(config_dir, 'config.override.json')
-
-        # Load existing configuration from override file if exists
-        existing_config = {}
-        if os.path.exists(override_path):
-            try:
-                with open(override_path, 'r', encoding='utf-8') as f:
-                    existing_config = json.load(f) or {}
-            except Exception as e:
-                print(f"Warning: Could not load override config: {e}")
 
         # Convert list back to dict format
         ai_services = {}
@@ -104,28 +88,66 @@ async def handle_save_ai_services(request):
                     'timeout': int(service.get('timeout', 300))
                 }
 
-        # Update ai_services section
-        existing_config['ai_services'] = ai_services
+        # Use config utility to set ai_services
+        config = get_config()
+        config.set("ai_services", ai_services)
 
         # Update default_ai_service if provided
         if default_service:
-            existing_config['default_ai_service'] = default_service
-        elif 'default_ai_service' in existing_config:
+            config.set("default_ai_service", default_service)
+        else:
             # Remove default_ai_service if it's empty
-            del existing_config['default_ai_service']
-
-        # Write to override file as JSON
-        with open(override_path, 'w', encoding='utf-8') as f:
-            json.dump(existing_config, f, ensure_ascii=False, indent=2)
-
-        # Reload configuration
-        config = get_config()
-        config.reload()
+            config.delete("default_ai_service")
 
         return web.json_response({
             "success": True,
-            "message": f"AI services configuration saved to {override_path}",
-            "path": override_path
+            "message": "AI services configuration saved successfully",
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return web.json_response({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+
+
+@register_route("/easytoolkit_config/delete_ai_service", method="POST")
+async def handle_delete_ai_service(request):
+    """
+    API endpoint to delete a specific AI service from configuration.
+    """
+    try:
+        data = await request.json()
+        service_id = data.get("service_id", "")
+
+        if not service_id:
+            return web.json_response({
+                "success": False,
+                "error": "Service ID is required"
+            }, status=400)
+
+        # Check if service exists
+        config = get_config()
+        ai_services = config.get("ai_services", {})
+        if service_id not in ai_services:
+            return web.json_response({
+                "success": False,
+                "error": f"Service '{service_id}' not found"
+            }, status=404)
+
+        # Remove the service using config.delete with dot notation
+        config.delete(f"ai_services.{service_id}")
+
+        # Update default service if it was the deleted one
+        default_service = config.get("default_ai_service", "")
+        if default_service == service_id:
+            config.set("default_ai_service", "")
+
+        return web.json_response({
+            "success": True,
+            "message": f"Service '{service_id}' deleted successfully",
         })
 
     except Exception as e:
@@ -143,48 +165,28 @@ async def handle_reset_ai_services(request):
     API endpoint to reset AI services configuration by removing ai_services from override file.
     """
     try:
-        # Load current config
-        config_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        override_path = os.path.join(config_dir, 'config.override.json')
+        config = get_config()
 
-        # Load existing configuration from override file if exists
-        existing_config = {}
-        if os.path.exists(override_path):
-            try:
-                with open(override_path, 'r', encoding='utf-8') as f:
-                    existing_config = json.load(f) or {}
-            except Exception as e:
-                print(f"Warning: Could not load override config: {e}")
-
-        # Remove ai_services and default_ai_service sections
+        # Remove ai_services and default_ai_service sections using config utility
         config_changed = False
-        if 'ai_services' in existing_config:
-            del existing_config['ai_services']
+
+        if config.get("ai_services") is not None:
+            config.delete("ai_services")
             config_changed = True
 
-        if 'default_ai_service' in existing_config:
-            del existing_config['default_ai_service']
+        if config.get("default_ai_service") is not None:
+            config.delete("default_ai_service")
             config_changed = True
 
         if config_changed:
-            # Write updated config back to override file
-            with open(override_path, 'w', encoding='utf-8') as f:
-                json.dump(existing_config, f, ensure_ascii=False, indent=2)
-
-            # Reload configuration
-            config = get_config()
-            config.reload()
-
             return web.json_response({
                 "success": True,
                 "message": "AI services configuration reset successfully",
-                "path": override_path
             })
         else:
             return web.json_response({
                 "success": True,
                 "message": "No AI services configuration found to reset",
-                "path": override_path
             })
 
     except Exception as e:

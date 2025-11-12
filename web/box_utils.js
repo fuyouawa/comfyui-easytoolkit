@@ -1,4 +1,5 @@
 import { app } from "../../scripts/app.js";
+import { createMessage } from "./ui_utils.js";
 
 /**
  * Utility functions for ComfyUI dialog and notification boxes
@@ -190,29 +191,13 @@ export function endDialogBox(dialogContext, buttonType, onButtonClick, options =
             }
         };
 
-        buttonContainer.appendChild(cancelButton);
         buttonContainer.appendChild(okButton);
+        buttonContainer.appendChild(cancelButton);
     }
 
     dialog.appendChild(buttonContainer);
 }
 
-/**
- * Create a message element with consistent styling
- * @param {string} message - The message text
- * @param {string} [color="#fff"] - Text color
- * @returns {HTMLElement} - Styled message element
- */
-function createMessageElement(message, color = "#fff") {
-    const messageElement = document.createElement('div');
-    messageElement.textContent = message;
-    messageElement.style.color = color;
-    messageElement.style.fontSize = '14px';
-    messageElement.style.lineHeight = '1.5';
-    messageElement.style.whiteSpace = 'pre-wrap';
-    messageElement.style.wordBreak = 'break-word';
-    return messageElement;
-}
 
 /**
  * Show a message dialog with customizable appearance
@@ -239,7 +224,7 @@ export function showMessage(message, options = {}) {
         maxHeight
     });
 
-    const messageElement = createMessageElement(message, color);
+    const messageElement = createMessage(message, { color });
     dialogContext.content.appendChild(messageElement);
 
     endDialogBox(dialogContext, DialogButtonType.OK_ONLY);
@@ -320,7 +305,7 @@ export function showConfirmDialog(message, yesText = "OK", noText = "Cancel") {
             maxWidth: 600
         });
 
-        const messageElement = createMessageElement(message, "#fff");
+        const messageElement = createMessage(message, { color: "#fff" });
         messageElement.style.marginBottom = '15px';
         dialogContext.content.appendChild(messageElement);
 
