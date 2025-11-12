@@ -24,13 +24,26 @@ def camel_to_spaced(s: str) -> str:
     # If no common prefix found, use the original logic
     return re.sub(r'(?<=[a-z0-9])([A-Z])', r' \1', s)
 
-def register_node(c):
+def register_node(c=None, *, emoji=None):
     """
     Decorator to register a ComfyUI node class.
+
+    Args:
+        c: The node class to register
+        emoji: Optional emoji to append to the display name
     """
-    NODE_CLASS_MAPPINGS[c.__name__] = c
-    NODE_DISPLAY_NAME_MAPPINGS[c.__name__] = camel_to_spaced(c.__name__)
-    return c
+    def decorator(cls):
+        NODE_CLASS_MAPPINGS[cls.__name__] = cls
+        display_name = camel_to_spaced(cls.__name__)
+        if emoji:
+            display_name = f"{display_name} {emoji}"
+        NODE_DISPLAY_NAME_MAPPINGS[cls.__name__] = display_name
+        return cls
+
+    if c is None:
+        return decorator
+    else:
+        return decorator(c)
 
 def register_route(path, method="POST"):
     """

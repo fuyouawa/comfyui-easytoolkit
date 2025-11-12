@@ -4,7 +4,7 @@ from ...utils.encoding import b64encode
 from ...utils.format import static_image_formats, mime_type_to_file_suffix
 
 
-@register_node
+@register_node(emoji="🔐")
 class ImageBatchBase64Encoder:
     """
     Base64 image batch encoder node.

@@ -4,7 +4,7 @@ from ...utils.encoding import b64encode
 from ...utils.format import static_image_formats
 
 
-@register_node
+@register_node(emoji="🔐")
 class ImageBase64Encoder:
     """
     Base64 image encoder node.

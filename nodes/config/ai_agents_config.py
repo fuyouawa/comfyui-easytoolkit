@@ -2,7 +2,7 @@ from aiohttp import web
 from ... import register_node, register_route
 from ...utils.config import get_config
 
-@register_node
+@register_node(emoji="⚙️")
 class AIAgentsConfig:
     """
     A ComfyUI node for managing AI Agents configuration with dynamic controls.

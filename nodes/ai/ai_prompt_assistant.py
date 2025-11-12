@@ -4,7 +4,7 @@ from ...utils.ai_service import get_ai_service, ClientDisconnectedError
 from aiohttp import web
 import traceback
 
-@register_node
+@register_node(emoji="🤖")
 class AIPromptAssistant:
     """
     AI-powered prompt assistant for expanding, translating, and optimizing prompts.

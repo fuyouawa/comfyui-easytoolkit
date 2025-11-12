@@ -5,7 +5,7 @@ import os
 import folder_paths
 
 
-@register_node
+@register_node(emoji="🔐")
 class Base64Decoder:
     """
     Base64 decoder node.

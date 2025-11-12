@@ -3,7 +3,7 @@ from ... import register_node
 from ...utils.image import encrypt_image
 
 
-@register_node
+@register_node(emoji="🖼️")
 class ImageBatchEncryptor:
     """
     Batch image encryption and processing node.

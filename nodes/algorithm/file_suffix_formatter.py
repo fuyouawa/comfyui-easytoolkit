@@ -1,7 +1,7 @@
 from ... import register_node
 from ...utils.format import file_suffix_to_mime_type, all_resource_formats
 
-@register_node
+@register_node(emoji="🧮")
 class FileSuffixFormatter:
     """
     A ComfyUI node that converts file suffixes to MIME types.

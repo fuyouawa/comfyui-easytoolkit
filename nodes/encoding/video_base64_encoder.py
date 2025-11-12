@@ -10,7 +10,7 @@ from ...utils.encoding import b64encode
 from ... import register_node
 
 
-@register_node
+@register_node(emoji="🔐")
 class VideoBase64Encoder:
     """
     Base64 video encoder node.

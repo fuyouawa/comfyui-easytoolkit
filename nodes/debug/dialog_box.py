@@ -1,6 +1,6 @@
 from ... import register_node
 
-@register_node
+@register_node(emoji="🪲")
 class DialogBox:
     """
     A ComfyUI node that displays dialog boxes during workflow execution.

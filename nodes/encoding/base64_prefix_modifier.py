@@ -2,7 +2,7 @@ from ... import register_node
 from ...utils.format import all_resource_formats, data_url_prefixes
 
 
-@register_node
+@register_node(emoji="🔐")
 class Base64PrefixModifier:
     """
     Base64 prefix modifier node.

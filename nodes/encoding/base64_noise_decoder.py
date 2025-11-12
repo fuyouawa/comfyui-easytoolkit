@@ -4,7 +4,7 @@ from ...utils.encoding import b64encode
 import zlib
 
 
-@register_node
+@register_node(emoji="🔐")
 class Base64NoiseDecoder:
     """
     Base64 noise decoder node.

@@ -3,7 +3,7 @@ from ...utils.image import bytes_to_image
 from ...utils.encoding import b64decode
 
 
-@register_node
+@register_node(emoji="🔐")
 class ImageBase64Decoder:
     """
     Base64 image decoder node.

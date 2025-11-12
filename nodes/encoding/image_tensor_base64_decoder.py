@@ -3,7 +3,7 @@ from ...utils.image import bytes_to_tensor
 from ...utils.encoding import b64decode
 
 
-@register_node
+@register_node(emoji="🔐")
 class ImageTensorBase64Decoder:
     """
     Tensor base64 image decoder node.

@@ -156,7 +156,7 @@ app.registerExtension({
                         await this.processWithAI();
                     }
                 });
-                processButton.label = "🚀 AI Process 🚀";
+                processButton.label = "🚀 AI Process";
                 
                 // Store button reference
                 this.processButton = processButton;
@@ -228,7 +228,7 @@ app.registerExtension({
                 
                 // Reset button text
                 if (this.processButton) {
-                    this.processButton.label = "🚀 AI Process 🚀";
+                    this.processButton.label = "🚀 AI Process";
                 }
                 
                 // Update processed prompt
@@ -385,7 +385,7 @@ app.registerExtension({
                 
                 // Change button text
                 if (this.processButton) {
-                    this.processButton.label = "⏹ Stop ⏹";
+                    this.processButton.label = "⏹ Stop";
                 }
                 
                 // Start loading animation with timer
@@ -455,7 +455,7 @@ app.registerExtension({
                     
                     // Reset button text
                     if (this.processButton) {
-                        this.processButton.label = "🚀 AI Process 🚀";
+                        this.processButton.label = "🚀 AI Process";
                     }
                 }
             };

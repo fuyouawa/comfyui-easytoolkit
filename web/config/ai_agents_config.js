@@ -192,14 +192,14 @@ app.registerExtension({
                     const summaryWidget = this.addWidget("button", `agent_${i}_summary`, null, () => {
                         this.showSummaryDialog(i);
                     });
-                    summaryWidget.label = `📝 Open Agent ${i + 1} - Summary Editor 📝`;
+                    summaryWidget.label = `📝 Open Agent ${i + 1} - Summary Editor`;
                     this.dynamicWidgets.push(summaryWidget);
 
                     // Delete button (only show for agents with valid IDs)
                     const deleteWidget = this.addWidget("button", `agent_${i}_delete`, null, () => {
                         this.deleteAgent(i);
                     });
-                    deleteWidget.label = `❌ Delete Agent ${i + 1} ❌`;
+                    deleteWidget.label = `❌ Delete Agent ${i + 1}`;
                     this.dynamicWidgets.push(deleteWidget);
 
                     const separateWidget = this.addWidget("text", '', null, null);
@@ -256,25 +256,25 @@ app.registerExtension({
                 const addButton = this.addWidget("button", "add_ai_agent", null, () => {
                     this.showAddAgentDialog();
                 });
-                addButton.label = "➕ Add New AI Agent ➕";
+                addButton.label = "➕ Add New AI Agent";
 
                 // Button: Load
                 const loadButton = this.addWidget("button", "load_ai_agents", null, () => {
                     this.loadAIAgents();
                 });
-                loadButton.label = "📥 Load AI Agents 📥";
+                loadButton.label = "📥 Load AI Agents";
 
                 // Button: Save
                 const saveButton = this.addWidget("button", "save_ai_agents", null, () => {
                     this.saveAIAgents();
                 });
-                saveButton.label = "💾 Save AI Agents 💾";
+                saveButton.label = "💾 Save AI Agents";
 
                 // Button: Reset
                 const resetButton = this.addWidget("button", "reset_ai_agents", null, () => {
                     this.resetAIAgents();
                 });
-                resetButton.label = "🔄 Reset AI Agents 🔄";
+                resetButton.label = "🔄 Reset AI Agents";
             };
 
             /**

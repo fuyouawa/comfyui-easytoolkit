@@ -1,6 +1,7 @@
 from ... import register_node
 
-@register_node
+
+@register_node(emoji="🖼️")
 class ImageBatchSelector:
     """
     Image batch selector for extracting specific images from batches.

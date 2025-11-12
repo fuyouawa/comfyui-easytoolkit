@@ -1,6 +1,6 @@
 from ... import register_node
 
-@register_node
+@register_node(emoji="🪲")
 class ToastBox:
     """
     A ComfyUI node that displays toast notifications during workflow execution.

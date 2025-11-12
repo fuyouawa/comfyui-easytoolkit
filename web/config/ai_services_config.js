@@ -228,7 +228,7 @@ app.registerExtension({
                     const deleteWidget = this.addWidget("button", `service_${i}_delete`, null, () => {
                         this.deleteService(i);
                     });
-                    deleteWidget.label = `❌ Delete Service ${i + 1} ❌`;
+                    deleteWidget.label = `❌ Delete Service ${i + 1}`;
                     this.dynamicWidgets.push(deleteWidget);
 
                     const separateWidget = this.addWidget("text", '', null, null);
@@ -286,25 +286,25 @@ app.registerExtension({
                 const addButton = this.addWidget("button", "add_ai_service", null, () => {
                     this.showAddServiceDialog();
                 });
-                addButton.label = "➕ Add New AI Service ➕";
+                addButton.label = "➕ Add New AI Service";
 
                 // Button: Load
                 const loadButton = this.addWidget("button", "load_ai_services", null, () => {
                     this.loadAIServices();
                 });
-                loadButton.label = "📥 Load AI Services 📥";
+                loadButton.label = "📥 Load AI Services";
 
                 // Button: Save
                 const saveButton = this.addWidget("button", "save_ai_services", null, () => {
                     this.saveAIServices();
                 });
-                saveButton.label = "💾 Save AI Services 💾";
+                saveButton.label = "💾 Save AI Services";
 
                 // Button: Reset
                 const resetButton = this.addWidget("button", "reset_ai_services", null, () => {
                     this.resetAIServices();
                 });
-                resetButton.label = "🔄 Reset AI Services 🔄";
+                resetButton.label = "🔄 Reset AI Services";
             };
 
             /**

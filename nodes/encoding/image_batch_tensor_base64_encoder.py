@@ -3,7 +3,7 @@ from ...utils.image import tensor_batch_to_bytes_list
 from ...utils.encoding import b64encode
 
 
-@register_node
+@register_node(emoji="🔐")
 class ImageBatchTensorBase64Encoder:
     """
     Tensor base64 image batch encoder node.
