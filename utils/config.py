@@ -41,7 +41,7 @@ class Config:
                     loaded_config = yaml.safe_load(f)
                     if loaded_config:
                         # Deep merge loaded config with defaults
-                        self._deep_merge(self._config, loaded_config)
+                        self._merge(self._config, loaded_config)
                 print(f"[comfyui-easytoolkit] Configuration loaded from {config_path}")
             else:
                 print(f"[comfyui-easytoolkit] Config file not found, using defaults")
@@ -56,22 +56,18 @@ class Config:
                     override_config = json.load(f)
                     if override_config:
                         # Deep merge override config (overrides take precedence)
-                        self._deep_merge(self._config, override_config)
+                        self._merge(self._config, override_config)
                 print(f"[comfyui-easytoolkit] Override configuration loaded from {override_path}")
         except Exception as e:
             print(f"[comfyui-easytoolkit] Warning: Failed to load override file: {e}")
     
-    def _deep_merge(self, base_dict, override_dict):
+    def _merge(self, base_dict, override_dict):
         """
         Recursively merge two dictionaries, with override values taking precedence.
         """
         for key, value in override_dict.items():
-            if key in base_dict and isinstance(base_dict[key], dict) and isinstance(value, dict):
-                # Recursively merge nested dictionaries
-                self._deep_merge(base_dict[key], value)
-            else:
-                # Override the value
-                base_dict[key] = value
+            # Override the value
+            base_dict[key] = value
     
     def get(self, key: str, default=None):
         """
