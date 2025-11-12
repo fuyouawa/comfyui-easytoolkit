@@ -20,9 +20,15 @@ class AIPromptAssistant:
                     "default": "",
                     "dynamicPrompts": False
                 }),
-                "ai_service": ("COMBO", {"default": "deepseek"}),
-                "ai_agent": ("COMBO", {"default": "video_prompt_expansion"}),
-                "execute_ai_request": ("BOOLEAN", {"default": False}),
+                "ai_service": ("COMBO", {
+                    "default": get_config().get('default_ai_service')
+                }),
+                "ai_agent": ("COMBO", {
+                    "default": get_config().get('default_ai_agent')
+                }),
+                "execute_ai_request": ("BOOLEAN", {
+                    "default": False
+                }),
             },
             "optional": {
                 "processed_prompt": ("STRING", {
