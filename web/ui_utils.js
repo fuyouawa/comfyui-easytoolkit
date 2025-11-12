@@ -185,3 +185,141 @@ export function createMessage(message, options = {}) {
 
     return messageElement;
 }
+
+/**
+ * Create dialog overlay element
+ * @returns {HTMLDivElement} Overlay element
+ */
+export function createDialogOverlay() {
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.display = 'flex';
+    overlay.style.justifyContent = 'center';
+    overlay.style.alignItems = 'center';
+    overlay.style.zIndex = '10000';
+
+    return overlay;
+}
+
+/**
+ * Create dialog container element
+ * @param {Object} options - Dialog options
+ * @param {number} options.minWidth - Minimum dialog width in pixels
+ * @param {number} options.maxWidth - Maximum dialog width in pixels
+ * @param {number} options.maxHeight - Maximum dialog height as viewport percentage
+ * @returns {HTMLDivElement} Dialog container element
+ */
+export function createDialogContainer(options = {}) {
+    const { minWidth = 400, maxWidth = 600, maxHeight = 80 } = options;
+
+    const dialog = document.createElement('div');
+    dialog.style.backgroundColor = '#1e1e1e';
+    dialog.style.border = '1px solid #555';
+    dialog.style.borderRadius = '8px';
+    dialog.style.padding = '20px';
+    dialog.style.minWidth = `${minWidth}px`;
+    dialog.style.maxWidth = `${maxWidth}px`;
+    dialog.style.maxHeight = `${maxHeight}vh`;
+    dialog.style.display = 'flex';
+    dialog.style.flexDirection = 'column';
+    dialog.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
+
+    return dialog;
+}
+
+/**
+ * Create dialog title element
+ * @param {string} title - Dialog title
+ * @returns {HTMLHeadingElement} Title element
+ */
+export function createDialogTitle(title) {
+    const titleElement = document.createElement('h3');
+    titleElement.textContent = title;
+    titleElement.style.margin = '0 0 15px 0';
+    titleElement.style.color = '#fff';
+    titleElement.style.fontSize = '18px';
+
+    return titleElement;
+}
+
+/**
+ * Create dialog content container
+ * @returns {HTMLDivElement} Content container element
+ */
+export function createDialogContent() {
+    const content = document.createElement('div');
+    content.style.flex = '1';
+    content.style.overflow = 'auto';
+    content.style.marginBottom = '15px';
+
+    return content;
+}
+
+/**
+ * Create button container for dialog
+ * @returns {HTMLDivElement} Button container element
+ */
+export function createButtonContainer() {
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.justifyContent = 'flex-end';
+    buttonContainer.style.gap = '10px';
+
+    return buttonContainer;
+}
+
+/**
+ * Create styled button for dialogs
+ * @param {string} text - Button text
+ * @param {boolean} isPrimary - Whether this is a primary button
+ * @returns {HTMLButtonElement} Styled button element
+ */
+export function createDialogButton(text, isPrimary = false) {
+    const button = document.createElement('button');
+    button.textContent = text;
+    button.style.padding = '8px 20px';
+    button.style.backgroundColor = isPrimary ? '#007acc' : '#555';
+    button.style.color = '#fff';
+    button.style.border = 'none';
+    button.style.borderRadius = '4px';
+    button.style.cursor = 'pointer';
+    button.style.fontSize = '14px';
+
+    // Hover effects
+    button.onmouseover = () => {
+        button.style.backgroundColor = isPrimary ? '#0098ff' : '#666';
+    };
+    button.onmouseout = () => {
+        button.style.backgroundColor = isPrimary ? '#007acc' : '#555';
+    };
+
+    return button;
+}
+
+/**
+ * Setup dialog event handlers
+ * @param {HTMLElement} overlay - Dialog overlay element
+ * @param {Function} escapeHandler - Escape key handler function
+ * @returns {Function} Cleanup function to remove event listeners
+ */
+export function setupDialogEvents(overlay, escapeHandler) {
+    // Close on overlay click
+    overlay.onclick = (e) => {
+        if (e.target === overlay) {
+            document.body.removeChild(overlay);
+        }
+    };
+
+    // Close on Escape key
+    document.addEventListener('keydown', escapeHandler);
+
+    // Return cleanup function
+    return () => {
+        document.removeEventListener('keydown', escapeHandler);
+    };
+}

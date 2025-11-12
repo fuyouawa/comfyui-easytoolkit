@@ -1,5 +1,14 @@
 import { app } from "../../scripts/app.js";
-import { createMessage } from "./ui_utils.js";
+import {
+    createMessage,
+    createDialogOverlay,
+    createDialogContainer,
+    createDialogTitle,
+    createDialogContent,
+    createButtonContainer,
+    createDialogButton,
+    setupDialogEvents
+} from "./ui_utils.js";
 
 /**
  * Utility functions for ComfyUI dialog and notification boxes
@@ -40,44 +49,17 @@ export function beginDialogBox(title, options = {}) {
     } = options;
 
     // Create overlay
-    const overlay = document.createElement('div');
-    overlay.style.position = 'fixed';
-    overlay.style.top = '0';
-    overlay.style.left = '0';
-    overlay.style.width = '100%';
-    overlay.style.height = '100%';
-    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-    overlay.style.display = 'flex';
-    overlay.style.justifyContent = 'center';
-    overlay.style.alignItems = 'center';
-    overlay.style.zIndex = '10000';
+    const overlay = createDialogOverlay();
 
     // Create dialog
-    const dialog = document.createElement('div');
-    dialog.style.backgroundColor = '#1e1e1e';
-    dialog.style.border = '1px solid #555';
-    dialog.style.borderRadius = '8px';
-    dialog.style.padding = '20px';
-    dialog.style.minWidth = `${minWidth}px`;
-    dialog.style.maxWidth = `${maxWidth}px`;
-    dialog.style.maxHeight = `${maxHeight}vh`;
-    dialog.style.display = 'flex';
-    dialog.style.flexDirection = 'column';
-    dialog.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
+    const dialog = createDialogContainer({ minWidth, maxWidth, maxHeight });
 
     // Title
-    const titleElement = document.createElement('h3');
-    titleElement.textContent = title;
-    titleElement.style.margin = '0 0 15px 0';
-    titleElement.style.color = '#fff';
-    titleElement.style.fontSize = '18px';
+    const titleElement = createDialogTitle(title);
     dialog.appendChild(titleElement);
 
     // Content container for user controls
-    const content = document.createElement('div');
-    content.style.flex = '1';
-    content.style.overflow = 'auto';
-    content.style.marginBottom = '15px';
+    const content = createDialogContent();
     dialog.appendChild(content);
 
     // Add dialog to overlay
@@ -86,13 +68,6 @@ export function beginDialogBox(title, options = {}) {
     // Add to body
     document.body.appendChild(overlay);
 
-    // Close on overlay click
-    overlay.onclick = (e) => {
-        if (e.target === overlay) {
-            document.body.removeChild(overlay);
-        }
-    };
-
     // Close on Escape key
     const escapeHandler = (e) => {
         if (e.key === 'Escape') {
@@ -100,13 +75,16 @@ export function beginDialogBox(title, options = {}) {
             document.removeEventListener('keydown', escapeHandler);
         }
     };
-    document.addEventListener('keydown', escapeHandler);
+
+    // Setup event handlers
+    const cleanupEvents = setupDialogEvents(overlay, escapeHandler);
 
     return {
         overlay,
         dialog,
         content,
-        escapeHandler
+        escapeHandler,
+        cleanupEvents
     };
 }
 
@@ -123,8 +101,8 @@ export function beginDialogBox(title, options = {}) {
 export function endDialogBox(dialogContext, buttonType, onButtonClick, options = {}) {
     const {
         overlay,
-        dialog,
-        escapeHandler
+        escapeHandler,
+        cleanupEvents
     } = dialogContext;
 
     const {
@@ -133,59 +111,40 @@ export function endDialogBox(dialogContext, buttonType, onButtonClick, options =
     } = options;
 
     // Buttons container
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.justifyContent = 'flex-end';
-    buttonContainer.style.gap = '10px';
+    const buttonContainer = createButtonContainer();
 
-    // Create button helper function
-    const createButton = (text, isPrimary = false) => {
-        const button = document.createElement('button');
-        button.textContent = text;
-        button.style.padding = '8px 20px';
-        button.style.backgroundColor = isPrimary ? '#007acc' : '#555';
-        button.style.color = '#fff';
-        button.style.border = 'none';
-        button.style.borderRadius = '4px';
-        button.style.cursor = 'pointer';
-        button.style.fontSize = '14px';
-
-        // Hover effects
-        button.onmouseover = () => {
-            button.style.backgroundColor = isPrimary ? '#0098ff' : '#666';
-        };
-        button.onmouseout = () => {
-            button.style.backgroundColor = isPrimary ? '#007acc' : '#555';
-        };
-
-        return button;
+    // Cleanup function
+    const cleanup = () => {
+        document.body.removeChild(overlay);
+        if (cleanupEvents) {
+            cleanupEvents();
+        } else {
+            document.removeEventListener('keydown', escapeHandler);
+        }
     };
 
     // Add buttons based on buttonType
     if (buttonType === DialogButtonType.OK_ONLY) {
-        const okButton = createButton(okText, true);
+        const okButton = createDialogButton(okText, true);
         okButton.onclick = () => {
-            document.body.removeChild(overlay);
-            document.removeEventListener('keydown', escapeHandler);
+            cleanup();
             if (onButtonClick) {
                 onButtonClick(DialogResult.OK);
             }
         };
         buttonContainer.appendChild(okButton);
     } else if (buttonType === DialogButtonType.OK_CANCEL) {
-        const cancelButton = createButton(cancelText, false);
+        const cancelButton = createDialogButton(cancelText, false);
         cancelButton.onclick = () => {
-            document.body.removeChild(overlay);
-            document.removeEventListener('keydown', escapeHandler);
+            cleanup();
             if (onButtonClick) {
                 onButtonClick(DialogResult.CANCEL);
             }
         };
 
-        const okButton = createButton(okText, true);
+        const okButton = createDialogButton(okText, true);
         okButton.onclick = () => {
-            document.body.removeChild(overlay);
-            document.removeEventListener('keydown', escapeHandler);
+            cleanup();
             if (onButtonClick) {
                 onButtonClick(DialogResult.OK);
             }
@@ -195,7 +154,7 @@ export function endDialogBox(dialogContext, buttonType, onButtonClick, options =
         buttonContainer.appendChild(cancelButton);
     }
 
-    dialog.appendChild(buttonContainer);
+    dialogContext.dialog.appendChild(buttonContainer);
 }
 
 
