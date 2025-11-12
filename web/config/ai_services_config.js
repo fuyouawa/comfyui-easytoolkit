@@ -117,9 +117,6 @@ app.registerExtension({
                 // Update default service options
                 this.updateDefaultServiceOptions();
 
-                // Find insertion point (before buttons)
-                let insertIndex = this.widgets.length;
-
                 // Find default service selection widget
                 const defaultServiceWidget = this.widgets.find(w => w.name === "default_service");
                 if (defaultServiceWidget) {
@@ -443,11 +440,33 @@ app.registerExtension({
                     }
                 );
 
+                const apiKeyField = createFormField(
+                    'API Key',
+                    'input',
+                    {
+                        placeholder: 'Enter API key',
+                    }
+                );
+
+                const timeoutField = createFormField(
+                    'Timeout (seconds)',
+                    'input',
+                    {
+                        placeholder: 'Enter timeout in seconds',
+                        type: 'number',
+                        value: 300,
+                        min: 1,
+                        max: 3600
+                    }
+                );
+
                 // Add all form elements to container
                 formContainer.appendChild(idField.container);
                 formContainer.appendChild(labelField.container);
                 formContainer.appendChild(urlField.container);
                 formContainer.appendChild(modelField.container);
+                formContainer.appendChild(apiKeyField.container);
+                formContainer.appendChild(timeoutField.container);
 
                 // Add form to dialog content
                 dialogContext.content.appendChild(formContainer);
@@ -459,9 +478,9 @@ app.registerExtension({
                             id: idField.field.value.trim(),
                             label: labelField.field.value.trim(),
                             base_url: urlField.field.value.trim(),
-                            api_key: '',
+                            api_key: apiKeyField.field.value.trim(),
                             model: modelField.field.value.trim(),
-                            timeout: 300
+                            timeout: parseInt(timeoutField.field.value) || 300
                         };
 
                         // Validate input
@@ -539,22 +558,21 @@ app.registerExtension({
                     if (data.success) {
                         showToastSuccess("Service Deleted", `Service "${service.id}" has been deleted successfully.`);
                         console.log("[EasyToolkit] AI Service deleted:", service.id);
-
-                        // Remove service from local data
-                        this.servicesData.splice(serviceIndex, 1);
-
-
-                        // Rebuild widgets with updated data
-                        this.updateServiceWidgets();
-
-                        // Update cached configuration
-                        this.saveCachedConfig();
                     } else {
                         showToastError("Delete Failed", data.error || "Failed to delete service");
                     }
                 } catch (error) {
                     console.error("[EasyToolkit] Failed to delete AI service:", error);
                     showToastError("Delete Failed", error.message || "Failed to delete service");
+                } finally {
+                    // Remove service from local data
+                    this.servicesData.splice(serviceIndex, 1);
+
+                    // Rebuild widgets with updated data
+                    this.updateServiceWidgets();
+
+                    // Update cached configuration
+                    this.saveCachedConfig();
                 }
             };
 

@@ -450,22 +450,21 @@ app.registerExtension({
                     if (data.success) {
                         showToastSuccess("Agent Deleted", `Agent "${agent.id}" has been deleted successfully.`);
                         console.log("[EasyToolkit] AI Agent deleted:", agent.id);
-
-                        // Remove agent from local data
-                        this.agentsData.splice(agentIndex, 1);
-
-
-                        // Rebuild widgets with updated data
-                        this.updateAgentWidgets();
-
-                        // Update cached configuration
-                        this.saveCachedConfig();
                     } else {
                         showToastError("Delete Failed", data.error || "Failed to delete agent");
                     }
                 } catch (error) {
                     console.error("[EasyToolkit] Failed to delete AI agent:", error);
                     showToastError("Delete Failed", error.message || "Failed to delete agent");
+                } finally {
+                    // Remove agent from local data
+                    this.agentsData.splice(agentIndex, 1);
+
+                    // Rebuild widgets with updated data
+                    this.updateAgentWidgets();
+
+                    // Update cached configuration
+                    this.saveCachedConfig();
                 }
             };
 
