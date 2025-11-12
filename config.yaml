@@ -91,3 +91,8 @@ ai_agents:
 default_ai_service: deepseek_chat
 default_ai_agent: video_prompt_translation
 
+# Override Configuration Storage
+# Controls where the config.override.json file is stored
+# Options: input, output, temp, or custom directory path
+storage_directory: input
+

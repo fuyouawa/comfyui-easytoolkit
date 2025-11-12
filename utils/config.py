@@ -28,7 +28,7 @@ class Config:
         """
         base_dir = os.path.dirname(os.path.dirname(__file__))
         config_path = os.path.join(base_dir, 'config.yaml')
-        override_path = os.path.join(base_dir, 'config.override.json')
+        override_path = self._get_override_path()
         
         # Default configuration
         self._config = {
@@ -104,7 +104,7 @@ class Config:
             key: Configuration key in dot notation (e.g., "ai_services.deepseek_chat.api_key")
             value: Value to set
         """
-        override_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.override.json')
+        override_path = self._get_override_path()
 
         # Load existing override config
         override_config = {}
@@ -150,7 +150,7 @@ class Config:
         Args:
             key: Configuration key in dot notation (e.g., "ai_agents.t2v_prompt_expansion")
         """
-        override_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.override.json')
+        override_path = self._get_override_path()
 
         # Load existing override config
         override_config = {}
@@ -258,6 +258,44 @@ class Config:
                 del current_dict[keys[-1]]
                 # Recursively clean parent dictionaries
                 self._clean_empty_dicts(config_dict, keys[:-1])
+
+    def _get_override_path(self):
+        """
+        Get the path for the override configuration file based on the storage directory setting.
+
+        Returns:
+            str: Full path to the override configuration file
+        """
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        storage_setting = self.get('storage_directory', 'input')
+
+        # Handle special directory options
+        if storage_setting == 'input':
+            if folder_paths:
+                override_dir = folder_paths.get_input_directory()
+            else:
+                override_dir = base_dir
+        elif storage_setting == 'output':
+            if folder_paths:
+                override_dir = folder_paths.get_output_directory()
+            else:
+                override_dir = base_dir
+        elif storage_setting == 'temp':
+            if folder_paths:
+                override_dir = folder_paths.get_temp_directory()
+            else:
+                override_dir = base_dir
+        else:
+            print(f"[comfyui-easytoolkit] Warning: Invalid override storage directory setting: {storage_setting}")
+            override_dir = base_dir
+        
+        if folder_paths:
+            override_dir = os.path.join(override_dir, 'comfyui-easytoolkit')
+
+        # Ensure the directory exists
+        os.makedirs(override_dir, exist_ok=True)
+
+        return os.path.join(override_dir, 'config.override.json')
 
 # Global config instance
 _config = Config()
