@@ -29,17 +29,6 @@ app.registerExtension({
                 // Track dynamic widgets
                 this.dynamicWidgets = [];
 
-                // Find the service_count widget and add change listener
-                const serviceCountWidget = this.widgets.find(w => w.name === "service_count");
-                if (serviceCountWidget) {
-                    const originalCallback = serviceCountWidget.callback;
-                    serviceCountWidget.callback = (value) => {
-                        if (originalCallback) {
-                            originalCallback.call(serviceCountWidget, value);
-                        }
-                        this.updateServiceWidgets(value);
-                    };
-                }
 
                 // Try to load cached configuration from field first
                 const configDataWidget = this.widgets.find(w => w.name === "config_data");
@@ -61,13 +50,9 @@ app.registerExtension({
                                     this.defaultService = cachedConfig.defaultService || '';
                                     console.log("[EasyToolkit] Loaded cached AI services configuration:", this.servicesData.length, "services", "default:", this.defaultService);
 
-                                    // Update service count widget
-                                    if (serviceCountWidget) {
-                                        serviceCountWidget.value = this.servicesData.length;
-                                    }
 
                                     // Rebuild widgets with cached data (includes action buttons)
-                                    this.updateServiceWidgets(this.servicesData.length);
+                                    this.updateServiceWidgets();
                                     return;
                                 }
                             } catch (error) {
@@ -99,14 +84,9 @@ app.registerExtension({
                             this.servicesData = data.services || [];
                             this.defaultService = data.default_service || '';
 
-                            // Update service count
-                            const serviceCountWidget = this.widgets.find(w => w.name === "service_count");
-                            if (serviceCountWidget) {
-                                serviceCountWidget.value = this.servicesData.length;
-                            }
 
                             // Rebuild widgets (includes action buttons)
-                            this.updateServiceWidgets(this.servicesData.length);
+                            this.updateServiceWidgets();
 
                             // Update cached configuration
                             this.saveCachedConfig();
@@ -126,36 +106,19 @@ app.registerExtension({
             };
             
             /**
-             * Update service widgets based on count
+             * Update service widgets based on current services data
              */
-            nodeType.prototype.updateServiceWidgets = function (count) {
+            nodeType.prototype.updateServiceWidgets = function () {
                 // Remove all dynamic widgets and action buttons
                 this.removeDynamicWidgets();
                 this.removeActionButtons();
 
-                // Ensure servicesData has enough entries
-                while (this.servicesData.length < count) {
-                    this.servicesData.push({
-                        id: '',
-                        label: '',
-                        base_url: '',
-                        api_key: '',
-                        model: '',
-                        timeout: 300
-                    });
-                }
-
-                // Trim excess services
-                if (this.servicesData.length > count) {
-                    this.servicesData = this.servicesData.slice(0, count);
-                }
 
                 // Update default service options
                 this.updateDefaultServiceOptions();
 
-                // Find insertion point (after service_count, before buttons)
-                const serviceCountIndex = this.widgets.findIndex(w => w.name === "service_count");
-                let insertIndex = serviceCountIndex + 1;
+                // Find insertion point (before buttons)
+                let insertIndex = this.widgets.length;
 
                 // Find default service selection widget
                 const defaultServiceWidget = this.widgets.find(w => w.name === "default_service");
@@ -171,7 +134,7 @@ app.registerExtension({
                 }
 
                 // Create widgets for each service
-                for (let i = 0; i < count; i++) {
+                for (let i = 0; i < this.servicesData.length; i++) {
                     const service = this.servicesData[i];
 
                     // Service ID
@@ -529,14 +492,9 @@ app.registerExtension({
                 // Add the new service to servicesData
                 this.servicesData.push(service);
 
-                // Update service count widget
-                const serviceCountWidget = this.widgets.find(w => w.name === "service_count");
-                if (serviceCountWidget) {
-                    serviceCountWidget.value = this.servicesData.length;
-                }
 
                 // Rebuild widgets with updated data
-                this.updateServiceWidgets(this.servicesData.length);
+                this.updateServiceWidgets();
 
                 // Update cached configuration
                 this.saveCachedConfig();
@@ -585,14 +543,9 @@ app.registerExtension({
                         // Remove service from local data
                         this.servicesData.splice(serviceIndex, 1);
 
-                        // Update service count widget
-                        const serviceCountWidget = this.widgets.find(w => w.name === "service_count");
-                        if (serviceCountWidget) {
-                            serviceCountWidget.value = this.servicesData.length;
-                        }
 
                         // Rebuild widgets with updated data
-                        this.updateServiceWidgets(this.servicesData.length);
+                        this.updateServiceWidgets();
 
                         // Update cached configuration
                         this.saveCachedConfig();

@@ -29,17 +29,6 @@ app.registerExtension({
                 // Track dynamic widgets
                 this.dynamicWidgets = [];
 
-                // Find the agent_count widget and add change listener
-                const agentCountWidget = this.widgets.find(w => w.name === "agent_count");
-                if (agentCountWidget) {
-                    const originalCallback = agentCountWidget.callback;
-                    agentCountWidget.callback = (value) => {
-                        if (originalCallback) {
-                            originalCallback.call(agentCountWidget, value);
-                        }
-                        this.updateAgentWidgets(value);
-                    };
-                }
 
                 // Try to load cached configuration from field first
                 const configDataWidget = this.widgets.find(w => w.name === "config_data");
@@ -61,13 +50,9 @@ app.registerExtension({
                                     this.defaultAgent = cachedConfig.defaultAgent || '';
                                     console.log("[EasyToolkit] Loaded cached AI agents configuration:", this.agentsData.length, "agents", "default:", this.defaultAgent);
 
-                                    // Update agent count widget
-                                    if (agentCountWidget) {
-                                        agentCountWidget.value = this.agentsData.length;
-                                    }
 
                                     // Rebuild widgets with cached data (includes action buttons)
-                                    this.updateAgentWidgets(this.agentsData.length);
+                                    this.updateAgentWidgets();
                                     return;
                                 }
                             } catch (error) {
@@ -99,14 +84,9 @@ app.registerExtension({
                             this.agentsData = data.agents || [];
                             this.defaultAgent = data.default_agent || '';
 
-                            // Update agent count
-                            const agentCountWidget = this.widgets.find(w => w.name === "agent_count");
-                            if (agentCountWidget) {
-                                agentCountWidget.value = this.agentsData.length;
-                            }
 
                             // Rebuild widgets (includes action buttons)
-                            this.updateAgentWidgets(this.agentsData.length);
+                            this.updateAgentWidgets();
 
                             // Update cached configuration
                             this.saveCachedConfig();
@@ -126,33 +106,19 @@ app.registerExtension({
             };
 
             /**
-             * Update agent widgets based on count
+             * Update agent widgets based on current agents data
              */
-            nodeType.prototype.updateAgentWidgets = function (count) {
+            nodeType.prototype.updateAgentWidgets = function () {
                 // Remove all dynamic widgets and action buttons
                 this.removeDynamicWidgets();
                 this.removeActionButtons();
 
-                // Ensure agentsData has enough entries
-                while (this.agentsData.length < count) {
-                    this.agentsData.push({
-                        id: '',
-                        label: '',
-                        summary: ''
-                    });
-                }
-
-                // Trim excess agents
-                if (this.agentsData.length > count) {
-                    this.agentsData = this.agentsData.slice(0, count);
-                }
 
                 // Update default agent options
                 this.updateDefaultAgentOptions();
 
-                // Find insertion point (after agent_count, before buttons)
-                const agentCountIndex = this.widgets.findIndex(w => w.name === "agent_count");
-                let insertIndex = agentCountIndex + 1;
+                // Find insertion point (before buttons)
+                let insertIndex = this.widgets.length;
 
                 // Find default agent selection widget
                 const defaultAgentWidget = this.widgets.find(w => w.name === "default_agent");
@@ -168,7 +134,7 @@ app.registerExtension({
                 }
 
                 // Create widgets for each agent
-                for (let i = 0; i < count; i++) {
+                for (let i = 0; i < this.agentsData.length; i++) {
                     const agent = this.agentsData[i];
 
                     // Agent ID
@@ -402,14 +368,9 @@ app.registerExtension({
                 // Add the new agent to agentsData
                 this.agentsData.push(agent);
 
-                // Update agent count widget
-                const agentCountWidget = this.widgets.find(w => w.name === "agent_count");
-                if (agentCountWidget) {
-                    agentCountWidget.value = this.agentsData.length;
-                }
 
                 // Rebuild widgets with updated data
-                this.updateAgentWidgets(this.agentsData.length);
+                this.updateAgentWidgets();
 
                 // Update cached configuration
                 this.saveCachedConfig();
@@ -493,14 +454,9 @@ app.registerExtension({
                         // Remove agent from local data
                         this.agentsData.splice(agentIndex, 1);
 
-                        // Update agent count widget
-                        const agentCountWidget = this.widgets.find(w => w.name === "agent_count");
-                        if (agentCountWidget) {
-                            agentCountWidget.value = this.agentsData.length;
-                        }
 
                         // Rebuild widgets with updated data
-                        this.updateAgentWidgets(this.agentsData.length);
+                        this.updateAgentWidgets();
 
                         // Update cached configuration
                         this.saveCachedConfig();

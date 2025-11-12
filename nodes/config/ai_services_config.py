@@ -15,7 +15,6 @@ class AIServicesConfig:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "service_count": ("INT", {"default": 2, "min": 0, "max": 20, "step": 1}),
                 "default_service": ("COMBO", {"default": ""}),
                 "config_data": ("STRING", {"default": "{}"}),
             },
@@ -27,7 +26,7 @@ class AIServicesConfig:
     CATEGORY = "EasyToolkit/Manager"
     OUTPUT_NODE = False
 
-    def run(self, service_count, default_service, config_data):
+    def run(self, default_service, config_data):
         pass
 
 
