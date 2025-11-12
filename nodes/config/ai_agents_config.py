@@ -23,7 +23,7 @@ class AIAgentsConfig:
     RETURN_TYPES = ()
     RETURN_NAMES = ()
     FUNCTION = "run"
-    CATEGORY = "EasyToolkit/Manager"
+    CATEGORY = "EasyToolkit/Config"
     OUTPUT_NODE = False
 
     def run(self, default_agent, config_data):
