@@ -7,15 +7,16 @@
 - [安装](#安装)
 - [节点说明](#节点说明)
   - [AI 工具节点](#ai-工具节点)
-  - [算法节点](#算法节点)
+  - [配置管理节点](#配置管理节点)
   - [编码/解码节点](#编码解码节点)
   - [图像处理节点](#图像处理节点)
-  - [管理工具节点](#管理工具节点)
+  - [调试工具节点](#调试工具节点)
+  - [算法节点](#算法节点)
 - [许可证](#许可证)
 
 ## 简介
 
-ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工作流程中的常见操作。该工具包提供了三大类节点：算法计算、编码解码和图像处理，帮助用户更高效地完成各种任务。
+ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工作流程中的常见操作。该工具包提供了六大类节点：配置管理、调试工具、AI 工具、算法计算、编码解码和图像处理，帮助用户更高效地完成各种任务。
 
 ## 功能特性
 
@@ -25,11 +26,13 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 - 多种预设 Agent
 - 灵活的配置系统
 
-✨ **算法工具**
-- 帧数计算器
-- 文件后缀格式化
+⚙️ **配置管理**
+- AI 服务配置管理器（支持添加、编辑、删除 AI 服务）
+- AI Agent 配置管理器（支持自定义 Agent 预设）
+- 动态配置界面，实时更新
+- 配置持久化存储
 
-🔄 **编码/解码**
+🔐 **编码/解码**
 - 图像的 Base64 编码/解码（支持单图像和图像批次）
 - 图像 Tensor 的 Base64 编码/解码（支持单图像和图像批次）
 - 支持视频的 Base64 编码（GIF、WebM、MP4等格式）
@@ -39,6 +42,15 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 🖼️ **图像处理**
 - 图像批次选择器
 - 图像加密/解密（支持单图像和图像批次）（支持反色、XOR加密）
+
+🪲 **调试工具**
+- 对话框节点（支持信息、成功、警告、错误、确认对话框）
+- 通知节点（支持 ComfyUI 和系统通知）
+- 交互式调试，捕获用户响应
+
+🧮 **算法工具**
+- 帧数计算器
+- 文件后缀格式化
 
 ## 安装
 
@@ -87,35 +99,50 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 - 实时提示词传输，可以将一个AIPromptAssistant节点的输出连接到另一个AIPromptAssistant节点的输入，实现链式处理（比如先扩写后翻译）
 - 实时配置更新
 
-### 算法节点
+### 配置管理节点
 
-#### Frame Calculator（帧数计算器）
+#### AI Services Config（AI 服务配置管理器）
 
-计算视频或动画的总帧数。
+管理 AI 服务的配置，支持添加、编辑、删除 AI 服务。
 
-**分类：** `EasyToolkit/Algorithm`
+**分类：** `EasyToolkit/Manager`
 
-**输入：**
-- `duration`（浮点数）：持续时间（秒），默认 5.0
-- `frame_rate`（浮点数）：帧率（FPS），默认 16.0
-- `extra_frames`（整数）：额外添加的帧数，默认 1
+**功能：**
+- 动态配置界面，实时更新
+- 支持添加新的 AI 服务（DeepSeek、OpenAI、Anthropic 等）
+- 编辑现有服务配置（API Key、Base URL、模型等）
+- 删除不需要的服务
+- 设置默认 AI 服务
+- 配置持久化存储
+- 重置配置到默认状态
 
-**输出：**
-- `total_frames`（整数）：计算得出的总帧数
+**配置字段：**
+- `Service ID`：服务唯一标识符
+- `Service Label`：服务显示名称
+- `Base URL`：API 基础地址
+- `API Key`：API 密钥
+- `Model`：默认模型名称
+- `Timeout`：请求超时时间（秒）
 
-**计算公式：** `total_frames = duration × frame_rate + extra_frames`
+#### AI Agents Config（AI Agent 配置管理器）
 
-#### File Suffix Formatter（文件后缀格式化器）
+管理 AI Agent 的配置，支持自定义 Agent 预设。
 
-将文件后缀名转换为标准格式。
+**分类：** `EasyToolkit/Manager`
 
-**分类：** `EasyToolkit/Algorithm`
+**功能：**
+- 动态配置界面，实时更新
+- 支持添加新的 AI Agent
+- 编辑现有 Agent 配置
+- 删除不需要的 Agent
+- 设置默认 AI Agent
+- 配置持久化存储
+- 重置配置到默认状态
 
-**输入：**
-- `suffix`（字符串）：文件后缀名，例如 "png"、"jpg"
-
-**输出：**
-- `format`（字符串）：标准化的格式，例如 "image/png"
+**配置字段：**
+- `Agent ID`：Agent 唯一标识符
+- `Agent Label`：Agent 显示名称
+- `Summary`：Agent 功能描述
 
 ### 编码/解码节点
 
@@ -338,6 +365,78 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 
 **输出：**
 - `images`（图像批次）：处理后的图像批次
+
+### 调试工具节点
+
+#### Dialog Box（对话框节点）
+
+在流程执行期间显示对话框，支持多种类型并捕获用户响应。
+
+**分类：** `EasyToolkit/Debug`
+
+**输入：**
+- `dialog_type`（选择）：对话框类型（info、success、warn、error、confirm）
+- `message`（字符串，多行）：对话框消息内容
+
+**输出：**
+- `message`（字符串）：用户响应消息
+
+**功能：**
+- 支持 5 种对话框类型：信息、成功、警告、错误、确认
+- 确认对话框支持用户交互，返回确认或取消结果
+- 非阻塞式显示，不影响流程执行
+- 捕获用户响应用于后续流程控制
+
+#### Toast Box（通知节点）
+
+在流程执行期间显示通知消息，支持 ComfyUI 和系统通知。
+
+**分类：** `EasyToolkit/Debug`
+
+**输入：**
+- `type`（选择）：通知类型（info、success、warn、error）
+- `mode`（选择）：通知模式（comfyui、system）
+- `message`（字符串，多行）：通知消息内容
+- `duration`（整数）：显示持续时间（毫秒）
+
+**输出：**
+- `message`（字符串）：通知消息
+
+**功能：**
+- 支持 4 种通知类型：信息、成功、警告、错误
+- 支持两种显示模式：ComfyUI 内置通知、系统原生通知
+- 可自定义显示持续时间
+- 非阻塞式显示，不影响流程执行
+
+### 算法节点
+
+#### Frame Calculator（帧数计算器）
+
+计算视频或动画的总帧数。
+
+**分类：** `EasyToolkit/Algorithm`
+
+**输入：**
+- `duration`（浮点数）：持续时间（秒），默认 5.0
+- `frame_rate`（浮点数）：帧率（FPS），默认 16.0
+- `extra_frames`（整数）：额外添加的帧数，默认 1
+
+**输出：**
+- `total_frames`（整数）：计算得出的总帧数
+
+**计算公式：** `total_frames = duration × frame_rate + extra_frames`
+
+#### File Suffix Formatter（文件后缀格式化器）
+
+将文件后缀名转换为标准格式。
+
+**分类：** `EasyToolkit/Algorithm`
+
+**输入：**
+- `suffix`（字符串）：文件后缀名，例如 "png"、"jpg"
+
+**输出：**
+- `format`（字符串）：标准化的格式，例如 "image/png"
 
 ## 许可证
 
