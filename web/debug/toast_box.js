@@ -4,7 +4,9 @@ import {
     showToastInfo,
     showToastSuccess,
     showToastWarning,
-    showToastError
+    showToastError,
+    showSystemNotification,
+    showWindowsNotification
 } from "../box_utils.js";
 
 /**
@@ -25,16 +27,21 @@ app.registerExtension({
                     originalOnExecuted.call(this, output);
                 }
 
-                const toasts = output?.toasts;
-                if (toasts && toasts.length > 0) {
-                    const toast = toasts[0];
-                    // Show toast notification based on node parameters
-                    this.showToastNotification(toast.type, toast.message, toast.duration);
+                const notifications = output?.notifications;
+                if (notifications && notifications.length > 0) {
+                    const notification = notifications[0];
+                    // Show notification based on node parameters
+                    this.showNotification(
+                        notification.type,
+                        notification.message,
+                        notification.duration,
+                        notification.mode
+                    );
                 }
             };
 
-            // Add method to show toast notification
-            nodeType.prototype.showToastNotification = function(type, message, duration) {
+            // Add method to show notification (toast or system)
+            nodeType.prototype.showNotification = function(type, message, duration, mode = "comfyui") {
                 try {
                     // Validate inputs
                     if (!message || message.trim() === "") {
@@ -42,36 +49,74 @@ app.registerExtension({
                         return;
                     }
 
-                    const toastOptions = {
-                        summary: "ToastBox Notification",
-                        detail: message.trim(),
-                        life: Math.max(1000, Math.min(10000, duration)) // Clamp duration between 1-10 seconds
-                    };
+                    const trimmedMessage = message.trim();
+                    const clampedDuration = Math.max(1000, Math.min(10000, duration)); // Clamp duration between 1-10 seconds
 
-                    console.log(`[ToastBox] Showing ${type} notification: ${toastOptions.detail}`);
+                    console.log(`[ToastBox] Showing ${type} notification (${mode}): ${trimmedMessage}`);
 
-                    // Use appropriate toast function based on type
-                    switch (type) {
-                        case "info":
-                            showToastInfo(toastOptions.summary, toastOptions.detail, toastOptions.life);
-                            break;
-                        case "success":
-                            showToastSuccess(toastOptions.summary, toastOptions.detail, toastOptions.life);
-                            break;
-                        case "warn":
-                            showToastWarning(toastOptions.summary, toastOptions.detail, toastOptions.life);
-                            break;
-                        case "error":
-                            showToastError(toastOptions.summary, toastOptions.detail, toastOptions.life);
-                            break;
-                        default:
-                            console.warn(`[ToastBox] Unknown type: ${type}, defaulting to info`);
-                            showToastInfo(toastOptions.summary, toastOptions.detail, toastOptions.life);
+                    // Choose notification method based on mode
+                    if (mode === "system") {
+                        // Use system notifications
+                        this.showSystemNotification(type, trimmedMessage, clampedDuration);
+                    } else {
+                        // Use ComfyUI toast notifications (default)
+                        this.showComfyUIToast(type, trimmedMessage, clampedDuration);
                     }
                 } catch (error) {
                     console.error("[ToastBox] Error showing notification:", error);
+                    // Fallback to error toast
                     showToastError("ToastBox Error", "Failed to display notification", 5000);
                 }
+            };
+
+            // Method to show ComfyUI toast notifications
+            nodeType.prototype.showComfyUIToast = function(type, message, duration) {
+                const toastOptions = {
+                    summary: "ToastBox Notification",
+                    detail: message,
+                    life: duration
+                };
+
+                // Use appropriate toast function based on type
+                switch (type) {
+                    case "info":
+                        showToastInfo(toastOptions.summary, toastOptions.detail, toastOptions.life);
+                        break;
+                    case "success":
+                        showToastSuccess(toastOptions.summary, toastOptions.detail, toastOptions.life);
+                        break;
+                    case "warn":
+                        showToastWarning(toastOptions.summary, toastOptions.detail, toastOptions.life);
+                        break;
+                    case "error":
+                        showToastError(toastOptions.summary, toastOptions.detail, toastOptions.life);
+                        break;
+                    default:
+                        console.warn(`[ToastBox] Unknown type: ${type}, defaulting to info`);
+                        showToastInfo(toastOptions.summary, toastOptions.detail, toastOptions.life);
+                }
+            };
+
+            // Method to show system notifications
+            nodeType.prototype.showSystemNotification = function(type, message, duration) {
+                const titleMap = {
+                    "info": "Info",
+                    "success": "Success",
+                    "warn": "Warning",
+                    "error": "Error"
+                };
+
+                const title = titleMap[type] || titleMap.info;
+
+                // Use Windows-style system notification
+                showWindowsNotification(title, message, type, {
+                    timeout: duration,
+                    requireInteraction: type === "error"
+                }).catch(error => {
+                    console.warn("[ToastBox] System notification failed, falling back to toast:", error);
+                    // Fallback to ComfyUI toast
+                    this.showComfyUIToast(type, message, duration);
+                });
             };
         }
     }

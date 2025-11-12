@@ -16,6 +16,9 @@ class ToastBox:
                 "type": (["info", "success", "warn", "error"], {
                     "default": "info"
                 }),
+                "mode": (["comfyui", "system"], {
+                    "default": "comfyui"
+                }),
                 "message": ("STRING", {
                     "default": "Hello from ToastBox!",
                     "multiline": True
@@ -35,7 +38,7 @@ class ToastBox:
     CATEGORY = "EasyToolkit/Debug"
     OUTPUT_NODE = True
 
-    def run(self, type, message, duration=3000):
+    def run(self, type, message, duration=3000, mode="comfyui"):
         """
         Display a toast notification and pass through any input data.
         """
@@ -45,10 +48,11 @@ class ToastBox:
         return {
             "result": (message,),
             "ui": {
-                "toasts": [{
-                    "type": type, 
-                    "message": message, 
-                    "duration": duration
+                "notifications": [{
+                    "type": type,
+                    "message": message,
+                    "duration": duration,
+                    "mode": mode
                 }]
             }
         }

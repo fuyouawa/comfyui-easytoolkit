@@ -354,6 +354,278 @@ export function showToastWarning(summary, detail, life = 4000) {
     });
 }
 
+/**
+ * Windows System Notification Functions
+ * Provides system-level notifications using Web Notifications API
+ */
+
+/**
+ * Check if system notifications are supported and permission is granted
+ * @returns {Promise<boolean>} - Promise that resolves to true if notifications are available
+ */
+export async function checkNotificationSupport() {
+    if (!('Notification' in window)) {
+        console.warn('This browser does not support system notifications');
+        return false;
+    }
+
+    if (Notification.permission === 'granted') {
+        return true;
+    }
+
+    if (Notification.permission === 'denied') {
+        console.warn('Notification permission has been denied');
+        return false;
+    }
+
+    // Request permission
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+}
+
+/**
+ * Show a system notification
+ * @param {string} title - Notification title
+ * @param {Object} [options] - Notification options
+ * @param {string} [options.body] - Notification body text
+ * @param {string} [options.icon] - URL of notification icon
+ * @param {string} [options.image] - URL of notification image
+ * @param {string} [options.tag] - Notification tag for grouping
+ * @param {boolean} [options.requireInteraction=false] - Whether notification requires user interaction
+ * @param {number} [options.timeout=5000] - Auto-close timeout in milliseconds (0 for no auto-close)
+ * @param {Array} [options.actions] - Array of action objects
+ * @returns {Promise<Notification|null>} - Promise that resolves to Notification object or null if failed
+ */
+export async function showSystemNotification(title, options = {}) {
+    const {
+        body = '',
+        icon = '',
+        image = '',
+        tag = '',
+        requireInteraction = false,
+        timeout = 5000,
+        actions = []
+    } = options;
+
+    const hasSupport = await checkNotificationSupport();
+    if (!hasSupport) {
+        console.warn('System notifications not available, falling back to toast');
+        showToastInfo(title, body);
+        return null;
+    }
+
+    const notificationOptions = {
+        body,
+        icon,
+        image,
+        tag,
+        requireInteraction,
+        actions
+    };
+
+    const notification = new Notification(title, notificationOptions);
+
+    // Auto-close if timeout is specified
+    if (timeout > 0) {
+        setTimeout(() => {
+            notification.close();
+        }, timeout);
+    }
+
+    return notification;
+}
+
+/**
+ * Show a system notification for ComfyUI workflow completion
+ * @param {string} workflowName - Name of the completed workflow
+ * @param {string} [message='Workflow completed successfully'] - Completion message
+ * @param {Object} [options] - Additional notification options
+ */
+export async function showWorkflowCompleteNotification(workflowName, message = 'Workflow completed successfully', options = {}) {
+    return showSystemNotification(
+        `✅ ${workflowName}`,
+        {
+            body: message,
+            icon: '/favicon.ico',
+            tag: 'workflow-complete',
+            requireInteraction: false,
+            timeout: 10000,
+            ...options
+        }
+    );
+}
+
+/**
+ * Show a system notification for ComfyUI workflow error
+ * @param {string} workflowName - Name of the workflow that failed
+ * @param {string} [errorMessage='Workflow execution failed'] - Error message
+ * @param {Object} [options] - Additional notification options
+ */
+export async function showWorkflowErrorNotification(workflowName, errorMessage = 'Workflow execution failed', options = {}) {
+    return showSystemNotification(
+        `❌ ${workflowName}`,
+        {
+            body: errorMessage,
+            icon: '/favicon.ico',
+            tag: 'workflow-error',
+            requireInteraction: true,
+            timeout: 0, // Don't auto-close error notifications
+            ...options
+        }
+    );
+}
+
+/**
+ * Show a system notification for ComfyUI workflow progress
+ * @param {string} workflowName - Name of the workflow
+ * @param {string} progressMessage - Progress update message
+ * @param {number} [progressPercent] - Progress percentage (0-100)
+ * @param {Object} [options] - Additional notification options
+ */
+export async function showWorkflowProgressNotification(workflowName, progressMessage, progressPercent, options = {}) {
+    const body = progressPercent !== undefined
+        ? `${progressMessage} (${progressPercent}%)`
+        : progressMessage;
+
+    return showSystemNotification(
+        `⏳ ${workflowName}`,
+        {
+            body,
+            icon: '/favicon.ico',
+            tag: 'workflow-progress',
+            requireInteraction: false,
+            timeout: 5000,
+            ...options
+        }
+    );
+}
+
+/**
+ * Show a system notification with custom actions
+ * @param {string} title - Notification title
+ * @param {string} body - Notification body
+ * @param {Array} actions - Array of action objects
+ * @param {Function} [onAction] - Callback when action is clicked
+ * @param {Object} [options] - Additional notification options
+ */
+export async function showActionableNotification(title, body, actions = [], onAction = null, options = {}) {
+    const notification = await showSystemNotification(title, {
+        body,
+        actions,
+        requireInteraction: true,
+        timeout: 0, // Don't auto-close actionable notifications
+        ...options
+    });
+
+    if (notification && onAction) {
+        notification.onclick = () => {
+            if (onAction) onAction('click');
+        };
+
+        notification.onclose = () => {
+            if (onAction) onAction('close');
+        };
+
+        // Handle action buttons
+        notification.addEventListener('notificationclick', (event) => {
+            if (onAction) onAction(event.action);
+        });
+    }
+
+    return notification;
+}
+
+/**
+ * Close all notifications with a specific tag
+ * @param {string} tag - Notification tag to close
+ */
+export function closeNotificationsByTag(tag) {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        // If using service workers, we can close notifications by tag
+        navigator.serviceWorker.controller.postMessage({
+            type: 'CLOSE_NOTIFICATIONS',
+            tag
+        });
+    }
+
+    // For regular notifications, we can't close by tag directly
+    // This would need to be handled by keeping track of notification instances
+    console.log(`Cannot close notifications by tag in this environment. Tag: ${tag}`);
+}
+
+/**
+ * Windows-style notification utilities
+ * Provides Windows-specific notification patterns
+ */
+
+/**
+ * Show a Windows-style system notification (balloon tip style)
+ * @param {string} title - Notification title
+ * @param {string} message - Notification message
+ * @param {string} [type='info'] - Notification type: 'info', 'warning', 'error', 'success'
+ * @param {Object} [options] - Additional options
+ */
+export async function showWindowsNotification(title, message, type = 'info', options = {}) {
+    const icons = {
+        info: 'ℹ️',
+        warn: '⚠️',
+        error: '❌',
+        success: '✅'
+    };
+
+    const icon = icons[type] || icons.info;
+
+    return showSystemNotification(
+        `${icon} ${title}`,
+        {
+            body: message,
+            requireInteraction: type === 'error',
+            timeout: type === 'error' ? 0 : 5000,
+            ...options
+        }
+    );
+}
+
+/**
+ * Request notification permission with user-friendly dialog
+ * @returns {Promise<boolean>} - Promise that resolves to true if permission granted
+ */
+export async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        showError('System notifications are not supported in this browser');
+        return false;
+    }
+
+    if (Notification.permission === 'granted') {
+        return true;
+    }
+
+    if (Notification.permission === 'denied') {
+        showError('Notification permission has been denied. Please enable notifications in your browser settings.');
+        return false;
+    }
+
+    // Show a friendly permission request dialog
+    const granted = await showConfirmDialog(
+        'Would you like to receive system notifications for workflow updates?',
+        'Allow Notifications',
+        'Not Now'
+    );
+
+    if (granted) {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            showSuccess('Notification permission granted! You will now receive system notifications.');
+            return true;
+        } else {
+            showWarning('Notification permission was not granted. You can enable it later in browser settings.');
+            return false;
+        }
+    }
+
+    return false;
+}
+
 // Default export with all functions
 export default {
     DialogButtonType,
@@ -370,6 +642,16 @@ export default {
     showToastInfo,
     showToastSuccess,
     showToastError,
-    showToastWarning
+    showToastWarning,
+    // Windows System Notification Functions
+    checkNotificationSupport,
+    showSystemNotification,
+    showWorkflowCompleteNotification,
+    showWorkflowErrorNotification,
+    showWorkflowProgressNotification,
+    showActionableNotification,
+    closeNotificationsByTag,
+    showWindowsNotification,
+    requestNotificationPermission
 };
 
