@@ -88,6 +88,6 @@ ai_agents:
       Return ONLY the translated prompt without any explanations or meta-text.
 
 # Default Settings
-default_ai_service: deepseek
-default_ai_agent: video_prompt_expansion
+default_ai_service: deepseek_chat
+default_ai_agent: video_prompt_translation
 
