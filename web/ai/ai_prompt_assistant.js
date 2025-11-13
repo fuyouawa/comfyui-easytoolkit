@@ -142,18 +142,21 @@ app.registerExtension({
                         const newLabel = this.serviceNameToLabel[this.previousServiceName];
                         if (newLabel) {
                             serviceWidget.value = newLabel;
+                            app.graph.setDirtyCanvas(true, false);
                             this.previousServiceName = null; // Clear after use
                         } else {
                             // Fallback to default if the stored name no longer exists
                             const defaultName = this.aiConfig.default_service;
                             const defaultLabel = this.serviceNameToLabel[defaultName] || defaultName;
                             serviceWidget.value = defaultLabel;
+                            app.graph.setDirtyCanvas(true, false);
                         }
                     } else if (!serviceWidget.value) {
                         // Set default value (convert name to label for display)
                         const defaultName = this.aiConfig.default_service;
                         const defaultLabel = this.serviceNameToLabel[defaultName] || defaultName;
                         serviceWidget.value = defaultLabel;
+                        app.graph.setDirtyCanvas(true, false);
                     }
                 }
             };
@@ -182,18 +185,21 @@ app.registerExtension({
                         const newLabel = this.agentNameToLabel[this.previousAgentName];
                         if (newLabel) {
                             agentWidget.value = newLabel;
+                            app.graph.setDirtyCanvas(true, false);
                             this.previousAgentName = null; // Clear after use
                         } else {
                             // Fallback to default if the stored name no longer exists
                             const defaultName = this.aiConfig.default_agent;
                             const defaultLabel = this.agentNameToLabel[defaultName] || defaultName;
                             agentWidget.value = defaultLabel;
+                            app.graph.setDirtyCanvas(true, false);
                         }
                     } else if (!agentWidget.value) {
                         // Set default value (convert name to label for display)
                         const defaultName = this.aiConfig.default_agent;
                         const defaultLabel = this.agentNameToLabel[defaultName] || defaultName;
                         agentWidget.value = defaultLabel;
+                        app.graph.setDirtyCanvas(true, false);
                     }
                 }
             };
@@ -282,9 +288,12 @@ app.registerExtension({
                     
                     const spinner = spinnerFrames[frameIndex];
                     cache.processedPrompt.value = `${spinner} Processing with AI... (${timeStr})`;
-                    
+
+                    // Note: setDirtyCanvas called every 100ms during animation - consider performance implications
+                    app.graph.setDirtyCanvas(true, false);
+
                     frameIndex = (frameIndex + 1) % spinnerFrames.length;
-                    
+
                     // Force UI update
                     if (this.onResize) {
                         this.onResize(this.size);
@@ -325,6 +334,7 @@ app.registerExtension({
                 const cache = this.widgetCache;
                 if (cache.processedPrompt) {
                     cache.processedPrompt.value = "⏹ Processing stopped by user";
+                    app.graph.setDirtyCanvas(true, false);
                 }
                 
                 console.log("[EasyToolkit] AI processing stopped by user");
@@ -435,7 +445,8 @@ app.registerExtension({
                 // Update the current node's original_prompt if value changed
                 if (sourceValue && cache.originalPrompt.value !== sourceValue) {
                     cache.originalPrompt.value = sourceValue;
-                    
+                    app.graph.setDirtyCanvas(true, false);
+
                     // Force UI update
                     if (this.onResize) {
                         this.onResize(this.size);
@@ -509,9 +520,10 @@ app.registerExtension({
                         // Update processed prompt widget
                         if (cache.processedPrompt) {
                             cache.processedPrompt.value = data.processed_prompt;
+                            app.graph.setDirtyCanvas(true, false);
                         }
                         console.log(`[EasyToolkit] AI processing completed in ${processingTime}s`);
-                        
+
                         // Trigger node update
                         if (this.onResize) {
                             this.onResize(this.size);
@@ -520,6 +532,7 @@ app.registerExtension({
                         const errorMsg = data.error || "Unknown error";
                         if (cache.processedPrompt) {
                             cache.processedPrompt.value = `❌ Error: ${errorMsg}`;
+                            app.graph.setDirtyCanvas(true, false);
                         }
                         showError("AI Processing Failed", new Error(errorMsg));
                     }
@@ -536,6 +549,7 @@ app.registerExtension({
                     const errorMsg = error.message || "Network error";
                     if (cache.processedPrompt) {
                         cache.processedPrompt.value = `❌ Error: ${errorMsg}`;
+                        app.graph.setDirtyCanvas(true, false);
                     }
                     showError("AI processing error", error);
                 } finally {
