@@ -10,3 +10,4 @@ from .video_base64_encoder import *
 from .base64_noise_encoder import *
 from .base64_noise_decoder import *
 from .base64_decoder import *
+from .image_base64_previewer import *
