@@ -19,7 +19,7 @@ class ImageBase64Decoder:
         return {
             "required": {
                 "base64": ("STRING", {
-                    "multiline": True
+                    "default": ""
                 }),
             },
         }

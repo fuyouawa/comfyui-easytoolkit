@@ -18,7 +18,9 @@ class ImageBatchTensorBase64Decoder:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "base64_batch": ("STRING", {"multiline": True}),
+                "base64_batch": ("STRING", {
+                    "default": ""
+                }),
             },
         }
 

@@ -21,7 +21,7 @@ class Base64Decoder:
         return {
             "required": {
                 "base64": ("STRING", {
-                    "multiline": True
+                    "default": ""
                 }),
                 "filename": ("STRING", {
                     "default": "%date:yyyy-MM-dd%_%date:hhmmss%"

@@ -18,7 +18,9 @@ class ImageTensorBase64Decoder:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "base64": ("STRING", {"multiline": False}),
+                "base64": ("STRING", {
+                    "default": ""
+                }),
             },
         }
 

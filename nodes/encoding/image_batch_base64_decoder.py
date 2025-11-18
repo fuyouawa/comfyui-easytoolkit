@@ -19,7 +19,7 @@ class ImageBatchBase64Decoder:
         return {
             "required": {
                 "base64_batch": ("STRING",{
-                    "multiline": True
+                    "default": ""
                 }),
             },
         }

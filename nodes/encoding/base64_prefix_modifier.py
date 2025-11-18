@@ -18,7 +18,7 @@ class Base64PrefixModifier:
         return {
             "required": {
                 "base64": ("STRING", {
-                    "multiline": True
+                    "default": ""
                 }),
                 "format": (all_resource_formats, {
                     "default": all_resource_formats[0]

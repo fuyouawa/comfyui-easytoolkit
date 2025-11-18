@@ -21,7 +21,7 @@ class Base64NoiseEncoder:
         return {
             "required": {
                 "base64": ("STRING", {
-                    "multiline": True
+                    "default": ""
                 }),
                 "compresslevel": ("INT", {
                     "default": "-1",
