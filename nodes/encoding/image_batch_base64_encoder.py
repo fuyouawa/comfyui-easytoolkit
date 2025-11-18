@@ -27,7 +27,7 @@ class ImageBatchBase64Encoder:
         }
 
     RETURN_TYPES = ("STRING", "INT", "STRING",)
-    RETURN_NAMES = ("base64_list", "count", "suffix",)
+    RETURN_NAMES = ("base64_batch", "count", "suffix",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True

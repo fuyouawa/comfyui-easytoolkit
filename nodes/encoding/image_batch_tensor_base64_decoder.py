@@ -18,7 +18,7 @@ class ImageBatchTensorBase64Decoder:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "base64_list": ("STRING", {"multiline": True}),
+                "base64_batch": ("STRING", {"multiline": True}),
             },
         }
 
@@ -28,11 +28,11 @@ class ImageBatchTensorBase64Decoder:
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, base64_list):
+    def run(self, base64_batch):
         """
         Decode base64 strings to image tensor batch.
         """
-        base64_array = [line.strip() for line in base64_list.split("\n") if line.strip()]
+        base64_array = [line.strip() for line in base64_batch.split("\n") if line.strip()]
         bytes_list = [b64decode(b64_str) for b64_str in base64_array]
         images = bytes_list_to_tensor_batch(bytes_list)
         count = images.shape[0] if images.numel() > 0 else 0

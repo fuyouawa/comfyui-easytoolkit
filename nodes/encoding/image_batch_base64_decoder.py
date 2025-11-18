@@ -18,7 +18,7 @@ class ImageBatchBase64Decoder:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "base64_list": ("STRING",{
+                "base64_batch": ("STRING",{
                     "multiline": True
                 }),
             },
@@ -30,11 +30,11 @@ class ImageBatchBase64Decoder:
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, base64_list: str) -> dict:
+    def run(self, base64_batch: str) -> dict:
         """
         Decode base64 strings to image batch.
         """
-        base64_strings = [s.strip() for s in base64_list.strip().split("\n") if s.strip()]
+        base64_strings = [s.strip() for s in base64_batch.strip().split("\n") if s.strip()]
 
         if not base64_strings:
             raise ValueError("No valid base64 strings found in input")

@@ -1,7 +1,7 @@
 from ... import register_node
 from ...utils.format import static_image_formats
 
-@register_node(emoji="🖼️")
+@register_node(emoji="🔐")
 class ImageBase64Previewer:
     """
     A ComfyUI node that previews base64 encoded images in the frontend.

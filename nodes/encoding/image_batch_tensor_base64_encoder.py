@@ -23,7 +23,7 @@ class ImageBatchTensorBase64Encoder:
         }
 
     RETURN_TYPES = ("STRING", "INT",)
-    RETURN_NAMES = ("base64_list", "count",)
+    RETURN_NAMES = ("base64_batch", "count",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
