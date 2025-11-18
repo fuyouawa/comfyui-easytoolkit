@@ -18,7 +18,7 @@ class ImageBatchTensorBase64Encoder:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "images": ("IMAGE",),
+                "image_batch": ("IMAGE",),
             },
         }
 
@@ -28,11 +28,11 @@ class ImageBatchTensorBase64Encoder:
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, images):
+    def run(self, image_batch):
         """
         Encode image tensor batch to base64.
         """
-        bytes_list = tensor_batch_to_bytes_list(images)
+        bytes_list = tensor_batch_to_bytes_list(image_batch)
         base64_list = [b64encode(tensor_bytes) for tensor_bytes in bytes_list]
         base64_text = "\n".join(base64_list)
         count = len(base64_list)

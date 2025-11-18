@@ -25,7 +25,7 @@ class ImageBatchTensorBase64Decoder:
         }
 
     RETURN_TYPES = ("IMAGE", "INT",)
-    RETURN_NAMES = ("images", "count",)
+    RETURN_NAMES = ("image_batch", "count",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
@@ -36,8 +36,8 @@ class ImageBatchTensorBase64Decoder:
         """
         base64_array = [line.strip() for line in base64_batch.split("\n") if line.strip()]
         bytes_list = [b64decode(b64_str) for b64_str in base64_array]
-        images = bytes_list_to_tensor_batch(bytes_list)
-        count = images.shape[0] if images.numel() > 0 else 0
+        image_batch = bytes_list_to_tensor_batch(bytes_list)
+        count = image_batch.shape[0] if image_batch.numel() > 0 else 0
 
-        return {"result": (images, count,)}
+        return {"result": (image_batch, count,)}
 
