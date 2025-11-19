@@ -21,7 +21,7 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 ## 功能特性
 
 🤖 **AI 工具**
-- AI 提示词助手（支持 DeepSeek、OpenAI、Anthropic）
+- AI 提示词助手（支持 DeepSeek、OpenAI、Anthropic等）
 - 提示词扩写、翻译、优化
 - 多种预设 Agent
 - 灵活的配置系统
@@ -289,10 +289,32 @@ ComfyUI EasyToolkit 是一个功能丰富的 ComfyUI 扩展包，旨在简化工
 **输出：**
 - `base64`（字符串）：带有正确前缀的 Base64 字符串
 
-**功能：**
-- 自动移除现有的数据 URL 前缀
-- 根据指定格式添加正确的 `data:format;base64,` 前缀
-- 支持所有常见资源格式
+#### Image Base64 Previewer（Base64 图像预览器）
+
+在前端预览 Base64 编码的图像数据。
+
+**分类：** `EasyToolkit/Encoding`
+
+**输入：**
+- `base64`（字符串）：Base64 编码的图像数据
+- `format`（选择）：图像格式（PNG、JPEG、WebP、BMP、TIFF）
+
+**输出：**
+- `base64`（字符串）：Base64 编码的图像数据（原样输出）
+
+#### Image Batch Base64 Previewer（批量 Base64 图像预览器）
+
+在前端预览批量 Base64 编码的图像数据，支持动画播放。
+
+**分类：** `EasyToolkit/Encoding`
+
+**输入：**
+- `base64_batch`（字符串）：换行符分隔的 Base64 字符串列表
+- `format`（选择）：图像格式（PNG、JPEG、WebP、BMP、TIFF）
+- `fps`（浮点数）：帧率（FPS），用于动画播放，范围 1.0-120.0
+
+**输出：**
+- `base64_batch`（字符串）：Base64 编码的图像数据列表（原样输出）
 
 #### Video Base64 Encoder（视频 Base64 编码器）
 
