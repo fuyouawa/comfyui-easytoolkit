@@ -15,3 +15,4 @@ from .encoding import *
 from .config import *
 from .ai import *
 from .debug import *
+from .formatting import *

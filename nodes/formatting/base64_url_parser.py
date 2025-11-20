@@ -2,7 +2,7 @@ from ... import register_node
 from ...utils.format import all_resource_formats, data_url_prefixes
 
 
-@register_node(emoji="🔐")
+@register_node(emoji="🔧")
 class Base64UrlParser:
     """
     Base64 prefix parser node.
@@ -26,7 +26,7 @@ class Base64UrlParser:
     RETURN_TYPES = ("STRING", all_resource_formats, "STRING")
     RETURN_NAMES = ("base64_url", "format", "base64")
     FUNCTION = "run"
-    CATEGORY = "EasyToolkit/Encoding"
+    CATEGORY = "EasyToolkit/Formatting"
 
     def run(self, base64_url):
         """

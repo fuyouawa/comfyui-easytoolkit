@@ -1,7 +1,7 @@
 from ... import register_node
 from ...utils.format import file_suffix_to_mime_type, all_resource_formats
 
-@register_node(emoji="🧮")
+@register_node(emoji="🔧")
 class FileSuffixFormatter:
     """
     A ComfyUI node that converts file suffixes to MIME types.
@@ -23,7 +23,7 @@ class FileSuffixFormatter:
     RETURN_TYPES = (all_resource_formats,)
     RETURN_NAMES = ("format",)
     FUNCTION = "run"
-    CATEGORY = "EasyToolkit/Algorithm"
+    CATEGORY = "EasyToolkit/Formatting"
 
     def run(self, suffix):
         """
