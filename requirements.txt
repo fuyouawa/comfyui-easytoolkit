@@ -1,6 +1,5 @@
 numpy
 imageio-ffmpeg
-pyyaml
+# pyyaml
 Pillow
 opencv-python
-aiohttp

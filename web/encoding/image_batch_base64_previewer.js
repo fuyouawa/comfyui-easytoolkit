@@ -1,8 +1,5 @@
 import { app } from "../../../scripts/app.js";
 import {
-    showError
-} from "../box_utils.js";
-import {
     calculateAvailableSpace,
     drawImagePreview
 } from "../preview_utils.js";

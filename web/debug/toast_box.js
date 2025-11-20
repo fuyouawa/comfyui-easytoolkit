@@ -57,7 +57,7 @@ app.registerExtension({
                     // Choose notification method based on mode
                     if (mode === "system") {
                         // Use system notifications
-                        this.showSystemNotification(type, trimmedMessage, clampedDuration);
+                        // this.showSystemNotification(type, trimmedMessage, clampedDuration);
                     } else {
                         // Use ComfyUI toast notifications (default)
                         this.showComfyUIToast(type, trimmedMessage, clampedDuration);
@@ -97,27 +97,27 @@ app.registerExtension({
                 }
             };
 
-            // Method to show system notifications
-            nodeType.prototype.showSystemNotification = function(type, message, duration) {
-                const titleMap = {
-                    "info": "Info",
-                    "success": "Success",
-                    "warn": "Warning",
-                    "error": "Error"
-                };
+            // // Method to show system notifications
+            // nodeType.prototype.showSystemNotification = function(type, message, duration) {
+            //     const titleMap = {
+            //         "info": "Info",
+            //         "success": "Success",
+            //         "warn": "Warning",
+            //         "error": "Error"
+            //     };
 
-                const title = titleMap[type] || titleMap.info;
+            //     const title = titleMap[type] || titleMap.info;
 
-                // Use Windows-style system notification
-                showWindowsNotification(title, message, type, {
-                    timeout: duration,
-                    requireInteraction: type === "error"
-                }).catch(error => {
-                    console.warn("[ToastBox] System notification failed, falling back to toast:", error);
-                    // Fallback to ComfyUI toast
-                    this.showComfyUIToast(type, message, duration);
-                });
-            };
+            //     // Use Windows-style system notification
+            //     showWindowsNotification(title, message, type, {
+            //         timeout: duration,
+            //         requireInteraction: type === "error"
+            //     }).catch(error => {
+            //         console.warn("[ToastBox] System notification failed, falling back to toast:", error);
+            //         // Fallback to ComfyUI toast
+            //         this.showComfyUIToast(type, message, duration);
+            //     });
+            // };
         }
     }
 });

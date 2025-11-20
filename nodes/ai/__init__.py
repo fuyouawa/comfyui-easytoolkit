@@ -1,2 +1,2 @@
-from .ai_prompt_assistant import *
+# from .ai_prompt_assistant import *
 
