@@ -1,5 +1,5 @@
 numpy
-imageio-ffmpeg
+# imageio-ffmpeg
 # pyyaml
 Pillow
-opencv-python
+# opencv-python
