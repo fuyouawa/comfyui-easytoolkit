@@ -3,7 +3,7 @@ from ...utils.format import all_resource_formats, data_url_prefixes
 
 
 @register_node(emoji="🔐")
-class Base64PrefixModifier:
+class Base64UrlFormatter:
     """
     Base64 prefix modifier node.
 
@@ -27,7 +27,7 @@ class Base64PrefixModifier:
         }
 
     RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("base64",)
+    RETURN_NAMES = ("base64_url",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Encoding"
 
