@@ -1,15 +1,14 @@
 from ... import register_node
 from ...utils.image import image_to_bytes
-from ...utils.encoding import b64encode
 from ...utils.format import static_image_formats
 
 
-@register_node(emoji="🔐")
-class ImageBase64Encoder:
+@register_node(emoji="📦")
+class ImageSerializer:
     """
-    Base64 image encoder node.
+    Image serializer node.
 
-    Encodes ComfyUI image tensor to base64 string.
+    Serializes ComfyUI image tensor to bytes data.
     """
 
     def __init__(self):
@@ -26,17 +25,16 @@ class ImageBase64Encoder:
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING",)
-    RETURN_NAMES = ("base64", "suffix",)
+    RETURN_TYPES = ("BYTES", "STRING",)
+    RETURN_NAMES = ("data", "suffix",)
     FUNCTION = "run"
-    CATEGORY = "EasyToolkit/Encoding"
+    CATEGORY = "EasyToolkit/Serialization"
     OUTPUT_NODE = True
 
     def run(self, image, format: str = "image/png") -> dict:
         """
-        Encode image to base64.
+        Serialize image to bytes data.
         """
         image_bytes = image_to_bytes(image, format)
-        b64 = b64encode(image_bytes)
         suffix = format.split("/")[-1]
-        return {"result": (b64, suffix,)}
+        return {"result": (image_bytes, suffix,)}

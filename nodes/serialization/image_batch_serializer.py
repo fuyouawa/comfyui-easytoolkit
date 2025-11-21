@@ -1,15 +1,15 @@
 from ... import register_node
 from ...utils.image import image_batch_to_bytes_list
-from ...utils.encoding import b64encode
 from ...utils.format import static_image_formats, mime_type_to_file_suffix
+from ...utils.serialization import merge_bytes_with_headers
 
 
-@register_node(emoji="🔐")
-class ImageBatchBase64Encoder:
+@register_node(emoji="📦")
+class ImageBatchSerializer:
     """
-    Base64 image batch encoder node.
+    Image batch serializer node.
 
-    Encodes batch of ComfyUI image tensors to base64 strings.
+    Serializes batch of ComfyUI image tensors to a single bytes object with size headers.
     """
 
     def __init__(self):
@@ -26,21 +26,23 @@ class ImageBatchBase64Encoder:
             },
         }
 
-    RETURN_TYPES = ("STRING", "INT", "STRING",)
-    RETURN_NAMES = ("base64_batch", "count", "suffix",)
+    RETURN_TYPES = ("BYTES", "INT", "STRING",)
+    RETURN_NAMES = ("data", "count", "suffix",)
     FUNCTION = "run"
-    CATEGORY = "EasyToolkit/Encoding"
+    CATEGORY = "EasyToolkit/Serialization"
     OUTPUT_NODE = True
 
     def run(self, image_batch, format="image/png"):
         """
-        Encode image batch to base64 strings.
+        Serialize image batch to a single bytes object with size headers.
         """
         bytes_list = image_batch_to_bytes_list(image_batch, format)
-        base64_list = [b64encode(image_bytes) for image_bytes in bytes_list]
-        base64_text = "\n".join(base64_list)
-        count = len(base64_list)
+        count = len(bytes_list)
         suffix = mime_type_to_file_suffix(format)
 
-        return {"result": (base64_text, count, suffix,)}
+        # Merge bytes_list into a single bytes object with size headers
+        data = merge_bytes_with_headers(bytes_list)
+
+        return {"result": (data, count, suffix,)}
+
 

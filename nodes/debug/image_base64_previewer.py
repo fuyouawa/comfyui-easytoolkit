@@ -1,7 +1,7 @@
 from ... import register_node
 from ...utils.format import static_image_formats
 
-@register_node(emoji="🔐")
+@register_node(emoji="🪲")
 class ImageBase64Previewer:
     """
     A ComfyUI node that previews base64 encoded images in the frontend.
@@ -26,7 +26,7 @@ class ImageBase64Previewer:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("base64",)
     FUNCTION = "run"
-    CATEGORY = "EasyToolkit/Encoding"
+    CATEGORY = "EasyToolkit/Debug"
     OUTPUT_NODE = True
 
     def run(self, base64, format="image/png"):

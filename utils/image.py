@@ -207,7 +207,7 @@ def bytes_list_to_tensor_batch(bytes_list):
         return torch.empty(0)
 
 
-def bytes_to_noise_image(data_bytes: bytes, width: int = None, height: int = None, use_alpha: bool = True):
+def bytes_to_data_image(data_bytes: bytes, width: int = None, height: int = None, use_alpha: bool = True):
     """
     Encode bytes into a noise-like image.
 
@@ -275,7 +275,7 @@ def bytes_to_noise_image(data_bytes: bytes, width: int = None, height: int = Non
 
     return image_tensor
 
-def noise_image_to_bytes(image):
+def data_image_to_bytes(image):
     """
     Decode bytes from a noise-like image.
 

@@ -1,7 +1,7 @@
 from ... import register_node
 from ...utils.format import static_image_formats
 
-@register_node(emoji="🔐")
+@register_node(emoji="🪲")
 class ImageBatchBase64Previewer:
     """
     A ComfyUI node that previews batch of base64 encoded images in the frontend.
@@ -32,7 +32,7 @@ class ImageBatchBase64Previewer:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("base64_batch",)
     FUNCTION = "run"
-    CATEGORY = "EasyToolkit/Encoding"
+    CATEGORY = "EasyToolkit/Debug"
     OUTPUT_NODE = True
 
     def run(self, base64_batch, format="image/png", fps=24.0):
