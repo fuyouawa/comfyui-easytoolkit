@@ -1,5 +1,4 @@
 import re
-# from server import PromptServer
 
 # A dictionary that contains all nodes you want to export with their names
 # NOTE: names should be globally unique
@@ -45,27 +44,29 @@ def register_node(c=None, *, emoji=None):
     else:
         return decorator(c)
 
-# def register_route(path, method="POST"):
-#     """
-#     Decorator to register API routes more conveniently.
-#     """
-#     def decorator(func):
-#         routes = PromptServer.instance.routes
-#         method_lower = method.lower()
+from server import PromptServer
+
+def register_route(path, method="POST"):
+    """
+    Decorator to register API routes more conveniently.
+    """
+    def decorator(func):
+        routes = PromptServer.instance.routes
+        method_lower = method.lower()
         
-#         if method_lower == "get":
-#             routes.get(path)(func)
-#         elif method_lower == "post":
-#             routes.post(path)(func)
-#         elif method_lower == "put":
-#             routes.put(path)(func)
-#         elif method_lower == "delete":
-#             routes.delete(path)(func)
-#         else:
-#             raise ValueError(f"Unsupported HTTP method: {method}")
+        if method_lower == "get":
+            routes.get(path)(func)
+        elif method_lower == "post":
+            routes.post(path)(func)
+        elif method_lower == "put":
+            routes.put(path)(func)
+        elif method_lower == "delete":
+            routes.delete(path)(func)
+        else:
+            raise ValueError(f"Unsupported HTTP method: {method}")
         
-#         return func
-#     return decorator
+        return func
+    return decorator
 
 # Import all nodes
 from .nodes import *

@@ -1,592 +1,592 @@
-// import { app } from "../../../scripts/app.js";
-// import { api } from "../../../scripts/api.js";
-// import { showError, showSuccess, showToastSuccess, showToastError } from "../box_utils.js";
+import { app } from "../../../scripts/app.js";
+import { api } from "../../../scripts/api.js";
+import { showError, showSuccess, showToastSuccess, showToastError } from "../box_utils.js";
 
-// /**
-//  * Extension for AIPromptAssistant node
-//  * Adds AI processing button and dynamic dropdowns
-//  */
-// app.registerExtension({
-//     name: "EasyToolkit.AIPromptAssistant",
+/**
+ * Extension for AIPromptAssistant node
+ * Adds AI processing button and dynamic dropdowns
+ */
+app.registerExtension({
+    name: "EasyToolkit.AIPromptAssistant",
     
-//     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-//         if (nodeData.name === "AIPromptAssistant") {
+    async beforeRegisterNodeDef(nodeType, nodeData, app) {
+        if (nodeData.name === "AIPromptAssistant") {
             
-//             // Store the original onNodeCreated
-//             const onNodeCreated = nodeType.prototype.onNodeCreated;
+            // Store the original onNodeCreated
+            const onNodeCreated = nodeType.prototype.onNodeCreated;
             
-//             nodeType.prototype.onNodeCreated = async function() {
-//                 // Call the original onNodeCreated if it exists
-//                 if (onNodeCreated) {
-//                     onNodeCreated.apply(this, arguments);
-//                 }
+            nodeType.prototype.onNodeCreated = async function() {
+                // Call the original onNodeCreated if it exists
+                if (onNodeCreated) {
+                    onNodeCreated.apply(this, arguments);
+                }
 
-//                 // Load configuration and set up widgets
-//                 await this.setupAIConfig();
+                // Load configuration and set up widgets
+                await this.setupAIConfig();
 
-//                 // Add AI process button
-//                 this.addProcessButton();
+                // Add AI process button
+                this.addProcessButton();
 
-//                 // Add refresh configuration button
-//                 this.addRefreshButton();
+                // Add refresh configuration button
+                this.addRefreshButton();
 
-//                 // Store widget references for easy access
-//                 this.cacheWidgetReferences();
+                // Store widget references for easy access
+                this.cacheWidgetReferences();
 
-//                 // Set up link monitoring for real-time value sync
-//                 this.setupLinkMonitoring();
-//             };
+                // Set up link monitoring for real-time value sync
+                this.setupLinkMonitoring();
+            };
             
-//             /**
-//              * Load AI configuration from server and update dropdowns
-//              */
-//             nodeType.prototype.setupAIConfig = async function() {
-//                 try {
-//                     const response = await api.fetchApi("/easytoolkit_ai/get_config", {
-//                         method: "GET"
-//                     });
+            /**
+             * Load AI configuration from server and update dropdowns
+             */
+            nodeType.prototype.setupAIConfig = async function() {
+                try {
+                    const response = await api.fetchApi("/easytoolkit_ai/get_config", {
+                        method: "GET"
+                    });
 
-//                     if (response.ok) {
-//                         const data = await response.json();
-//                         if (data.success) {
-//                             this.aiConfig = data;
-//                             this.updateServiceDropdown();
-//                             this.updateAgentDropdown();
-//                             console.log("[EasyToolkit] AI configuration loaded");
-//                         } else {
-//                             console.error("[EasyToolkit] Failed to load AI config:", data.error);
-//                             showToastError("Load Failed", data.error || "Unknown error");
-//                         }
-//                     } else {
-//                         showToastError("Load Failed", `HTTP ${response.status}`);
-//                     }
-//                 } catch (error) {
-//                     console.error("[EasyToolkit] Failed to load AI configuration:", error);
-//                     showToastError("Load Failed", error.message || "Failed to load AI configuration");
-//                 }
-//             };
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            this.aiConfig = data;
+                            this.updateServiceDropdown();
+                            this.updateAgentDropdown();
+                            console.log("[EasyToolkit] AI configuration loaded");
+                        } else {
+                            console.error("[EasyToolkit] Failed to load AI config:", data.error);
+                            showToastError("Load Failed", data.error || "Unknown error");
+                        }
+                    } else {
+                        showToastError("Load Failed", `HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error("[EasyToolkit] Failed to load AI configuration:", error);
+                    showToastError("Load Failed", error.message || "Failed to load AI configuration");
+                }
+            };
 
-//             /**
-//              * Refresh AI configuration from server and update dropdowns
-//              * This forces a reload of configuration files and updates the dropdowns
-//              */
-//             nodeType.prototype.refreshAIConfig = async function() {
-//                 try {
-//                     // Store current selections before refreshing config
-//                     this.storeCurrentSelections();
+            /**
+             * Refresh AI configuration from server and update dropdowns
+             * This forces a reload of configuration files and updates the dropdowns
+             */
+            nodeType.prototype.refreshAIConfig = async function() {
+                try {
+                    // Store current selections before refreshing config
+                    this.storeCurrentSelections();
 
-//                     const response = await api.fetchApi("/easytoolkit_ai/refresh_config", {
-//                         method: "POST"
-//                     });
+                    const response = await api.fetchApi("/easytoolkit_ai/refresh_config", {
+                        method: "POST"
+                    });
 
-//                     if (response.ok) {
-//                         const data = await response.json();
-//                         if (data.success) {
-//                             this.aiConfig = data;
-//                             this.updateServiceDropdown();
-//                             this.updateAgentDropdown();
-//                             console.log("[EasyToolkit] AI configuration refreshed");
-//                             showToastSuccess("Configuration Refreshed", data.message || "Configuration updated successfully");
-//                         } else {
-//                             console.error("[EasyToolkit] Failed to refresh AI config:", data.error);
-//                             showToastError("Refresh Failed", data.error || "Unknown error");
-//                         }
-//                     } else {
-//                         showToastError("Refresh Failed", `HTTP ${response.status}`);
-//                     }
-//                 } catch (error) {
-//                     console.error("[EasyToolkit] Failed to refresh AI configuration:", error);
-//                     showToastError("Refresh Failed", error.message || "Failed to refresh AI configuration");
-//                 }
-//             };
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            this.aiConfig = data;
+                            this.updateServiceDropdown();
+                            this.updateAgentDropdown();
+                            console.log("[EasyToolkit] AI configuration refreshed");
+                            showToastSuccess("Configuration Refreshed", data.message || "Configuration updated successfully");
+                        } else {
+                            console.error("[EasyToolkit] Failed to refresh AI config:", data.error);
+                            showToastError("Refresh Failed", data.error || "Unknown error");
+                        }
+                    } else {
+                        showToastError("Refresh Failed", `HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error("[EasyToolkit] Failed to refresh AI configuration:", error);
+                    showToastError("Refresh Failed", error.message || "Failed to refresh AI configuration");
+                }
+            };
             
-//             /**
-//              * Store current selections before refreshing configuration
-//              */
-//             nodeType.prototype.storeCurrentSelections = function() {
-//                 const serviceWidget = this.widgets.find(w => w.name === "ai_service");
-//                 const agentWidget = this.widgets.find(w => w.name === "ai_agent");
+            /**
+             * Store current selections before refreshing configuration
+             */
+            nodeType.prototype.storeCurrentSelections = function() {
+                const serviceWidget = this.widgets.find(w => w.name === "ai_service");
+                const agentWidget = this.widgets.find(w => w.name === "ai_agent");
 
-//                 // Store current service name
-//                 if (serviceWidget && serviceWidget.value && this.serviceLabelToName) {
-//                     this.previousServiceName = this.serviceLabelToName[serviceWidget.value];
-//                 }
+                // Store current service name
+                if (serviceWidget && serviceWidget.value && this.serviceLabelToName) {
+                    this.previousServiceName = this.serviceLabelToName[serviceWidget.value];
+                }
 
-//                 // Store current agent name
-//                 if (agentWidget && agentWidget.value && this.agentLabelToName) {
-//                     this.previousAgentName = this.agentLabelToName[agentWidget.value];
-//                 }
-//             };
+                // Store current agent name
+                if (agentWidget && agentWidget.value && this.agentLabelToName) {
+                    this.previousAgentName = this.agentLabelToName[agentWidget.value];
+                }
+            };
 
-//             /**
-//              * Update AI service dropdown options
-//              */
-//             nodeType.prototype.updateServiceDropdown = function() {
-//                 if (!this.aiConfig || !this.aiConfig.services) return;
+            /**
+             * Update AI service dropdown options
+             */
+            nodeType.prototype.updateServiceDropdown = function() {
+                if (!this.aiConfig || !this.aiConfig.services) return;
 
-//                 const serviceWidget = this.widgets.find(w => w.name === "ai_service");
-//                 if (serviceWidget) {
-//                     // Create mappings between label and name
-//                     this.serviceLabelToName = {};
-//                     this.serviceNameToLabel = {};
-//                     this.aiConfig.services.forEach(s => {
-//                         this.serviceLabelToName[s.label] = s.name;
-//                         this.serviceNameToLabel[s.name] = s.label;
-//                     });
+                const serviceWidget = this.widgets.find(w => w.name === "ai_service");
+                if (serviceWidget) {
+                    // Create mappings between label and name
+                    this.serviceLabelToName = {};
+                    this.serviceNameToLabel = {};
+                    this.aiConfig.services.forEach(s => {
+                        this.serviceLabelToName[s.label] = s.name;
+                        this.serviceNameToLabel[s.name] = s.label;
+                    });
 
-//                     // Update options with labels
-//                     serviceWidget.options.values = this.aiConfig.services.map(s => s.label);
+                    // Update options with labels
+                    serviceWidget.options.values = this.aiConfig.services.map(s => s.label);
 
-//                     // Try to restore previous selection if available
-//                     if (this.previousServiceName) {
-//                         const newLabel = this.serviceNameToLabel[this.previousServiceName];
-//                         if (newLabel) {
-//                             serviceWidget.value = newLabel;
-//                             app.graph.setDirtyCanvas(true, false);
-//                             this.previousServiceName = null; // Clear after use
-//                         } else {
-//                             // Fallback to default if the stored name no longer exists
-//                             const defaultName = this.aiConfig.default_service;
-//                             const defaultLabel = this.serviceNameToLabel[defaultName] || defaultName;
-//                             serviceWidget.value = defaultLabel;
-//                             app.graph.setDirtyCanvas(true, false);
-//                         }
-//                     } else if (!serviceWidget.value) {
-//                         // Set default value (convert name to label for display)
-//                         const defaultName = this.aiConfig.default_service;
-//                         const defaultLabel = this.serviceNameToLabel[defaultName] || defaultName;
-//                         serviceWidget.value = defaultLabel;
-//                         app.graph.setDirtyCanvas(true, false);
-//                     }
-//                 }
-//             };
+                    // Try to restore previous selection if available
+                    if (this.previousServiceName) {
+                        const newLabel = this.serviceNameToLabel[this.previousServiceName];
+                        if (newLabel) {
+                            serviceWidget.value = newLabel;
+                            app.graph.setDirtyCanvas(true, false);
+                            this.previousServiceName = null; // Clear after use
+                        } else {
+                            // Fallback to default if the stored name no longer exists
+                            const defaultName = this.aiConfig.default_service;
+                            const defaultLabel = this.serviceNameToLabel[defaultName] || defaultName;
+                            serviceWidget.value = defaultLabel;
+                            app.graph.setDirtyCanvas(true, false);
+                        }
+                    } else if (!serviceWidget.value) {
+                        // Set default value (convert name to label for display)
+                        const defaultName = this.aiConfig.default_service;
+                        const defaultLabel = this.serviceNameToLabel[defaultName] || defaultName;
+                        serviceWidget.value = defaultLabel;
+                        app.graph.setDirtyCanvas(true, false);
+                    }
+                }
+            };
             
-//             /**
-//              * Update AI agent dropdown options
-//              */
-//             nodeType.prototype.updateAgentDropdown = function() {
-//                 if (!this.aiConfig || !this.aiConfig.agents) return;
+            /**
+             * Update AI agent dropdown options
+             */
+            nodeType.prototype.updateAgentDropdown = function() {
+                if (!this.aiConfig || !this.aiConfig.agents) return;
 
-//                 const agentWidget = this.widgets.find(w => w.name === "ai_agent");
-//                 if (agentWidget) {
-//                     // Create mappings between label and name
-//                     this.agentLabelToName = {};
-//                     this.agentNameToLabel = {};
-//                     this.aiConfig.agents.forEach(a => {
-//                         this.agentLabelToName[a.label] = a.name;
-//                         this.agentNameToLabel[a.name] = a.label;
-//                     });
+                const agentWidget = this.widgets.find(w => w.name === "ai_agent");
+                if (agentWidget) {
+                    // Create mappings between label and name
+                    this.agentLabelToName = {};
+                    this.agentNameToLabel = {};
+                    this.aiConfig.agents.forEach(a => {
+                        this.agentLabelToName[a.label] = a.name;
+                        this.agentNameToLabel[a.name] = a.label;
+                    });
 
-//                     // Update options with labels
-//                     agentWidget.options.values = this.aiConfig.agents.map(a => a.label);
+                    // Update options with labels
+                    agentWidget.options.values = this.aiConfig.agents.map(a => a.label);
 
-//                     // Try to restore previous selection if available
-//                     if (this.previousAgentName) {
-//                         const newLabel = this.agentNameToLabel[this.previousAgentName];
-//                         if (newLabel) {
-//                             agentWidget.value = newLabel;
-//                             app.graph.setDirtyCanvas(true, false);
-//                             this.previousAgentName = null; // Clear after use
-//                         } else {
-//                             // Fallback to default if the stored name no longer exists
-//                             const defaultName = this.aiConfig.default_agent;
-//                             const defaultLabel = this.agentNameToLabel[defaultName] || defaultName;
-//                             agentWidget.value = defaultLabel;
-//                             app.graph.setDirtyCanvas(true, false);
-//                         }
-//                     } else if (!agentWidget.value) {
-//                         // Set default value (convert name to label for display)
-//                         const defaultName = this.aiConfig.default_agent;
-//                         const defaultLabel = this.agentNameToLabel[defaultName] || defaultName;
-//                         agentWidget.value = defaultLabel;
-//                         app.graph.setDirtyCanvas(true, false);
-//                     }
-//                 }
-//             };
+                    // Try to restore previous selection if available
+                    if (this.previousAgentName) {
+                        const newLabel = this.agentNameToLabel[this.previousAgentName];
+                        if (newLabel) {
+                            agentWidget.value = newLabel;
+                            app.graph.setDirtyCanvas(true, false);
+                            this.previousAgentName = null; // Clear after use
+                        } else {
+                            // Fallback to default if the stored name no longer exists
+                            const defaultName = this.aiConfig.default_agent;
+                            const defaultLabel = this.agentNameToLabel[defaultName] || defaultName;
+                            agentWidget.value = defaultLabel;
+                            app.graph.setDirtyCanvas(true, false);
+                        }
+                    } else if (!agentWidget.value) {
+                        // Set default value (convert name to label for display)
+                        const defaultName = this.aiConfig.default_agent;
+                        const defaultLabel = this.agentNameToLabel[defaultName] || defaultName;
+                        agentWidget.value = defaultLabel;
+                        app.graph.setDirtyCanvas(true, false);
+                    }
+                }
+            };
             
-//             /**
-//              * Cache widget references for easy access
-//              */
-//             nodeType.prototype.cacheWidgetReferences = function() {
-//                 this.widgetCache = {
-//                     originalPrompt: this.widgets.find(w => w.name === "original_prompt"),
-//                     aiService: this.widgets.find(w => w.name === "ai_service"),
-//                     aiAgent: this.widgets.find(w => w.name === "ai_agent"),
-//                     processedPrompt: this.widgets.find(w => w.name === "processed_prompt"),
-//                     refreshButton: this.widgets.find(w => w.name === "refresh_config")
-//                 };
-//             };
+            /**
+             * Cache widget references for easy access
+             */
+            nodeType.prototype.cacheWidgetReferences = function() {
+                this.widgetCache = {
+                    originalPrompt: this.widgets.find(w => w.name === "original_prompt"),
+                    aiService: this.widgets.find(w => w.name === "ai_service"),
+                    aiAgent: this.widgets.find(w => w.name === "ai_agent"),
+                    processedPrompt: this.widgets.find(w => w.name === "processed_prompt"),
+                    refreshButton: this.widgets.find(w => w.name === "refresh_config")
+                };
+            };
             
-//             /**
-//              * Add the AI process button
-//              */
-//             nodeType.prototype.addProcessButton = function() {
-//                 // Initialize processing state
-//                 this.isProcessing = false;
-//                 this.abortController = null;
-//                 this.animationTimer = null;
-//                 this.processingStartTime = null;
+            /**
+             * Add the AI process button
+             */
+            nodeType.prototype.addProcessButton = function() {
+                // Initialize processing state
+                this.isProcessing = false;
+                this.abortController = null;
+                this.animationTimer = null;
+                this.processingStartTime = null;
 
-//                 const processButton = this.addWidget("button", "ai_process", null, async () => {
-//                     if (this.isProcessing) {
-//                         // Stop processing
-//                         this.stopProcessing();
-//                     } else {
-//                         // Start processing
-//                         await this.processWithAI();
-//                     }
-//                 });
-//                 processButton.label = "🚀 AI Process";
+                const processButton = this.addWidget("button", "ai_process", null, async () => {
+                    if (this.isProcessing) {
+                        // Stop processing
+                        this.stopProcessing();
+                    } else {
+                        // Start processing
+                        await this.processWithAI();
+                    }
+                });
+                processButton.label = "🚀 AI Process";
 
-//                 // Store button reference
-//                 this.processButton = processButton;
+                // Store button reference
+                this.processButton = processButton;
 
-//                 // Style the button (optional)
-//                 processButton.serialize = false; // Don't save button state
-//             };
+                // Style the button (optional)
+                processButton.serialize = false; // Don't save button state
+            };
 
-//             /**
-//              * Add the refresh configuration button
-//              */
-//             nodeType.prototype.addRefreshButton = function() {
-//                 const refreshButton = this.addWidget("button", "refresh_config", null, async () => {
-//                     await this.refreshAIConfig();
-//                 });
-//                 refreshButton.label = "🔄 Refresh Config";
+            /**
+             * Add the refresh configuration button
+             */
+            nodeType.prototype.addRefreshButton = function() {
+                const refreshButton = this.addWidget("button", "refresh_config", null, async () => {
+                    await this.refreshAIConfig();
+                });
+                refreshButton.label = "🔄 Refresh Config";
 
-//                 // Store button reference
-//                 this.refreshButton = refreshButton;
+                // Store button reference
+                this.refreshButton = refreshButton;
 
-//                 // Style the button (optional)
-//                 refreshButton.serialize = false; // Don't save button state
-//             };
+                // Style the button (optional)
+                refreshButton.serialize = false; // Don't save button state
+            };
             
-//             /**
-//              * Start loading animation and timer
-//              */
-//             nodeType.prototype.startLoadingAnimation = function() {
-//                 const cache = this.widgetCache;
-//                 if (!cache.processedPrompt) return;
+            /**
+             * Start loading animation and timer
+             */
+            nodeType.prototype.startLoadingAnimation = function() {
+                const cache = this.widgetCache;
+                if (!cache.processedPrompt) return;
                 
-//                 // Loading spinner frames
-//                 const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-//                 let frameIndex = 0;
+                // Loading spinner frames
+                const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+                let frameIndex = 0;
                 
-//                 // Record start time
-//                 this.processingStartTime = Date.now();
+                // Record start time
+                this.processingStartTime = Date.now();
                 
-//                 // Update animation every 100ms
-//                 this.animationTimer = setInterval(() => {
-//                     const elapsed = Date.now() - this.processingStartTime;
-//                     const seconds = Math.floor(elapsed / 1000);
-//                     const minutes = Math.floor(seconds / 60);
-//                     const remainingSeconds = seconds % 60;
+                // Update animation every 100ms
+                this.animationTimer = setInterval(() => {
+                    const elapsed = Date.now() - this.processingStartTime;
+                    const seconds = Math.floor(elapsed / 1000);
+                    const minutes = Math.floor(seconds / 60);
+                    const remainingSeconds = seconds % 60;
                     
-//                     const timeStr = minutes > 0 
-//                         ? `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
-//                         : `${remainingSeconds}s`;
+                    const timeStr = minutes > 0 
+                        ? `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+                        : `${remainingSeconds}s`;
                     
-//                     const spinner = spinnerFrames[frameIndex];
-//                     cache.processedPrompt.value = `${spinner} Processing with AI... (${timeStr})`;
+                    const spinner = spinnerFrames[frameIndex];
+                    cache.processedPrompt.value = `${spinner} Processing with AI... (${timeStr})`;
 
-//                     // Note: setDirtyCanvas called every 100ms during animation - consider performance implications
-//                     app.graph.setDirtyCanvas(true, false);
+                    // Note: setDirtyCanvas called every 100ms during animation - consider performance implications
+                    app.graph.setDirtyCanvas(true, false);
 
-//                     frameIndex = (frameIndex + 1) % spinnerFrames.length;
+                    frameIndex = (frameIndex + 1) % spinnerFrames.length;
 
-//                     // Force UI update
-//                     if (this.onResize) {
-//                         this.onResize(this.size);
-//                     }
-//                 }, 100);
-//             };
+                    // Force UI update
+                    if (this.onResize) {
+                        this.onResize(this.size);
+                    }
+                }, 100);
+            };
             
-//             /**
-//              * Stop loading animation and timer
-//              */
-//             nodeType.prototype.stopLoadingAnimation = function() {
-//                 if (this.animationTimer) {
-//                     clearInterval(this.animationTimer);
-//                     this.animationTimer = null;
-//                 }
-//                 this.processingStartTime = null;
-//             };
+            /**
+             * Stop loading animation and timer
+             */
+            nodeType.prototype.stopLoadingAnimation = function() {
+                if (this.animationTimer) {
+                    clearInterval(this.animationTimer);
+                    this.animationTimer = null;
+                }
+                this.processingStartTime = null;
+            };
             
-//             /**
-//              * Stop AI processing
-//              */
-//             nodeType.prototype.stopProcessing = function() {
-//                 if (this.abortController) {
-//                     this.abortController.abort();
-//                     this.abortController = null;
-//                 }
-//                 this.isProcessing = false;
+            /**
+             * Stop AI processing
+             */
+            nodeType.prototype.stopProcessing = function() {
+                if (this.abortController) {
+                    this.abortController.abort();
+                    this.abortController = null;
+                }
+                this.isProcessing = false;
                 
-//                 // Stop animation
-//                 this.stopLoadingAnimation();
+                // Stop animation
+                this.stopLoadingAnimation();
                 
-//                 // Reset button text
-//                 if (this.processButton) {
-//                     this.processButton.label = "🚀 AI Process";
-//                 }
+                // Reset button text
+                if (this.processButton) {
+                    this.processButton.label = "🚀 AI Process";
+                }
                 
-//                 // Update processed prompt
-//                 const cache = this.widgetCache;
-//                 if (cache.processedPrompt) {
-//                     cache.processedPrompt.value = "⏹ Processing stopped by user";
-//                     app.graph.setDirtyCanvas(true, false);
-//                 }
+                // Update processed prompt
+                const cache = this.widgetCache;
+                if (cache.processedPrompt) {
+                    cache.processedPrompt.value = "⏹ Processing stopped by user";
+                    app.graph.setDirtyCanvas(true, false);
+                }
                 
-//                 console.log("[EasyToolkit] AI processing stopped by user");
-//             };
+                console.log("[EasyToolkit] AI processing stopped by user");
+            };
             
-//             /**
-//              * Set up link monitoring for real-time value synchronization
-//              */
-//             nodeType.prototype.setupLinkMonitoring = function() {
-//                 // Store original onConnectionsChange if exists
-//                 const originalOnConnectionsChange = this.onConnectionsChange;
+            /**
+             * Set up link monitoring for real-time value synchronization
+             */
+            nodeType.prototype.setupLinkMonitoring = function() {
+                // Store original onConnectionsChange if exists
+                const originalOnConnectionsChange = this.onConnectionsChange;
                 
-//                 // Override onConnectionsChange to detect link changes
-//                 this.onConnectionsChange = function(type, index, connected, link_info) {
-//                     // Call original handler if exists
-//                     if (originalOnConnectionsChange) {
-//                         originalOnConnectionsChange.apply(this, arguments);
-//                     }
+                // Override onConnectionsChange to detect link changes
+                this.onConnectionsChange = function(type, index, connected, link_info) {
+                    // Call original handler if exists
+                    if (originalOnConnectionsChange) {
+                        originalOnConnectionsChange.apply(this, arguments);
+                    }
                     
-//                     // Check if this is an input connection change (type === 1)
-//                     if (type === 1) {
-//                         // Update link sync immediately
-//                         this.updateLinkedValue();
-//                     }
-//                 };
+                    // Check if this is an input connection change (type === 1)
+                    if (type === 1) {
+                        // Update link sync immediately
+                        this.updateLinkedValue();
+                    }
+                };
                 
-//                 // Set up periodic check for linked values
-//                 this.setupPeriodicSync();
+                // Set up periodic check for linked values
+                this.setupPeriodicSync();
                 
-//                 // Initial check
-//                 this.updateLinkedValue();
-//             };
+                // Initial check
+                this.updateLinkedValue();
+            };
             
-//             /**
-//              * Set up periodic synchronization with linked nodes
-//              */
-//             nodeType.prototype.setupPeriodicSync = function() {
-//                 // Clear existing timer if any
-//                 if (this.syncTimer) {
-//                     clearInterval(this.syncTimer);
-//                 }
+            /**
+             * Set up periodic synchronization with linked nodes
+             */
+            nodeType.prototype.setupPeriodicSync = function() {
+                // Clear existing timer if any
+                if (this.syncTimer) {
+                    clearInterval(this.syncTimer);
+                }
                 
-//                 // Check linked values every 100ms for real-time updates
-//                 this.syncTimer = setInterval(() => {
-//                     if (!this.isProcessing) {
-//                         this.updateLinkedValue();
-//                     }
-//                 }, 100);
-//             };
+                // Check linked values every 100ms for real-time updates
+                this.syncTimer = setInterval(() => {
+                    if (!this.isProcessing) {
+                        this.updateLinkedValue();
+                    }
+                }, 100);
+            };
             
-//             /**
-//              * Update original_prompt value from linked node
-//              */
-//             nodeType.prototype.updateLinkedValue = function() {
-//                 const cache = this.widgetCache;
-//                 if (!cache.originalPrompt) return;
+            /**
+             * Update original_prompt value from linked node
+             */
+            nodeType.prototype.updateLinkedValue = function() {
+                const cache = this.widgetCache;
+                if (!cache.originalPrompt) return;
                 
-//                 // Find the input slot for original_prompt (usually slot 0)
-//                 const inputSlot = this.inputs?.findIndex(input => input.name === "original_prompt");
-//                 if (inputSlot === -1 || inputSlot === undefined) return;
+                // Find the input slot for original_prompt (usually slot 0)
+                const inputSlot = this.inputs?.findIndex(input => input.name === "original_prompt");
+                if (inputSlot === -1 || inputSlot === undefined) return;
                 
-//                 // Check if the input is connected
-//                 const input = this.inputs[inputSlot];
-//                 if (!input || !input.link) return;
+                // Check if the input is connected
+                const input = this.inputs[inputSlot];
+                if (!input || !input.link) return;
                 
-//                 // Get the link information
-//                 const graph = app.graph;
-//                 if (!graph) return;
+                // Get the link information
+                const graph = app.graph;
+                if (!graph) return;
                 
-//                 const link = graph.links[input.link];
-//                 if (!link) return;
+                const link = graph.links[input.link];
+                if (!link) return;
                 
-//                 // Get the source node
-//                 const sourceNode = graph.getNodeById(link.origin_id);
-//                 if (!sourceNode) return;
+                // Get the source node
+                const sourceNode = graph.getNodeById(link.origin_id);
+                if (!sourceNode) return;
                 
-//                 // Check if source node is AIPromptAssistant
-//                 if (sourceNode.type !== "AIPromptAssistant") return;
+                // Check if source node is AIPromptAssistant
+                if (sourceNode.type !== "AIPromptAssistant") return;
                 
-//                 // Get the output slot index from the link
-//                 const outputSlot = link.origin_slot;
+                // Get the output slot index from the link
+                const outputSlot = link.origin_slot;
                 
-//                 // Find which output is connected
-//                 const sourceOutput = sourceNode.outputs?.[outputSlot];
-//                 if (!sourceOutput) return;
+                // Find which output is connected
+                const sourceOutput = sourceNode.outputs?.[outputSlot];
+                if (!sourceOutput) return;
                 
-//                 // Find the source node's widgets
-//                 const sourceWidgets = sourceNode.widgets;
-//                 if (!sourceWidgets) return;
+                // Find the source node's widgets
+                const sourceWidgets = sourceNode.widgets;
+                if (!sourceWidgets) return;
                 
-//                 let sourceValue = "";
+                let sourceValue = "";
                 
-//                 // Determine which output is connected and get the corresponding value
-//                 if (sourceOutput.name === "original_prompt") {
-//                     // Connected to original_prompt output
-//                     const sourceOriginalPrompt = sourceWidgets.find(w => w.name === "original_prompt");
-//                     if (sourceOriginalPrompt) {
-//                         sourceValue = sourceOriginalPrompt.value || "";
-//                     }
-//                 } else if (sourceOutput.name === "processed_prompt") {
-//                     // Connected to processed_prompt output
-//                     const sourceProcessedPrompt = sourceWidgets.find(w => w.name === "processed_prompt");
-//                     if (sourceProcessedPrompt) {
-//                         sourceValue = sourceProcessedPrompt.value || "";
-//                     }
-//                 }
+                // Determine which output is connected and get the corresponding value
+                if (sourceOutput.name === "original_prompt") {
+                    // Connected to original_prompt output
+                    const sourceOriginalPrompt = sourceWidgets.find(w => w.name === "original_prompt");
+                    if (sourceOriginalPrompt) {
+                        sourceValue = sourceOriginalPrompt.value || "";
+                    }
+                } else if (sourceOutput.name === "processed_prompt") {
+                    // Connected to processed_prompt output
+                    const sourceProcessedPrompt = sourceWidgets.find(w => w.name === "processed_prompt");
+                    if (sourceProcessedPrompt) {
+                        sourceValue = sourceProcessedPrompt.value || "";
+                    }
+                }
                 
-//                 // Update the current node's original_prompt if value changed
-//                 if (sourceValue && cache.originalPrompt.value !== sourceValue) {
-//                     cache.originalPrompt.value = sourceValue;
-//                     app.graph.setDirtyCanvas(true, false);
+                // Update the current node's original_prompt if value changed
+                if (sourceValue && cache.originalPrompt.value !== sourceValue) {
+                    cache.originalPrompt.value = sourceValue;
+                    app.graph.setDirtyCanvas(true, false);
 
-//                     // Force UI update
-//                     if (this.onResize) {
-//                         this.onResize(this.size);
-//                     }
-//                 }
-//             };
+                    // Force UI update
+                    if (this.onResize) {
+                        this.onResize(this.size);
+                    }
+                }
+            };
             
-//             /**
-//              * Process prompt using AI
-//              */
-//             nodeType.prototype.processWithAI = async function() {
-//                 const cache = this.widgetCache;
+            /**
+             * Process prompt using AI
+             */
+            nodeType.prototype.processWithAI = async function() {
+                const cache = this.widgetCache;
                 
-//                 if (!cache.originalPrompt || !cache.originalPrompt.value) {
-//                     showError("Original prompt is empty");
-//                     return;
-//                 }
+                if (!cache.originalPrompt || !cache.originalPrompt.value) {
+                    showError("Original prompt is empty");
+                    return;
+                }
                 
-//                 const originalPrompt = cache.originalPrompt.value;
+                const originalPrompt = cache.originalPrompt.value;
                 
-//                 // Get label values from widgets
-//                 const aiServiceLabel = cache.aiService.value;
-//                 const aiAgentLabel = cache.aiAgent.value;
+                // Get label values from widgets
+                const aiServiceLabel = cache.aiService.value;
+                const aiAgentLabel = cache.aiAgent.value;
                 
-//                 // Convert labels to names for backend
-//                 const aiService = this.serviceLabelToName && this.serviceLabelToName[aiServiceLabel] 
-//                     ? this.serviceLabelToName[aiServiceLabel] 
-//                     : aiServiceLabel.toLowerCase(); // fallback
+                // Convert labels to names for backend
+                const aiService = this.serviceLabelToName && this.serviceLabelToName[aiServiceLabel] 
+                    ? this.serviceLabelToName[aiServiceLabel] 
+                    : aiServiceLabel.toLowerCase(); // fallback
                 
-//                 const aiAgent = this.agentLabelToName && this.agentLabelToName[aiAgentLabel]
-//                     ? this.agentLabelToName[aiAgentLabel]
-//                     : aiAgentLabel.toLowerCase().replace(/\s+/g, '_'); // fallback
+                const aiAgent = this.agentLabelToName && this.agentLabelToName[aiAgentLabel]
+                    ? this.agentLabelToName[aiAgentLabel]
+                    : aiAgentLabel.toLowerCase().replace(/\s+/g, '_'); // fallback
                 
-//                 // Set processing state
-//                 this.isProcessing = true;
-//                 this.abortController = new AbortController();
+                // Set processing state
+                this.isProcessing = true;
+                this.abortController = new AbortController();
                 
-//                 // Change button text
-//                 if (this.processButton) {
-//                     this.processButton.label = "⏹ Stop";
-//                 }
+                // Change button text
+                if (this.processButton) {
+                    this.processButton.label = "⏹ Stop";
+                }
                 
-//                 // Start loading animation with timer
-//                 this.startLoadingAnimation();
+                // Start loading animation with timer
+                this.startLoadingAnimation();
                 
-//                 try {
-//                     const response = await api.fetchApi("/easytoolkit_ai/process_prompt", {
-//                         method: "POST",
-//                         headers: {
-//                             "Content-Type": "application/json"
-//                         },
-//                         body: JSON.stringify({
-//                             original_prompt: originalPrompt,
-//                             ai_service: aiService,
-//                             ai_agent: aiAgent
-//                         }),
-//                         signal: this.abortController.signal
-//                     });
+                try {
+                    const response = await api.fetchApi("/easytoolkit_ai/process_prompt", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            original_prompt: originalPrompt,
+                            ai_service: aiService,
+                            ai_agent: aiAgent
+                        }),
+                        signal: this.abortController.signal
+                    });
                     
-//                     const data = await response.json();
+                    const data = await response.json();
                     
-//                     // Stop animation before updating final result
-//                     this.stopLoadingAnimation();
+                    // Stop animation before updating final result
+                    this.stopLoadingAnimation();
                     
-//                     if (data.success) {
-//                         // Calculate total processing time
-//                         const processingTime = this.processingStartTime 
-//                             ? ((Date.now() - this.processingStartTime) / 1000).toFixed(1)
-//                             : '?';
+                    if (data.success) {
+                        // Calculate total processing time
+                        const processingTime = this.processingStartTime 
+                            ? ((Date.now() - this.processingStartTime) / 1000).toFixed(1)
+                            : '?';
                         
-//                         // Update processed prompt widget
-//                         if (cache.processedPrompt) {
-//                             cache.processedPrompt.value = data.processed_prompt;
-//                             app.graph.setDirtyCanvas(true, false);
-//                         }
-//                         console.log(`[EasyToolkit] AI processing completed in ${processingTime}s`);
+                        // Update processed prompt widget
+                        if (cache.processedPrompt) {
+                            cache.processedPrompt.value = data.processed_prompt;
+                            app.graph.setDirtyCanvas(true, false);
+                        }
+                        console.log(`[EasyToolkit] AI processing completed in ${processingTime}s`);
 
-//                         // Trigger node update
-//                         if (this.onResize) {
-//                             this.onResize(this.size);
-//                         }
-//                     } else {
-//                         const errorMsg = data.error || "Unknown error";
-//                         if (cache.processedPrompt) {
-//                             cache.processedPrompt.value = `❌ Error: ${errorMsg}`;
-//                             app.graph.setDirtyCanvas(true, false);
-//                         }
-//                         showError("AI Processing Failed", new Error(errorMsg));
-//                     }
-//                 } catch (error) {
-//                     // Stop animation on error
-//                     this.stopLoadingAnimation();
+                        // Trigger node update
+                        if (this.onResize) {
+                            this.onResize(this.size);
+                        }
+                    } else {
+                        const errorMsg = data.error || "Unknown error";
+                        if (cache.processedPrompt) {
+                            cache.processedPrompt.value = `❌ Error: ${errorMsg}`;
+                            app.graph.setDirtyCanvas(true, false);
+                        }
+                        showError("AI Processing Failed", new Error(errorMsg));
+                    }
+                } catch (error) {
+                    // Stop animation on error
+                    this.stopLoadingAnimation();
                     
-//                     // Check if it was aborted
-//                     if (error.name === 'AbortError') {
-//                         console.log("[EasyToolkit] AI processing was aborted");
-//                         return; // Don't show error dialog for user-initiated abort
-//                     }
+                    // Check if it was aborted
+                    if (error.name === 'AbortError') {
+                        console.log("[EasyToolkit] AI processing was aborted");
+                        return; // Don't show error dialog for user-initiated abort
+                    }
                     
-//                     const errorMsg = error.message || "Network error";
-//                     if (cache.processedPrompt) {
-//                         cache.processedPrompt.value = `❌ Error: ${errorMsg}`;
-//                         app.graph.setDirtyCanvas(true, false);
-//                     }
-//                     showError("AI processing error", error);
-//                 } finally {
-//                     // Reset processing state
-//                     this.isProcessing = false;
-//                     this.abortController = null;
+                    const errorMsg = error.message || "Network error";
+                    if (cache.processedPrompt) {
+                        cache.processedPrompt.value = `❌ Error: ${errorMsg}`;
+                        app.graph.setDirtyCanvas(true, false);
+                    }
+                    showError("AI processing error", error);
+                } finally {
+                    // Reset processing state
+                    this.isProcessing = false;
+                    this.abortController = null;
                     
-//                     // Reset button text
-//                     if (this.processButton) {
-//                         this.processButton.label = "🚀 AI Process";
-//                     }
-//                 }
-//             };
+                    // Reset button text
+                    if (this.processButton) {
+                        this.processButton.label = "🚀 AI Process";
+                    }
+                }
+            };
             
-//             /**
-//              * Clean up when node is removed
-//              */
-//             const origOnRemoved = nodeType.prototype.onRemoved;
-//             nodeType.prototype.onRemoved = function() {
-//                 // Clean up sync timer
-//                 if (this.syncTimer) {
-//                     clearInterval(this.syncTimer);
-//                     this.syncTimer = null;
-//                 }
+            /**
+             * Clean up when node is removed
+             */
+            const origOnRemoved = nodeType.prototype.onRemoved;
+            nodeType.prototype.onRemoved = function() {
+                // Clean up sync timer
+                if (this.syncTimer) {
+                    clearInterval(this.syncTimer);
+                    this.syncTimer = null;
+                }
                 
-//                 // Clean up animation timer
-//                 if (this.animationTimer) {
-//                     clearInterval(this.animationTimer);
-//                     this.animationTimer = null;
-//                 }
+                // Clean up animation timer
+                if (this.animationTimer) {
+                    clearInterval(this.animationTimer);
+                    this.animationTimer = null;
+                }
                 
-//                 // Call original handler if exists
-//                 if (origOnRemoved) {
-//                     origOnRemoved.apply(this, arguments);
-//                 }
-//             };
-//         }
-//     }
-// });
+                // Call original handler if exists
+                if (origOnRemoved) {
+                    origOnRemoved.apply(this, arguments);
+                }
+            };
+        }
+    }
+});
 
