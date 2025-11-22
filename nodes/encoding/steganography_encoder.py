@@ -1,6 +1,5 @@
 from ... import register_node
 from ...utils.encoding import encode_steganography
-import zlib
 
 
 @register_node(emoji="🔐")
