@@ -2,12 +2,6 @@ import base64
 import torch
 import numpy as np
 
-def b64decode(data: str, encoding: str = "utf-8") -> bytes:
-    return base64.b64decode(data.encode(encoding))
-
-def b64encode(data: bytes, encoding: str = "utf-8") -> str:
-    return base64.b64encode(data).decode(encoding)
-
 def encode_steganography(data_bytes: bytes, width: int = None, height: int = None, use_alpha: bool = True):
     """
     Encode bytes into a steganography image.
@@ -127,3 +121,80 @@ def decode_steganography(image):
     data_bytes = byte_array[4:4 + data_length].tobytes()
 
     return data_bytes
+
+
+def encode_bytes(data: bytes, base: str) -> str:
+    """
+    Encode bytes data to string representation in specified base.
+
+    Args:
+        data: Bytes data to encode
+        base: Base format ("binary", "octal", "decimal", "hexadecimal", "base64")
+
+    Returns:
+        Encoded string representation
+
+    Raises:
+        ValueError: If unsupported base is provided
+    """
+    if base == "binary":
+        return ''.join(format(byte, '08b') for byte in data)
+    elif base == "octal":
+        return ''.join(format(byte, '03o') for byte in data)
+    elif base == "decimal":
+        return ' '.join(str(byte) for byte in data)
+    elif base == "hexadecimal":
+        return data.hex()
+    elif base == "base64":
+        return base64.b64encode(data).decode("utf-8")
+    else:
+        raise ValueError(f"Unsupported base: {base}")
+
+
+def decode_bytes(encoded_string: str, base: str) -> bytes:
+    """
+    Decode string representation back to bytes data from specified base.
+
+    Args:
+        encoded_string: String representation of bytes data
+        base: Base format ("binary", "octal", "decimal", "hexadecimal", "base64")
+
+    Returns:
+        Decoded bytes data
+
+    Raises:
+        ValueError: If unsupported base is provided or invalid input format
+    """
+    encoded_string = encoded_string.strip()
+
+    if base == "binary":
+        # Remove any spaces and ensure length is multiple of 8
+        binary_string = encoded_string.replace(" ", "").replace("\n", "").replace("\t", "")
+        if len(binary_string) % 8 != 0:
+            raise ValueError("Binary string length must be multiple of 8")
+        return bytes(int(binary_string[i:i+8], 2) for i in range(0, len(binary_string), 8))
+
+    elif base == "octal":
+        # Remove any spaces and ensure length is multiple of 3
+        octal_string = encoded_string.replace(" ", "").replace("\n", "").replace("\t", "")
+        if len(octal_string) % 3 != 0:
+            raise ValueError("Octal string length must be multiple of 3")
+        return bytes(int(octal_string[i:i+3], 8) for i in range(0, len(octal_string), 3))
+
+    elif base == "decimal":
+        # Split by spaces and convert each number
+        decimal_strings = encoded_string.split()
+        return bytes(int(num) for num in decimal_strings)
+
+    elif base == "hexadecimal":
+        # Remove any spaces and ensure even length
+        hex_string = encoded_string.replace(" ", "").replace("\n", "").replace("\t", "")
+        if len(hex_string) % 2 != 0:
+            raise ValueError("Hexadecimal string length must be even")
+        return bytes.fromhex(hex_string)
+
+    elif base == "base64":
+        return base64.b64decode(encoded_string.encode("utf-8"))
+
+    else:
+        raise ValueError(f"Unsupported base: {base}")

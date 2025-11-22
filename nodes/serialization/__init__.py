@@ -7,3 +7,4 @@ from .resource_header_builder import *
 from .resource_header_serializer import *
 from .resource_header_deserializer import *
 from .resource_header_parser import *
+from .resource_header_size import *

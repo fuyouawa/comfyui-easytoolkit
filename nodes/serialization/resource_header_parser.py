@@ -1,5 +1,5 @@
 from ... import register_node
-from ...utils.serialization import ResourceHeader, CompressionMode, SerializationFormat, compression_modes, serialization_formats
+from ...utils.serialization import ResourceHeader, compression_modes, serialization_formats
 from ...utils.format import all_resource_formats
 
 
@@ -32,8 +32,4 @@ class ResourceHeaderParser:
         Parse ResourceHeader into individual fields.
         """
 
-        return (
-            resource_header.mime_type,
-            resource_header.compression_mode,
-            resource_header.serialization_format,
-            )
+        return (resource_header.mime_type, resource_header.compression_mode, resource_header.serialization_format,)

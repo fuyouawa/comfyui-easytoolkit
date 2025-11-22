@@ -21,6 +21,7 @@ class CompressionMode(StrEnum):
 serialization_formats = [SerializationFormat.NONE, SerializationFormat.BYTES_WITH_HEADERS]
 compression_modes = [CompressionMode.NO_COMPRESSION, CompressionMode.ZLIB_COMPRESSION]
 
+RESOURCE_HEADER_SIZE = 4
 
 class ResourceHeader:
     """
@@ -36,6 +37,7 @@ class ResourceHeader:
     - NONE: Standard single data stream
     - BYTES_WITH_HEADERS: Data is a concatenated array of byte streams, each preceded by a 4-byte big-endian size header
     """
+
 
     def __init__(self, format_number: int = 0, compression_mode: CompressionMode = CompressionMode.NO_COMPRESSION, serialization_format: SerializationFormat = SerializationFormat.NONE):
         """
@@ -91,21 +93,21 @@ class ResourceHeader:
     @classmethod
     def from_bytes(cls, data: bytes) -> 'ResourceHeader':
         """
-        Create ResourceHeader from 4-byte bytes representation.
+        Create ResourceHeader from bytes representation.
 
         Args:
-            data: 4-byte header data
+            data: header data
 
         Returns:
             ResourceHeader: Parsed header object
 
         Raises:
-            ValueError: If data length is not exactly 4 bytes
+            ValueError: If data length is not exactly RESOURCE_HEADER_SIZE
         """
-        if len(data) != 4:
-            raise ValueError(f"ResourceHeader data must be exactly 4 bytes, got {len(data)} bytes")
+        if len(data) != RESOURCE_HEADER_SIZE:
+            raise ValueError(f"ResourceHeader data must be exactly {RESOURCE_HEADER_SIZE} bytes, got {len(data)} bytes")
 
-        # Unpack 4 bytes: format_number, compression_mode_index, serialization_format_index, reserved
+        # Unpack bytes: format_number, compression_mode_index, serialization_format_index, reserved
         format_number, compression_mode_index, serialization_format_index, _ = struct.unpack('BBBB', data)
 
         # Convert indices back to enum types
