@@ -5,23 +5,25 @@ from PIL import Image
 import cv2
 import numpy as np
 
-from .common import convert_image_batch_to_pil_list, process_image_format
+from .common import convert_image_batch_to_pil_list, process_image_format_to_file
 
 
-def image_batch_to_video_bytes(
+def image_batch_to_video_file(
     image_batch,
+    output_path: str,
     frame_rate: int,
     video_format: str = "image/gif",
     pingpong: bool = False,
     loop_count: int = 0,
     video_metadata: Optional[dict] = None
-) -> Tuple[bytes, str]:
+) -> str:
     """
-    Convert image_batch to video and return bytes using OpenCV.
-    Returns (video_bytes, extension_without_dot)
+    Convert image_batch to video and save to output_path using OpenCV.
+    Returns output_path
 
     Args:
         image_batch: List of images (PIL, numpy arrays, or ComfyUI tensors)
+        output_path: Path where the video file will be saved
         frame_rate: Frame rate for the output video
         video_format: Format string like "image/gif", "video/mp4", etc.
         pingpong: Whether to create pingpong effect
@@ -30,7 +32,7 @@ def image_batch_to_video_bytes(
         **kwargs: Additional arguments (ignored for OpenCV)
 
     Returns:
-        Tuple[bytes, str]: Video bytes and file extension
+        str: Output file path
     """
     # Convert image_batch to PIL Image list and normalize
     frames = convert_image_batch_to_pil_list(image_batch)
@@ -43,32 +45,25 @@ def image_batch_to_video_bytes(
 
     # image formats via Pillow (OpenCV doesn't handle GIF/WEBP well)
     if format_type == "image":
-        return process_image_format(frames, format_ext, frame_rate, loop_count)
+        return process_image_format_to_file(frames, output_path, format_ext, frame_rate, loop_count)
 
     # video formats via OpenCV
-    return _process_video_format(frames, format_ext, frame_rate)
+    return _process_video_format_to_file(frames, output_path, format_ext, frame_rate)
 
 
-def _process_video_format(frames: List[Image.Image], format_ext: str, frame_rate: int) -> Tuple[bytes, str]:
+def _process_video_format_to_file(frames: List[Image.Image], output_path: str, format_ext: str, frame_rate: int) -> str:
     """
-    Process video formats using OpenCV.
+    Process video formats using OpenCV and save to output_path.
     """
     # Get video writer properties
     fourcc, extension = _get_opencv_format(format_ext)
-
-    # Create temporary file for output
-    import folder_paths
-
-    tmp_dir = folder_paths.get_temp_directory()
-    os.makedirs(tmp_dir, exist_ok=True)
-    tmp_out = os.path.join(tmp_dir, f"{uuid.uuid4().hex}.{extension}")
 
     # Get frame dimensions
     width, height = frames[0].size
 
     # Initialize video writer
     fourcc_code = cv2.VideoWriter_fourcc(*fourcc)
-    out = cv2.VideoWriter(tmp_out, fourcc_code, frame_rate, (width, height))
+    out = cv2.VideoWriter(output_path, fourcc_code, frame_rate, (width, height))
 
     try:
         # Write frames
@@ -81,16 +76,13 @@ def _process_video_format(frames: List[Image.Image], format_ext: str, frame_rate
         # Release video writer
         out.release()
 
-        # Read output file
-        with open(tmp_out, "rb") as f:
-            video_bytes = f.read()
+        return output_path
 
-        return video_bytes, extension
-
-    finally:
-        # Clean up temporary file
-        if os.path.exists(tmp_out):
-            os.remove(tmp_out)
+    except Exception:
+        # Clean up output file if writing failed
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        raise
 
 
 def _get_opencv_format(format_ext: str) -> Tuple[str, str]:
@@ -111,14 +103,3 @@ def _get_opencv_format(format_ext: str) -> Tuple[str, str]:
 
     # Default to MP4
     return ("mp4v", "mp4")
-
-
-def is_opencv_available() -> bool:
-    """
-    Check if OpenCV is available and functional.
-    """
-    try:
-        import cv2
-        return True
-    except ImportError:
-        return False

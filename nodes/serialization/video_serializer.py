@@ -1,10 +1,12 @@
 import json
 import folder_paths
+import os
+import uuid
 
 from PIL.PngImagePlugin import PngInfo
 
 from ...utils.format import animated_image_formats
-from ...utils.video import ffmpeg_image_batch_to_video_bytes, opencv_image_batch_to_video_bytes, ffmpeg_path
+from ...utils.video import ffmpeg_image_batch_to_video_file, opencv_image_batch_to_video_file, ffmpeg_path
 
 from ... import register_node
 
@@ -85,9 +87,11 @@ class VideoSerializer:
                     metadata.add_text(x, json.dumps(extra_pnginfo[x]))
                     video_metadata[x] = extra_pnginfo[x]
 
+        temp_path = os.path.join(folder_paths.get_temp_directory(), f"{uuid.uuid4().hex}")
         if library == "ffmpeg":
-            video_bytes, ext = ffmpeg_image_batch_to_video_bytes(
+            ext = ffmpeg_image_batch_to_video_file(
                 image_batch=image_batch,
+                output_path=temp_path,
                 frame_rate=frame_rate,
                 video_format=video_format,
                 pingpong=pingpong,
@@ -104,8 +108,9 @@ class VideoSerializer:
                 "video/webm": "video/webm",
                 "video/mp4": "video/mp4",
             }
-            video_bytes, ext = opencv_image_batch_to_video_bytes(
+            ext = opencv_image_batch_to_video_file(
                 image_batch=image_batch,
+                output_path=temp_path,
                 frame_rate=frame_rate,
                 video_format=mapping[video_format],
                 pingpong=pingpong,
@@ -114,5 +119,8 @@ class VideoSerializer:
             )
         else:
             raise ValueError(f"Unknown library: {library}")
+        
+        with open(temp_path, "rb") as f:
+            video_bytes = f.read()
 
         return {"result": (video_bytes, ext,)}

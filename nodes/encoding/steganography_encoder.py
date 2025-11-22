@@ -1,15 +1,15 @@
 from ... import register_node
-from ...utils.image import bytes_to_data_image
+from ...utils.encoding import encode_steganography
 import zlib
 
 
-@register_node(emoji="📦")
-class DataImageSerializer:
+@register_node(emoji="🔐")
+class SteganographyEncoder:
     """
-    Data image serializer node.
+    Steganography encoder node.
 
-    Serializes bytes data into a noise-like image where the data
-    is hidden in the pixel values.
+    Encodes hidden data into a noise-like image where the data
+    is embedded in the pixel values using steganography.
     """
 
     def __init__(self):
@@ -53,14 +53,14 @@ class DataImageSerializer:
         }
 
     RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("noise_image", "compression", )
+    RETURN_NAMES = ("steganography_image", "compression", )
     FUNCTION = "run"
-    CATEGORY = "EasyToolkit/Serialization"
+    CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
     def run(self, data, compresslevel = -1, width: int = 0, height: int = 0, use_alpha: bool = True) -> dict:
         """
-        Serialize bytes data to noise image with optional compression.
+        Encode data into steganography image with optional compression.
         """
         # Apply compression if requested
         if compresslevel != 0:
@@ -70,6 +70,6 @@ class DataImageSerializer:
         w = None if width == 0 else width
         h = None if height == 0 else height
 
-        noise_image = bytes_to_data_image(data, w, h, use_alpha)
-        return {"result": (noise_image,)}
+        steganography_image = encode_steganography(data, w, h, use_alpha)
+        return {"result": (steganography_image,)}
 

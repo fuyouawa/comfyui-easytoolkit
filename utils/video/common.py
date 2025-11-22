@@ -45,14 +45,13 @@ def _ensure_even_dimensions(img: Image.Image) -> Image.Image:
     return img
 
 
-def process_image_format(frames: List[Image.Image], format_ext: str, frame_rate: int, loop_count: int) -> Tuple[bytes, str]:
+def process_image_format_to_file(frames: List[Image.Image], output_path: str, format_ext: str, frame_rate: int, loop_count: int) -> str:
     """
-    Logic for processing image formats (GIF, WEBP, etc.) using Pillow.
-    Returns (video_bytes, extension_without_dot)
+    Process image formats (GIF, WEBP, etc.) using Pillow and save to output_path.
+    Returns output_path
     """
     import io
 
-    bio = io.BytesIO()
     pil_format = format_ext.upper()
     save_kwargs = {}
 
@@ -65,7 +64,7 @@ def process_image_format(frames: List[Image.Image], format_ext: str, frame_rate:
             "loop": loop_count,
             "optimize": False,
         })
-        frames[0].save(bio, format="GIF", **save_kwargs)
+        frames[0].save(output_path, format="GIF", **save_kwargs)
     elif pil_format == "WEBP":
         save_kwargs.update({
             "save_all": True,
@@ -73,12 +72,10 @@ def process_image_format(frames: List[Image.Image], format_ext: str, frame_rate:
             "duration": round(1000 / frame_rate),
             "loop": loop_count,
         })
-        frames[0].save(bio, format="WEBP", **save_kwargs)
+        frames[0].save(output_path, format="WEBP", **save_kwargs)
     else:
         # Other pillow-supported multi-frame images
-        frames[0].save(bio, format=pil_format, save_all=True, append_images=frames[1:],
+        frames[0].save(output_path, format=pil_format, save_all=True, append_images=frames[1:],
                       duration=round(1000/frame_rate), loop=loop_count)
 
-    bio.seek(0)
-    return bio.read(), format_ext
-
+    return output_path

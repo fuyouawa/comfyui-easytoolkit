@@ -1,6 +1,7 @@
 from .algorithm import *
 from .image import *
 from .video import *
+from .encoding import *
 from .serialization import *
 from .config import *
 from .ai import *
