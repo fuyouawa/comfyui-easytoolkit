@@ -21,13 +21,6 @@ class SteganographyEncoder:
             "required": {
                 "data": ("BYTES", {
                 }),
-                "compresslevel": ("INT", {
-                    "default": "-1",
-                    "min": -1,
-                    "max": 9,
-                    "step": 1,
-                    "display": "number",
-                }),
                 "use_alpha": ("BOOLEAN", {
                     "default": False,
                     "label_on": "RGBA (4 channels)",
@@ -58,14 +51,10 @@ class SteganographyEncoder:
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, data, compresslevel = -1, width: int = 0, height: int = 0, use_alpha: bool = True) -> dict:
+    def run(self, data, width: int = 0, height: int = 0, use_alpha: bool = True) -> dict:
         """
         Encode data into steganography image with optional compression.
         """
-        # Apply compression if requested
-        if compresslevel != 0:
-            data = zlib.compress(data, level=compresslevel)
-
         # Convert 0 to None for auto-calculation
         w = None if width == 0 else width
         h = None if height == 0 else height

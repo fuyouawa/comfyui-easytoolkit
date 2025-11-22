@@ -36,9 +36,5 @@ class SteganographyDecoder:
         # Extract bytes from steganography image
         data_bytes = decode_steganography(steganography_image)
 
-        # Apply decompression if requested
-        if data_bytes.startswith((b"\x78\x01", b"\x78\x9c", b"\x78\xda")):
-            data_bytes = zlib.decompress(data_bytes)
-
         return {"result": (data_bytes,)}
 
