@@ -6,7 +6,7 @@ import uuid
 from PIL.PngImagePlugin import PngInfo
 
 from ...utils.format import animated_image_formats
-from ...utils.video import ffmpeg_image_batch_to_video_file, opencv_image_batch_to_video_file, ffmpeg_path
+from ...utils.video import ffmpeg_combine_video, opencv_combine_video, ffmpeg_path, FFMPEG_FORMAT_MAPPING, OPENCV_FORMAT_MAPPING
 
 from ... import register_node
 
@@ -22,7 +22,8 @@ class VideoSerializer:
     def INPUT_TYPES(cls):
         ffmpeg_formats = []
         if ffmpeg_path is not None:
-            ffmpeg_formats = ["video/"+x[:-5] for x in folder_paths.get_filename_list("video_formats")]
+            ffmpeg_formats = ["video/"+x for x in FFMPEG_FORMAT_MAPPING.keys()]
+        opencv_formats = ["video/"+x for x in OPENCV_FORMAT_MAPPING.keys()]
 
         return {
             "required": {
@@ -38,8 +39,11 @@ class VideoSerializer:
                 "library": (["ffmpeg", "opencv"], {
                     "default": "ffmpeg",
                 }),
-                "video_format": (animated_image_formats + ffmpeg_formats, {
-                    "default": "image/gif",
+                "ffmpeg_format": (animated_image_formats + ffmpeg_formats, {
+                    "default": ffmpeg_formats[0],
+                }),
+                "opencv_format": (animated_image_formats + opencv_formats, {
+                    "default": opencv_formats[0],
                 }),
                 "pingpong": ("BOOLEAN", {
                     "default": False,
@@ -65,8 +69,9 @@ class VideoSerializer:
         image_batch,
         frame_rate: int,
         loop_count: int,
-        library: str = "ffmpeg",
-        video_format: str = "image/gif",
+        library: str,
+        ffmpeg_format: str,
+        opencv_format: str,
         pingpong: bool = False,
         save_metadata: bool = False,
         prompt=None,
@@ -88,39 +93,38 @@ class VideoSerializer:
                     video_metadata[x] = extra_pnginfo[x]
 
         temp_path = os.path.join(folder_paths.get_temp_directory(), f"{uuid.uuid4().hex}")
-        if library == "ffmpeg":
-            ext = ffmpeg_image_batch_to_video_file(
-                image_batch=image_batch,
-                output_path=temp_path,
-                frame_rate=frame_rate,
-                video_format=video_format,
-                pingpong=pingpong,
-                loop_count=loop_count,
-                video_metadata=video_metadata,
-            )
-        elif library == "opencv":
-            mapping = {
-                "image/gif": "image/gif",
-                "image/webp": "image/webp",
-                "video/av1-webm": "video/webm",
-                "video/h264-mp4": "video/mp4",
-                "video/h265-mp4": "video/mp4",
-                "video/webm": "video/webm",
-                "video/mp4": "video/mp4",
-            }
-            ext = opencv_image_batch_to_video_file(
-                image_batch=image_batch,
-                output_path=temp_path,
-                frame_rate=frame_rate,
-                video_format=mapping[video_format],
-                pingpong=pingpong,
-                loop_count=loop_count,
-                video_metadata=video_metadata,
-            )
-        else:
-            raise ValueError(f"Unknown library: {library}")
-        
-        with open(temp_path, "rb") as f:
-            video_bytes = f.read()
+        try:
+            if library == "ffmpeg":
+                ext = ffmpeg_combine_video(
+                    image_batch=image_batch,
+                    output_path=temp_path,
+                    frame_rate=frame_rate,
+                    video_format=ffmpeg_format,
+                    pingpong=pingpong,
+                    loop_count=loop_count,
+                    video_metadata=video_metadata,
+                )
+            elif library == "opencv":
+                ext = opencv_combine_video(
+                    image_batch=image_batch,
+                    output_path=temp_path,
+                    frame_rate=frame_rate,
+                    video_format=opencv_format,
+                    pingpong=pingpong,
+                    loop_count=loop_count,
+                    video_metadata=video_metadata,
+                )
+            else:
+                raise ValueError(f"Unknown library: {library}")
+            
+            with open(temp_path, "rb") as f:
+                video_bytes = f.read()
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except:
+                    pass  # Ignore cleanup errors
 
         return {"result": (video_bytes, ext,)}

@@ -3,7 +3,8 @@ from .image_deserializer import *
 from .image_batch_serializer import *
 from .image_batch_deserializer import *
 from .video_serializer import *
-from .resource_header_builder import *
+from .video_deserializer import *
+from .resource_header_constructor import *
 from .resource_header_serializer import *
 from .resource_header_deserializer import *
 from .resource_header_parser import *

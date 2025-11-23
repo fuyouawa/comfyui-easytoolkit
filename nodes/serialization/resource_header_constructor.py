@@ -4,7 +4,7 @@ from ...utils.format import all_resource_formats
 
 
 @register_node(emoji="📦")
-class ResourceHeaderBuilder:
+class ResourceHeaderConstructor:
     """
     ResourceHeader builder node.
 
@@ -30,7 +30,7 @@ class ResourceHeaderBuilder:
             },
         }
 
-    RETURN_TYPES = ("RESOURCEHEADER",)
+    RETURN_TYPES = ("EASYTOOLKIT_RESOURCEHEADER",)
     RETURN_NAMES = ("resource_header",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Serialization"

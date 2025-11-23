@@ -21,7 +21,7 @@ class ResourceHeaderDeserializer:
             },
         }
 
-    RETURN_TYPES = ("RESOURCEHEADER",)
+    RETURN_TYPES = ("EASYTOOLKIT_RESOURCEHEADER",)
     RETURN_NAMES = ("resource_header",)
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Serialization"

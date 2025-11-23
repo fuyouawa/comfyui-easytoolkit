@@ -18,7 +18,7 @@ class ResourceHeaderParser:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "resource_header": ("RESOURCEHEADER",),
+                "resource_header": ("EASYTOOLKIT_RESOURCEHEADER",),
             },
         }
 
