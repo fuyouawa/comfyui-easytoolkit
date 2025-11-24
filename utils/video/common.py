@@ -152,11 +152,14 @@ def _ensure_even_dimensions(img: Image.Image) -> Image.Image:
     return img
 
 
-def combine_animated_image(frames: List[Image.Image], output_path: str, format_ext: str, frame_rate: int, loop_count: int) -> str:
+def combine_animated_image(frames: List[Image.Image], output_path: str, format_ext: str, frame_rate: int, loop_count: int) -> Tuple[str, str]:
     """
     Process image formats (GIF, WEBP, etc.) using Pillow and save to output_path.
     Returns output_path
     """
+    extension = format_ext.lower()
+    if not output_path.endswith(f".{extension}"):
+        output_path = f"{output_path}.{extension}"
     pil_format = format_ext.upper()
     save_kwargs = {}
 
@@ -183,10 +186,10 @@ def combine_animated_image(frames: List[Image.Image], output_path: str, format_e
         frames[0].save(output_path, format=pil_format, save_all=True, append_images=frames[1:],
                       duration=round(1000/frame_rate), loop=loop_count)
 
-    return output_path
+    return output_path, extension
 
 
-def target_size(width: int, height: int, custom_width: int, custom_height: int, downscale_ratio: int = DEFAULT_DOWNSCALE_RATIO) -> tuple[int, int]:
+def target_size(width: int, height: int, custom_width: int, custom_height: int, downscale_ratio: int = DEFAULT_DOWNSCALE_RATIO) -> Tuple[int, int]:
     """
     Calculate target size while maintaining aspect ratio and scaling ratio.
 

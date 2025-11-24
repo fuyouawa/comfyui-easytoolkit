@@ -59,7 +59,7 @@ class VideoSerializer:
         }
 
     RETURN_TYPES = ("BYTES", "STRING",)
-    RETURN_NAMES = ("data", "suffix",)
+    RETURN_NAMES = ("data", "extension",)
     OUTPUT_NODE = True
     CATEGORY = "EasyToolkit/Serialization"
     FUNCTION = "run"
@@ -95,7 +95,7 @@ class VideoSerializer:
         temp_path = os.path.join(folder_paths.get_temp_directory(), f"{uuid.uuid4().hex}")
         try:
             if library == "ffmpeg":
-                ext = ffmpeg_combine_video(
+                result_path, extension = ffmpeg_combine_video(
                     image_batch=image_batch,
                     output_path=temp_path,
                     frame_rate=frame_rate,
@@ -105,7 +105,7 @@ class VideoSerializer:
                     video_metadata=video_metadata,
                 )
             elif library == "opencv":
-                ext = opencv_combine_video(
+                result_path, extension = opencv_combine_video(
                     image_batch=image_batch,
                     output_path=temp_path,
                     frame_rate=frame_rate,
@@ -117,14 +117,14 @@ class VideoSerializer:
             else:
                 raise ValueError(f"Unknown library: {library}")
             
-            with open(temp_path, "rb") as f:
+            with open(result_path, "rb") as f:
                 video_bytes = f.read()
         finally:
             # Clean up temporary file
-            if os.path.exists(temp_path):
+            if os.path.exists(result_path):
                 try:
-                    os.remove(temp_path)
+                    os.remove(result_path)
                 except:
                     pass  # Ignore cleanup errors
 
-        return {"result": (video_bytes, ext,)}
+        return {"result": (video_bytes, extension,)}

@@ -50,7 +50,7 @@ def format_filename(template: str) -> str:
     return template
 
 
-def file_suffix_to_mime_type(suffix: str) -> str:
+def file_extension_to_mime_type(suffix: str) -> str:
     """
     Convert file suffix to corresponding MIME type.
     """
@@ -111,7 +111,7 @@ def file_suffix_to_mime_type(suffix: str) -> str:
 
     return mapping.get(suffix.lower(), "application/octet-stream")
 
-def mime_type_to_file_suffix(format: str) -> str:
+def mime_type_to_file_extension(format: str) -> str:
     """
     Convert MIME type to file suffix.
     """

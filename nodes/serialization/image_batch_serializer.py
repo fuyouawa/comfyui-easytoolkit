@@ -1,6 +1,6 @@
 from ... import register_node
 from ...utils.image import image_batch_to_bytes_list
-from ...utils.format import static_image_formats, mime_type_to_file_suffix
+from ...utils.format import static_image_formats, mime_type_to_file_extension
 from ...utils.serialization import merge_bytes_with_headers
 
 
@@ -38,7 +38,7 @@ class ImageBatchSerializer:
         """
         bytes_list = image_batch_to_bytes_list(image_batch, format)
         count = len(bytes_list)
-        suffix = mime_type_to_file_suffix(format)
+        suffix = mime_type_to_file_extension(format)
 
         # Merge bytes_list into a single bytes object with size headers
         data = merge_bytes_with_headers(bytes_list)

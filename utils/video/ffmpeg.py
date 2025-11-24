@@ -91,7 +91,7 @@ def get_video_format(format_name: str):
         KeyError: If format name is not found
     """
     if format_name not in FORMAT_MAPPING:
-        raise KeyError(f"Video format '{format_name}' not found. Available formats: {list(FORMAT_MAPPING.keys())}")
+        raise KeyError(f"Video format '{format_name}' not found. Available formats: {list_available_formats()}")
 
     return FORMAT_MAPPING[format_name]
 
@@ -103,7 +103,7 @@ def list_available_formats():
     Returns:
         List of format names
     """
-    return list(FORMAT_MAPPING.keys())
+    return [key for key in FORMAT_MAPPING.keys()]
 
 
 # The code is based on ComfyUI-VideoHelperSuite modification.
@@ -116,7 +116,7 @@ def combine_video(
     loop_count: int = 0,
     video_metadata: Optional[dict] = None,
     ffmpeg_bin: Optional[str] = None,
-) -> str:
+) -> Tuple[str, str]:
     """
     Convert image_batch to video and save to output_path.
     Returns output_path
@@ -144,7 +144,10 @@ def combine_video(
 
     # Get video format configuration from Python module
     video_format = get_video_format(format_ext)
-    muxer = video_format.get("muxer", video_format["extension"])
+
+    extension = video_format["extension"]
+    if not output_path.endswith(f".{extension}"):
+        output_path = f"{output_path}.{extension}"
 
     dimensions = f"{frames[0].width}x{frames[0].height}"
     metadata_json = str(video_metadata or {})
@@ -154,7 +157,7 @@ def combine_video(
         ffmpeg_bin, "-v", "error",
         "-f", "rawvideo", "-pix_fmt", "rgb24",
         "-s", dimensions, "-r", str(frame_rate), "-i", "-"
-    ] + video_format.get("main_pass", [])
+    ] + video_format["main_pass"]
 
     # metadata handling - attempt to pass as -metadata comment=..., if too long fall back to using temporary metadata file
     metadata_args = ["-metadata", "comment=" + metadata_json]
@@ -172,25 +175,24 @@ def combine_video(
 
     if len(metadata_args[1]) >= max_arg_length:
         # write metadata to temp file and use it as an extra input
-        _run_ffmpeg_with_metadata_file(args, frames, metadata_json, output_path, env, muxer)
+        _run_ffmpeg_with_metadata_file(args, frames, metadata_json, output_path, env)
     else:
         # normal path: pass metadata arg directly
         try:
-            _run_ffmpeg_with_metadata_arg(args, metadata_args, frames, output_path, env, muxer)
+            _run_ffmpeg_with_metadata_arg(args, metadata_args, frames, output_path, env)
         except (FileNotFoundError, OSError) as e:
             # replicate original fallback triggers for very long metadata on Windows/Errno
             # fall back to metadata temp file approach
-            _run_ffmpeg_with_metadata_file(args, frames, metadata_json, output_path, env, muxer)
+            _run_ffmpeg_with_metadata_file(args, frames, metadata_json, output_path, env)
 
-    return output_path
+    return output_path, extension
 
 def _run_ffmpeg_with_metadata_file(
     args: List[str],
     frames: List[Image.Image],
     metadata_json: str,
     output_path: str,
-    env: dict,
-    muxer: str
+    env: dict
 ):
     """
     Helper function to run ffmpeg with temporary metadata file.
@@ -209,7 +211,7 @@ def _run_ffmpeg_with_metadata_file(
     new_args = [args[0]] + ["-i", md_tmp] + args[1:]
 
     try:
-        with subprocess.Popen(new_args + ["-f", muxer, output_path], stdin=subprocess.PIPE, env=env) as proc:
+        with subprocess.Popen(new_args + [output_path], stdin=subprocess.PIPE, env=env) as proc:
             for fr in frames:
                 #TODO Error occurs when format is video/av1-webm
                 proc.stdin.write(fr.tobytes())
@@ -226,15 +228,14 @@ def _run_ffmpeg_with_metadata_arg(
     meta_arg_list: List[str],
     frames: List[Image.Image],
     output_path: str,
-    env: dict,
-    muxer: str
+    env: dict
 ):
     """
     Helper function to run ffmpeg with metadata arguments directly.
     """
     # run ffmpeg writing frames to stdin and create output file
     try:
-        with subprocess.Popen(args + meta_arg_list + ["-f", muxer, output_path], stdin=subprocess.PIPE, env=env) as proc:
+        with subprocess.Popen(args + meta_arg_list + [output_path], stdin=subprocess.PIPE, env=env) as proc:
             for fr in frames:
                 # ensure rgb24 byte order
                 proc.stdin.write(fr.tobytes())

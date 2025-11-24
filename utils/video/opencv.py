@@ -25,7 +25,7 @@ def combine_video(
     pingpong: bool = False,
     loop_count: int = 0,
     video_metadata: Optional[dict] = None
-) -> str:
+) -> Tuple[str, str]:
     """
     Convert image_batch to video and save to output_path using OpenCV.
     Returns output_path
@@ -60,7 +60,7 @@ def combine_video(
     return _process_video_format_to_file(frames, output_path, format_ext, frame_rate)
 
 
-def _process_video_format_to_file(frames: List[Image.Image], output_path: str, format_ext: str, frame_rate: int) -> str:
+def _process_video_format_to_file(frames: List[Image.Image], output_path: str, format_ext: str, frame_rate: int):
     """
     Process video formats using OpenCV and save to output_path.
 
@@ -75,6 +75,8 @@ def _process_video_format_to_file(frames: List[Image.Image], output_path: str, f
     """
     # Get video writer properties
     fourcc, extension = _get_opencv_format(format_ext)
+    if not output_path.endswith(f".{extension}"):
+        output_path = f"{output_path}.{extension}"
 
     # Get frame dimensions
     width, height = frames[0].size
@@ -82,6 +84,10 @@ def _process_video_format_to_file(frames: List[Image.Image], output_path: str, f
     # Initialize video writer
     fourcc_code = cv2.VideoWriter_fourcc(*fourcc)
     out = cv2.VideoWriter(output_path, fourcc_code, frame_rate, (width, height))
+    if not out.isOpened():
+        print(cv2.getBuildInformation())
+        print(cv2.__version__)
+        raise ValueError(f"Failed to open video writer for {output_path}")
 
     try:
         # Write frames
@@ -94,7 +100,7 @@ def _process_video_format_to_file(frames: List[Image.Image], output_path: str, f
         # Release video writer
         out.release()
 
-        return output_path
+        return output_path, extension
 
     except Exception:
         # Clean up output file if writing failed

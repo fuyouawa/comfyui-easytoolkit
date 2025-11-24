@@ -1,10 +1,10 @@
 from ... import register_node
-from ...utils.format import file_suffix_to_mime_type, all_resource_formats
+from ...utils.format import file_extension_to_mime_type, all_resource_formats
 
 @register_node(emoji="🔧")
-class FileSuffixToFormatType:
+class FileExtensionToFormatType:
     """
-    A ComfyUI node that converts file suffixes to MIME types.
+    A ComfyUI node that converts file extension to MIME types.
     """
 
     def __init__(self):
@@ -14,7 +14,7 @@ class FileSuffixToFormatType:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "suffix": ("STRING", {
+                "extension": ("STRING", {
                     "default": "png",
                 }),
             },
@@ -25,9 +25,9 @@ class FileSuffixToFormatType:
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Formatting"
 
-    def run(self, suffix):
+    def run(self, extension):
         """
-        Convert file suffix to MIME type.
+        Convert file extension to MIME type.
         """
-        format = file_suffix_to_mime_type(suffix)
+        format = file_extension_to_mime_type(extension)
         return {"result": (format,)}
