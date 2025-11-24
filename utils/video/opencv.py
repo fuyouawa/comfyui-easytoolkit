@@ -317,7 +317,6 @@ def load_video(video_path, force_rate: int = 0, frame_load_cap: int = 0, start_t
 
     # Build video information object
     video_info = VideoInfo(
-        source_path=video_path,
         source_fps=source_fps,
         source_width=source_width,
         source_height=source_height,
@@ -327,7 +326,7 @@ def load_video(video_path, force_rate: int = 0, frame_load_cap: int = 0, start_t
         loaded_frame_count=frame_count,
         loaded_fps=loaded_fps,
         source_frame_count=source_frame_count,
-        generator="opencv"
+        generator="opencv",
     )
 
     return image_batch, video_info

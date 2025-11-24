@@ -12,16 +12,14 @@ class VideoInfo:
     """
     Video information class for encapsulating video loading metadata.
     """
-    def __init__(self, source_path: str, 
-                source_width: int, source_height: int, source_fps: float, source_frame_count: int, 
+    def __init__(self, source_width: int, source_height: int, source_fps: float, source_frame_count: int,
                 loaded_width: int, loaded_height: int, loaded_fps: float, loaded_frame_count: int,
-                loaded_channels: int, 
+                loaded_channels: int,
                 generator: str):
         """
         Initialize video information.
 
         Args:
-            source_path: Video source file path
             source_fps: Original frame rate
             source_width: Original video width
             source_height: Original video height
@@ -32,8 +30,8 @@ class VideoInfo:
             loaded_frame_count: Loaded frame count
             loaded_fps: Loaded frame rate
             generator: Generator type used
+            source_path: Path to the source video file
         """
-        self.source_path = source_path
         self.loaded_width = loaded_width
         self.loaded_height = loaded_height
         self.loaded_channels = loaded_channels
@@ -69,18 +67,9 @@ class VideoInfo:
             return self.loaded_frame_count / self.source_fps
         return None
 
-    def __str__(self) -> str:
-        """String representation."""
-        duration_info = f", duration: {self.estimated_duration:.2f}s" if self.estimated_duration else ""
-        fps_info = f", source fps: {self.source_fps}fps" if self.source_fps else ""
-        loaded_fps_info = f", loaded fps: {self.loaded_fps}fps" if self.loaded_fps else ""
-        source_res_info = f", source: {self.source_width}x{self.source_height}" if self.source_width and self.source_height else ""
-        source_frames_info = f", source frames: {self.source_frame_count}" if self.source_frame_count else ""
-        return f"VideoInfo(path: {self.source_path}, resolution: {self.resolution}, frames: {self.loaded_frame_count}{source_frames_info}{duration_info}{fps_info}{loaded_fps_info}{source_res_info})"
-
     def __repr__(self) -> str:
         """Detailed representation."""
-        return f"VideoInfo(source_path='{self.source_path}', loaded_width={self.loaded_width}, loaded_height={self.loaded_height}, loaded_channels={self.loaded_channels}, loaded_frame_count={self.loaded_frame_count}, generator='{self.generator}', source_fps={self.source_fps}, source_frame_count={self.source_frame_count}, source_width={self.source_width}, source_height={self.source_height}, loaded_fps={self.loaded_fps})"
+        return f"VideoInfo(loaded_width={self.loaded_width}, loaded_height={self.loaded_height}, loaded_channels={self.loaded_channels}, loaded_frame_count={self.loaded_frame_count}, generator='{self.generator}', source_fps={self.source_fps}, source_frame_count={self.source_frame_count}, source_width={self.source_width}, source_height={self.source_height}, loaded_fps={self.loaded_fps})"
     
 
 def image_batch_to_pil_list(image_batch) -> List[Image.Image]:
@@ -152,34 +141,6 @@ def pil_list_to_image_batch(pil_list: List[Image.Image]) -> torch.Tensor:
     batch = np.stack(frames)
 
     return torch.from_numpy(batch)
-
-
-
-def frames_to_tensor(frame_generator: Iterator, width: int, height: int, channels: int = 3, max_frames: int = None) -> torch.Tensor:
-    """
-    Convert frame generator to PyTorch tensor.
-
-    Args:
-        frame_generator: Frame generator
-        width: Frame width
-        height: Frame height
-        channels: Number of channels (3 for RGB, 4 for RGBA)
-        max_frames: Maximum number of frames limit
-
-    Returns:
-        PyTorch tensor with shape (frames, height, width, channels)
-    """
-    if max_frames is not None:
-        frame_generator = itertools.islice(frame_generator, max_frames)
-
-    # Efficiently convert generator to numpy array, then to PyTorch tensor
-    dtype = np.dtype((np.float32, (height, width, channels)))
-    frames_array = np.fromiter(frame_generator, dtype)
-
-    if len(frames_array) == 0:
-        raise RuntimeError("No frames generated")
-
-    return torch.from_numpy(frames_array)
 
 def _ensure_even_dimensions(img: Image.Image) -> Image.Image:
     """Ensure width and height are even (some ffmpeg encoders don't like odd dimensions)."""
