@@ -15,7 +15,7 @@ class FormatTypeToFileExtension:
         return {
             "required": {
                 "format": (all_resource_formats, {
-                    "default": "png",
+                    "default": all_resource_formats[0],
                 }),
             },
         }

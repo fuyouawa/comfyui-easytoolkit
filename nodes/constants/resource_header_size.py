@@ -2,7 +2,7 @@ from ... import register_node
 from ...utils.serialization import RESOURCE_HEADER_SIZE
 
 
-@register_node(emoji="📦")
+@register_node(emoji="📏")
 class ResourceHeaderSize:
     """
     ResourceHeader size node.
@@ -22,7 +22,7 @@ class ResourceHeaderSize:
     RETURN_TYPES = ("INT",)
     RETURN_NAMES = ("header_size",)
     FUNCTION = "run"
-    CATEGORY = "EasyToolkit/Serialization"
+    CATEGORY = "EasyToolkit/Constants"
 
     def run(self):
         """
