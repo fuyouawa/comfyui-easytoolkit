@@ -5,14 +5,14 @@ import {
 } from "../preview_utils.js";
 
 /**
- * Extension for ImageBase64Previewer node
+ * Extension for ImageSafePreviewer node
  * Displays base64 encoded images directly on the node during workflow execution
  */
 app.registerExtension({
-    name: "EasyToolkit.ImageBase64Previewer",
+    name: "EasyToolkit.ImageSafePreviewer",
 
     async beforeRegisterNodeDef(nodeType, nodeData) {
-        if (nodeData.name === "ImageBase64Previewer") {
+        if (nodeData.name === "ImageSafePreviewer") {
             // Add custom node behavior
             const originalOnExecuted = nodeType.prototype.onExecuted;
 
@@ -37,19 +37,18 @@ app.registerExtension({
                     };
                 }
             };
-
             
-        // Override onDrawForeground to draw the preview image on the node
+        // Override onDrawForeground to draw the preview image and resolution text on the node
         const onDrawForeground = nodeType.prototype.onDrawForeground;
         nodeType.prototype.onDrawForeground = function(ctx) {
             if (onDrawForeground) {
                 onDrawForeground.apply(this, arguments);
             }
-            
+
             if (this.previewImage && this.previewImage.complete) {
                 // Calculate available space using utility function
                 const { margin, startY, availableWidth, availableHeight } = calculateAvailableSpace(this);
-                
+
                 // Draw image preview using utility function
                 const { height: drawnHeight } = drawImagePreview(
                     ctx,
@@ -59,9 +58,21 @@ app.registerExtension({
                     availableWidth,
                     availableHeight
                 );
-                
-                // Auto-resize node to fit image if needed
-                const minHeight = startY + drawnHeight + margin;
+
+                // Draw resolution text below the image
+                const resolutionText = `${this.previewImage.width} × ${this.previewImage.height}`;
+                const textY = startY + drawnHeight + 15;
+
+                ctx.save();
+                ctx.fillStyle = "#888";
+                ctx.font = "12px monospace";
+                ctx.textAlign = "center";
+                ctx.fillText(resolutionText, this.size[0] / 2, textY);
+                ctx.restore();
+
+                // Auto-resize node to fit image and resolution text if needed
+                const textHeight = 15; // Additional space for resolution text
+                const minHeight = startY + drawnHeight + margin + textHeight;
                 if (this.size[1] < minHeight) {
                     this.size[1] = minHeight;
                 }
