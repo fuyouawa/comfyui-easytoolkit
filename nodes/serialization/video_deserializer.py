@@ -17,7 +17,7 @@ class VideoDeserializer:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "data": ("BYTES", {
+                "video_data": ("BYTES", {
                 }),
                 "mode": (["ffmpeg", "opencv"], {
                     "default": "ffmpeg",
@@ -44,7 +44,7 @@ class VideoDeserializer:
 
     def run(
         self,
-        data: bytes,
+        video_data: bytes,
         mode: str,
         force_rate: int = 0,
         frame_load_cap: int = 0,
@@ -60,7 +60,7 @@ class VideoDeserializer:
         try:
             # Write bytes to temporary file
             with open(temp_path, "wb") as f:
-                f.write(data)
+                f.write(video_data)
 
             # Load video based on selected mode
             if mode == "ffmpeg":

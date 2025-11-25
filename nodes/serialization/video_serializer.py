@@ -59,7 +59,7 @@ class VideoSerializer:
         }
 
     RETURN_TYPES = ("BYTES", "STRING",)
-    RETURN_NAMES = ("data", "extension",)
+    RETURN_NAMES = ("video_data", "extension",)
     OUTPUT_NODE = True
     CATEGORY = "EasyToolkit/Serialization"
     FUNCTION = "run"

@@ -25,6 +25,20 @@ class SteganographyEncoder:
                     "label_on": "RGBA (4 channels)",
                     "label_off": "RGB (3 channels)",
                 }),
+                "top_margin_percent": ("FLOAT", {
+                    "default": 20.0,
+                    "min": 0.0,
+                    "max": 100.0,
+                    "step": 1.0,
+                    "display": "number",
+                }),
+                "bottom_margin_percent": ("FLOAT", {
+                    "default": 20.0,
+                    "min": 0.0,
+                    "max": 100.0,
+                    "step": 1.0,
+                    "display": "number",
+                }),
             },
             "optional": {
                 "width": ("INT", {
@@ -45,12 +59,12 @@ class SteganographyEncoder:
         }
 
     RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("steganography_image", "compression", )
+    RETURN_NAMES = ("steganography_image", )
     FUNCTION = "run"
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, data, width: int = 0, height: int = 0, use_alpha: bool = True) -> dict:
+    def run(self, data, use_alpha: bool = True, top_margin_percent: float = 20.0, bottom_margin_percent: float = 20.0, width: int = 0, height: int = 0) -> dict:
         """
         Encode data into steganography image with optional compression.
         """
@@ -58,6 +72,6 @@ class SteganographyEncoder:
         w = None if width == 0 else width
         h = None if height == 0 else height
 
-        steganography_image = encode_steganography(data, w, h, use_alpha)
+        steganography_image = encode_steganography(data, w, h, use_alpha, top_margin_percent / 100, bottom_margin_percent / 100)
         return {"result": (steganography_image,)}
 

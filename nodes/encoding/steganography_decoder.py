@@ -19,6 +19,20 @@ class SteganographyDecoder:
         return {
             "required": {
                 "steganography_image": ("IMAGE",),
+                "top_margin_percent": ("FLOAT", {
+                    "default": 20.0,
+                    "min": 0.0,
+                    "max": 100.0,
+                    "step": 1.0,
+                    "display": "number",
+                }),
+                "bottom_margin_percent": ("FLOAT", {
+                    "default": 20.0,
+                    "min": 0.0,
+                    "max": 100.0,
+                    "step": 1.0,
+                    "display": "number",
+                }),
             },
         }
 
@@ -28,12 +42,12 @@ class SteganographyDecoder:
     CATEGORY = "EasyToolkit/Encoding"
     OUTPUT_NODE = True
 
-    def run(self, steganography_image) -> dict:
+    def run(self, steganography_image, top_margin_percent: float = 20.0, bottom_margin_percent: float = 20.0) -> dict:
         """
         Decode hidden data from steganography image with optional decompression.
         """
         # Extract bytes from steganography image
-        data_bytes = decode_steganography(steganography_image)
+        data_bytes = decode_steganography(steganography_image, top_margin_percent / 100, bottom_margin_percent / 100)
 
         return {"result": (data_bytes,)}
 
