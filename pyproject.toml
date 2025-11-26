@@ -1,6 +1,6 @@
 [project]
 name = "comfyui-easytoolkit"
-description = "A comprehensive ComfyUI extension toolkit providing nodes for algorithm calculations, Base64 encoding/decoding, image processing, and workflow utilities to streamline your ComfyUI workflows."
+description = "A comprehensive ComfyUI extension package that provides nodes for algorithm calculations, Base64 encoding/decoding, image processing, serialization, and workflow utilities to streamline ComfyUI workflows."
 version = "0.0.1"
 license = { text = "GNU General Public License v3.0" }
 
